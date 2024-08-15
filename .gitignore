@@ -1,0 +1,581 @@
+!**/[Pp]ackages/build/
+!.axoCover/settings.json
+!.vscode/*.code-snippets
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!?*.[Cc]ache/
+#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
+#   For a library or package, you might want to ignore these files since the code is
+#   However, in case of collaboration, if having platform-specific dependencies or dependencies
+#   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
+#   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
+#   This is especially recommended for binary packages to ensure reproducibility, and is more
+#   commonly ignored for libraries.
+#   git rm -r .ipynb_checkpoints/
+#   having no cross-platform support, pipenv may install dependencies that don't work, or not
+#   https://pdm.fming.dev/#use-with-ide
+#   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
+#   in version control.
+#   install all needed dependencies.
+#   intended to run in multiple environments; otherwise, check them in:
+#   pdm stores project-wide configurations in .pdm.toml, but it is recommended to not include it
+#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
+#  Usually these files are written by a python script from a template
+#  and can be added to the global gitignore or merged into this file.  For a more nuclear
+#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
+# !tools/packages.config
+# (https://github.com/github/gitignore/pull/1529#issuecomment-104372622)
+# (https://github.com/github/gitignore/pull/2483#issue-259490424)
+# .NET Core
+# .nfs files are created when an open file is removed but is still being accessed
+# .python-version
+# ASP.NET Scaffolding
+# Additional files built by Visual Studio
+# Annotation Processing
+# AxoCover is a Code Coverage Tool
+# Azure Functions localsettings file
+# Azure Stream Analytics local run output
+# Backup & report files from converting an old project file
+# Backup folder for Package Reference Convert tool in Visual Studio 2017
+# BeatPulse healthcheck temp database
+# Benchmark Results
+# BizTalk build output
+# Build Results of an ATL Project
+# Build results
+# Built Visual Studio Code Extensions
+# Business Intelligence projects
+# Byte-compiled / optimized / DLL files
+# C extensions
+# CDT- autotools
+# CDT-specific (C/C++ Development Tooling)
+# Cake - Uncomment if you are using it
+# Celery stuff
+# Chutzpah Test files
+# Click-Once directory
+# Code Recommenders
+# CodeRush personal settings
+# Coverlet is a free, cross platform Code Coverage Tool
+# Created by https://www.toptal.com/developers/gitignore/api/osx,linux,dotenv,eclipse,windows,visualstudio,azurefunctions,jupyternotebooks,visualstudiocode,python
+# Cython debug symbols
+# Directories potentially created on remote AFP share
+# Distribution / packaging
+# Django stuff:
+# DocProject is a documentation generator add-in
+# DotCover is a Code Coverage Tool
+# Dump file
+# Edit at https://www.toptal.com/developers/gitignore?templates=osx,linux,dotenv,eclipse,windows,visualstudio,azurefunctions,jupyternotebooks,visualstudiocode,python
+# End of https://www.toptal.com/developers/gitignore/api/osx,linux,dotenv,eclipse,windows,visualstudio,azurefunctions,jupyternotebooks,visualstudiocode,python
+# Environments
+# External tool builders
+# FAKE - F# Make
+# Files built by Visual Studio
+# Files that might appear in the root of a volume
+# Flask stuff:
+# Fody - auto-generated XML schema
+# Folder config file
+# General
+# GhostDoc plugin setting file
+# Guidance Automation Toolkit
+# IPython
+# Icon must end with two \r
+# Ignore all local history of files
+# Including strong name files can present a security risk
+# Installer logs
+# Installshield output folder
+# Ionide (cross platform F# VS Code tools) working folder
+# Java annotation processor (APT)
+# JetBrains Rider
+# Jupyter Notebook
+# KDE directory preferences
+# LSP config files
+# Linux trash folder which might appear on any partition or disk
+# Local History for Visual Studio
+# Local History for Visual Studio Code
+# Local cache
+# Locally stored "Eclipse launch configurations"
+# MFractors (Xamarin productivity tool) working folder
+# MSBuild Binary and Structured Log
+# MSTest test Results
+# Microsoft Azure Build Output
+# Microsoft Azure Emulator
+# Microsoft Azure Web App publish settings. Comment the next line if you want to
+# Microsoft Fakes
+# MightyMoose
+# Mono auto generated files
+# NCrunch
+# NUnit
+# NVidia Nsight GPU debugger configuration file
+# Node.js Tools for Visual Studio
+# Note: Comment the next line if you want to checkin your web deploy settings,
+# NuGet Packages
+# NuGet Symbol Packages
+# NuGet v3's project.json files produces more ignorable files
+# OpenCover UI analysis results
+# Others
+# PDT-specific (PHP Development Tools)
+# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
+# Paket dependency manager
+# Poetry local configuration file - https://python-poetry.org/docs/configuration/#local-configuration
+# Publish Web Output
+# PyBuilder
+# PyCharm
+# PyDev specific (Python IDE for Eclipse)
+# PyInstaller
+# Pyre type checker
+# Python Tools for Visual Studio (PTVS)
+# RIA/Silverlight projects
+# ReSharper is a .NET coding add-in
+# Recycle Bin used on file shares
+# Reflex
+# Remove previous ipynb_checkpoints
+# Rope project settings
+# SQL Server files
+# STS (Spring Tool Suite)
+# SageMath parsed files
+# Scala IDE specific (Scala & Java development for Eclipse)
+# Scrapy stuff:
+# See: https://github.com/clemlesne/gitops-version
+# Since there are multiple workflows, uncomment next line to ignore bower_components
+# Sphinx documentation
+# Spring Boot Tooling
+# Spyder project settings
+# StyleCop
+# TFS 2012 Local Workspace
+# Tabs Studio
+# TeXlipse plugin
+# TeamCity is a build add-in
+# Telerik's JustMock configuration file
+# Tern plugin
+# The packages folder can be ignored because of Package Restore
+# Thumbnails
+# Translations
+# Typically, this file would be tracked if it contains build/dependency configurations:
+# Uncomment if necessary however generally it will be regenerated when needed
+# Uncomment if you have tasks that create the project's static files in wwwroot
+# Uncomment this line if you wish to ignore the project description file.
+# Unit test / coverage reports
+# User-specific files
+# User-specific files (MonoDevelop/Xamarin Studio)
+# VS Code files for those working on multiple tools
+# Visual C++ cache files
+# Visual Studio 2015/2017 cache/options directory
+# Visual Studio 2017 auto generated files
+# Visual Studio 6 auto-generated project file (contains which files were open etc.)
+# Visual Studio 6 auto-generated workspace file (contains which files were open etc.)
+# Visual Studio 6 build log
+# Visual Studio 6 technical files
+# Visual Studio 6 workspace and project file (working project files containing files to include in project)
+# Visual Studio 6 workspace options file
+# Visual Studio History (VSHistory) files
+# Visual Studio LightSwitch build output
+# Visual Studio Trace Files
+# Visual Studio cache files
+# Visual Studio code coverage results
+# Visual Studio profiler
+# Web workbench (sass)
+# Windows Installer files
+# Windows Installer files from build outputs
+# Windows Store app package directories and files
+# Windows shortcuts
+# Windows thumbnail cache files
+# because we have git ;-)
+# but database connection strings (with potential passwords) will be unencrypted
+# but keep track of directories ending in .cache
+# checkin your Azure Web App publish settings, but sensitive information contained
+# except build/, which is used as an MSBuild target.
+# files ending in .cache can be ignored
+# gitignore template for Jupyter Notebooks
+# in these scripts will be unencrypted
+# mkdocs documentation
+# mypy
+# pdm
+# pipenv
+# poetry
+# pyenv
+# pytype static type analyzer
+# ruff
+# sbteclipse plugin
+# temporary files which can be created if a process still has a handle open of a deleted file
+# to a newer Visual Studio version. Backup files are not needed,
+# tools/**
+# website: http://jupyter.org/
+#!**/[Pp]ackages/repositories.config
+##
+## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
+## Ignore Visual Studio temporary files, build results, and
+## files generated by popular Visual Studio add-ons.
+### AzureFunctions ###
+### Eclipse ###
+### Eclipse Patch ###
+### JupyterNotebooks ###
+### Linux ###
+### OSX ###
+### Python ###
+### Python Patch ###
+### VisualStudio ###
+### VisualStudio Patch ###
+### VisualStudioCode ###
+### VisualStudioCode Patch ###
+### Windows ###
+### dotenv ###
+#*.snk
+#.idea/
+#.project
+#Pipfile.lock
+#bower_components/
+#pdm.lock
+#poetry.lock
+#wwwroot/
+$RECYCLE.BIN/
+$tf/
+*$py.class
+**/*.DesktopClient/GeneratedArtifacts
+**/*.DesktopClient/ModelManifest.xml
+**/*.HTMLClient/GeneratedArtifacts
+**/*.Server/GeneratedArtifacts
+**/*.Server/ModelManifest.xml
+**/[Pp]ackages/*
+*- [Bb]ackup ([0-9]).rdl
+*- [Bb]ackup ([0-9][0-9]).rdl
+*- [Bb]ackup.rdl
+*.DotSettings.user
+*.GhostDoc.xml
+*.VC.VC.opendb
+*.VC.db
+*.VisualState.xml
+*.[Cc]ache
+*.[Pp]ublish.xml
+*.[Rr]e[Ss]harper
+*.appx
+*.appxbundle
+*.appxupload
+*.aps
+*.azurePubxml
+*.bak
+*.bim.layout
+*.bim_*.settings
+*.binlog
+*.btm.cs
+*.btp.cs
+*.build.csdef
+*.cab
+*.cachefile
+*.code-workspace
+*.cover
+*.coverage
+*.coveragexml
+*.db
+*.dbmdl
+*.dbproj.schemaview
+*.dotCover
+*.dsp
+*.dsw
+*.e2e
+*.egg
+*.egg-info/
+*.gpState
+*.ilk
+*.iobj
+*.ipdb
+*.jfm
+*.jmconfig
+*.launch
+*.ldf
+*.lnk
+*.log
+*.manifest
+*.mdf
+*.meta
+*.mm.*
+*.mo
+*.msi
+*.msix
+*.msm
+*.msp
+*.ncb
+*.ndf
+*.nuget.props
+*.nuget.targets
+*.nupkg
+*.nvuser
+*.obj
+*.odx.cs
+*.opendb
+*.opensdf
+*.opt
+*.pch
+*.pdb
+*.pfx
+*.pgc
+*.pgd
+*.pidb
+*.plg
+*.pot
+*.psess
+*.publishproj
+*.publishsettings
+*.pubxml
+*.py,cover
+*.py[cod]
+*.pyc
+*.pydevproject
+*.rdl.data
+*.rptproj.bak
+*.rptproj.rsuser
+*.rsp
+*.rsuser
+*.sage.py
+*.sap
+*.sbr
+*.scc
+*.sdf
+*.sln.docstates
+*.sln.iml
+*.snupkg
+*.so
+*.spec
+*.stackdump
+*.suo
+*.svclog
+*.swp
+*.tlb
+*.tlh
+*.tli
+*.tlog
+*.tmp
+*.tmp_proj
+*.tss
+*.user
+*.userosscache
+*.userprefs
+*.vbp
+*.vbw
+*.vsix
+*.vsp
+*.vspscc
+*.vspx
+*.vssscc
+*.xsd.cs
+*/.ipynb_checkpoints/*
+*_h.h
+*_i.c
+*_p.c
+*_wpftmp.csproj
+*~
+*~.nib
+.*crunch*.local.xml
+.AppleDB
+.AppleDesktop
+.AppleDouble
+.DS_Store
+.DocumentRevisions-V100
+.LSOverride
+.Python
+.Spotlight-V100
+.TemporaryItems
+.Trash-*
+.Trashes
+.VolumeIcon.icns
+._*
+.apdisk
+.apt_generated/
+.apt_generated_test/
+.autotools
+.axoCover/*
+.buildpath
+.builds
+.cache
+.cache-main
+.com.apple.timemachine.donotpresent
+.coverage
+.coverage.*
+.cproject
+.cr/personal
+.directory
+.dmypy.json
+.eggs/
+.env
+.externalToolBuilders/
+.factorypath
+.fake/
+.fseventsd
+.fuse_hidden*
+.history
+.history/
+.hypothesis/
+.installed.cfg
+.ionide
+.ionide/
+.ipynb_checkpoints
+.loadpath
+.localhistory/
+.metadata
+.mfractor/
+.mypy_cache/
+.nfs*
+.nox/
+.ntvs_analysis.dat
+.paket/paket.exe
+.pdm.toml
+.pybuilder/
+.pyre/
+.pytest_cache/
+.pytype/
+.recommenders
+.recommenders/
+.ropeproject
+.ruff_cache/
+.sass-cache/
+.scala_dependencies
+.scrapy
+.settings/
+.springBeans
+.spyderproject
+.spyproject
+.sts4-cache/
+.target
+.tern-project
+.texlipse
+.tox/
+.venv
+.version.cache
+.vs/
+.vscode/*
+.vshistory/
+.web
+.web/
+.webassets-cache
+.worksheet
+/site
+ASALocalRun/
+AppPackages/
+AutoTest.Net/
+Backup*/
+BenchmarkDotNet.Artifacts/
+BundleArtifacts/
+ClientBin/
+DocProject/Help/*.HxC
+DocProject/Help/*.HxT
+DocProject/Help/*.hhc
+DocProject/Help/*.hhk
+DocProject/Help/*.hhp
+DocProject/Help/Html2
+DocProject/Help/html
+DocProject/buildhelp/
+ENV/
+FakesAssemblies/
+FodyWeavers.xsd
+Generated\ Files/
+Generated_Code/
+Icon
+MANIFEST
+MigrationBackup/
+Network Trash Folder
+OpenCover/
+Package.StoreAssociation.xml
+PublishScripts/
+ScaffoldingReadMe.txt
+ServiceFabricBackup/
+StyleCopReport.xml
+Temporary Items
+TestResult.xml
+Thumbs.db
+Thumbs.db:encryptable
+UpgradeLog*.XML
+UpgradeLog*.htm
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+[Bb]in/
+[Bb]uild[Ll]og.*
+[Dd]ebug/
+[Dd]ebugPS/
+[Dd]ebugPublic/
+[Dd]esktop.ini
+[Ee]xpress/
+[Ll]og/
+[Ll]ogs/
+[Oo]bj/
+[Rr]elease/
+[Rr]eleasePS/
+[Rr]eleases/
+[Tt]est[Rr]esult*/
+[Ww][Ii][Nn]32/
+_Chutzpah*
+_NCrunch_*
+_Pvt_Extensions
+_ReSharper*/
+_TeamCity*
+_UpgradeReport_Files/
+__pycache__/
+__pypackages__/
+_pkginfo.txt
+artifacts/
+assets/external/
+bin/
+bld/
+build/
+celerybeat-schedule
+celerybeat.pid
+cover/
+coverage*.info
+coverage*.json
+coverage*.xml
+coverage.xml
+csx/
+cython_debug/
+db.sqlite3
+db.sqlite3-journal
+develop-eggs/
+dist/
+dlldata.c
+dmypy.json
+docs/_build/
+downloads/
+ecf/
+eggs/
+ehthumbs.db
+ehthumbs_vista.db
+env.bak/
+env/
+healthchecksdb
+htmlcov/
+instance/
+ipch/
+ipython_config.py
+lib/
+lib64/
+local.properties
+local.settings.json
+local_settings.py
+mono_crash.*
+nCrunchTemp_*
+node_modules/
+nosetests.xml
+nunit-*.xml
+orleans.codegen.cs
+paket-files/
+parts/
+pip-delete-this-directory.txt
+pip-log.txt
+poetry.toml
+profile_default/
+project.fragment.lock.json
+project.lock.json
+publish/
+pyrightconfig.json
+rcf/
+sdist/
+share/python-wheels/
+target/
+tmp/
+var/
+venv.bak/
+venv/
+wheels/
+x64/
+x86/
+~$*

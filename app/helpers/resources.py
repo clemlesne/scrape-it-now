@@ -34,11 +34,18 @@ def scrape_queue_name(job_name: str) -> str:
     return f"{job_name}-to-scrape"
 
 
-def chunck_queue_name(job_name: str) -> str:
+def index_queue_name(job_name: str) -> str:
     """
     Get the output queue name for the job.
     """
     return f"{job_name}-to-chunk"
+
+
+def index_index_name(job_name: str) -> str:
+    """
+    Get the index name for the job.
+    """
+    return job_name
 
 
 def hash_url(url: str) -> str:

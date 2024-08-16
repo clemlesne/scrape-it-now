@@ -21,7 +21,7 @@ from pydantic import ValidationError
 from app.helpers.logging import logger
 from app.helpers.persistence import blob_client, queue_client
 from app.helpers.resources import (
-    chunck_queue_name,
+    index_queue_name,
     hash_url,
     resources_dir,
     scrape_container_name,
@@ -329,7 +329,7 @@ async def _worker(
         ) as in_queue:
             async with queue_client(
                 connection_string=storage_connection_string,
-                queue=chunck_queue_name(job),
+                queue=index_queue_name(job),
             ) as out_queue:
 
                 # Init Playwright context

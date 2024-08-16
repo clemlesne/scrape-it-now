@@ -23,6 +23,7 @@ Scraper:
 
 Indexer:
 
+- [x] AI Search index is created automatically
 - [x] Chunck markdown while keeping the content coherent
 - [x] Embed chuncks with OpenAI embeddings
 - [x] Indexed content is semantically searchable with [Azure AI Search](https://learn.microsoft.com/en-us/azure/search)
@@ -103,10 +104,10 @@ Basic usage:
 export AZURE_OPENAI_API_KEY=xxx
 export AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME=xxx
 export AZURE_OPENAI_EMBEDDING_DIMENSIONS=xxx
+export AZURE_OPENAI_EMBEDDING_MODEL_NAME=xxx
 export AZURE_OPENAI_ENDPOINT=xxx
 export AZURE_SEARCH_API_KEY=xxx
 export AZURE_SEARCH_ENDPOINT=xxx
-export AZURE_SEARCH_INDEX_NAME=xxx
 export AZURE_STORAGE_CONNECTION_STRING=xxx
 scrape-it-now index run [job_name]
 ```
@@ -131,10 +132,10 @@ Most frequent options are:
 | `--azure-openai-api-key`</br>`-aoak` | Azure OpenAI API key | `AZURE_OPENAI_API_KEY` |
 | `--azure-openai-embedding-deployment-name`</br>`-aoedn` | Azure OpenAI embedding deployment name | `AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME` |
 | `--azure-openai-embedding-dimensions`</br>`-aoed` | Azure OpenAI embedding dimensions | `AZURE_OPENAI_EMBEDDING_DIMENSIONS` |
+| `--azure-openai-embedding-model-name`</br>`-aoemn` | Azure OpenAI embedding model name | `AZURE_OPENAI_EMBEDDING_MODEL_NAME` |
 | `--azure-openai-endpoint`</br>`-aoe` | Azure OpenAI endpoint | `AZURE_OPENAI_ENDPOINT` |
 | `--azure-search-api-key`</br>`-asak` | Azure Search API key | `AZURE_SEARCH_API_KEY` |
 | `--azure-search-endpoint`</br>`-ase` | Azure Search endpoint | `AZURE_SEARCH_ENDPOINT` |
-| `--azure-search-index-name`</br>`-asin` | Azure Search index name | `AZURE_SEARCH_INDEX_NAME` |
 | `--azure-storage-connection-string`</br>`-ascs` | Azure Storage connection string | `AZURE_STORAGE_CONNECTION_STRING` |
 
 For documentation on all available options, run:

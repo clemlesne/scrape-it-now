@@ -7,7 +7,7 @@ import click
 from app.helpers.logging import logger
 from app.helpers.monitoring import VERSION
 from app.index import run as index_backend_run
-from app.scrape import run as scrape_backend_run
+from app.scrape import run as scrape_backend_run, state as scrape_backend_state
 
 
 def run_in_async(func):
@@ -203,6 +203,34 @@ async def scrape_run(
         viewports=viewports_parsed,
         whitelist=whitelist_parsed,
     )
+
+
+@click.option(
+    "--azure-storage-connection-string",
+    "-ascs",
+    envvar="AZURE_STORAGE_CONNECTION_STRING",
+    hide_input=True,
+    required=True,
+    type=str,
+)
+@click.argument(
+    "job_name",
+    envvar="JOB_NAME",
+)
+@scrape.command("status")
+@run_in_async
+async def scrape_status(
+    azure_storage_connection_string: str,
+    job_name: str | None,
+) -> None:
+    """
+    Get the state of a scraping job.
+    """
+    state = await scrape_backend_state(
+        job=job_name,
+        storage_connection_string=azure_storage_connection_string,
+    )
+    logger.info(state.model_dump_json())
 
 
 @cli.group

@@ -371,69 +371,62 @@ async def run(
 
 async def _worker(
     azure_openai_api_key: str,
-    openai_api_version: str,
     azure_openai_embedding_deployment: str,
     azure_openai_embedding_dimensions: int,
     azure_openai_endpoint: str,
     job: str,
+    openai_api_version: str,
     search_api_key: str,
     search_endpoint: str,
     search_index: str,
     storage_connection_string: str,
 ) -> None:
     # Init clients
-    blob = await blob_client(
+    async with blob_client(
         connection_string=storage_connection_string,
         container=scrape_container_name(job),
-    )
-    openai = await openai_client(
-        api_key=azure_openai_api_key,
-        api_version=openai_api_version,
-        endpoint=azure_openai_endpoint,
-    )
-    queue = await queue_client(
-        connection_string=storage_connection_string,
-        queue=chunck_queue_name(job),
-    )
-    search = await search_client(
-        api_key=search_api_key,
-        endpoint=search_endpoint,
-        index=search_index,
-    )
+    ) as blob:
+        async with openai_client(
+            api_key=azure_openai_api_key,
+            api_version=openai_api_version,
+            endpoint=azure_openai_endpoint,
+        ) as openai:
+            async with queue_client(
+                connection_string=storage_connection_string,
+                queue=chunck_queue_name(job),
+            ) as queue:
+                async with search_client(
+                    api_key=search_api_key,
+                    endpoint=search_endpoint,
+                    index=search_index,
+                ) as search:
 
-    try:
-        # Process the queue
-        while messages := queue.receive_messages(
-            max_messages=32,
-            visibility_timeout=32 * 10,  # 10 secs per message
-        ):
-            logger.info("Processing new messages")
-            async for message in messages:
-                blob_name = message.content
-                try:
-                    await _process_one(
-                        blob=blob,
-                        embedding_deployment=azure_openai_embedding_deployment,
-                        embedding_dimensions=azure_openai_embedding_dimensions,
-                        file_name=blob_name,
-                        openai=openai,
-                        search=search,
-                    )
-                    await queue.delete_message(message)
-                except Exception:
-                    # TODO: Add a dead-letter queue
-                    # TODO: Add a retry mechanism
-                    # TODO: Narrow the exception type
-                    logger.error("Error processing %s", blob_name, exc_info=True)
+                    # Process the queue
+                    while messages := queue.receive_messages(
+                        max_messages=32,
+                        visibility_timeout=32 * 10,  # 10 secs per message
+                    ):
+                        logger.info("Processing new messages")
+                        async for message in messages:
+                            blob_name = message.content
+                            try:
+                                await _process_one(
+                                    blob=blob,
+                                    embedding_deployment=azure_openai_embedding_deployment,
+                                    embedding_dimensions=azure_openai_embedding_dimensions,
+                                    file_name=blob_name,
+                                    openai=openai,
+                                    search=search,
+                                )
+                                await queue.delete_message(message)
 
-            # Wait 3 sec to avoid spamming the queue if it is empty
-            await asyncio.sleep(3)
+                            except Exception:
+                                # TODO: Add a dead-letter queue
+                                # TODO: Add a retry mechanism
+                                # TODO: Narrow the exception type
+                                logger.error("Error processing %s", blob_name, exc_info=True)
 
-        logger.info("No more queued messages, exiting")
+                        # Wait 3 sec to avoid spamming the queue if it is empty
+                        await asyncio.sleep(3)
 
-    finally:
-        # Close the clients
-        await blob.close()
-        await openai.close()
-        await queue.close()
-        await search.close()
+                    logger.info("No more queued messages, exiting")

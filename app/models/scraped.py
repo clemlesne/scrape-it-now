@@ -12,6 +12,7 @@ class ScrapedUrlModel(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     etag: str | None
     links: list[str] = []
+    network_used_mb: float = 0.0
     raw: str | None = None
     redirect: str | None = None
     status: int

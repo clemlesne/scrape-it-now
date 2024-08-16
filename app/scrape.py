@@ -1,5 +1,6 @@
 import asyncio, random, re
 from datetime import UTC, datetime, timedelta
+from typing import Awaitable, Callable
 from urllib.parse import urlparse
 from uuid import uuid4
 
@@ -173,11 +174,11 @@ async def _process_one(
     user_agents: list[str],
     viewports: list[ViewportSize],
     whitelist: dict[re.Pattern, list[re.Pattern]],
-) -> tuple[int, int]:
+) -> tuple[int, int, int]:
     """
     Process one URL from the queue.
 
-    Returns the number of processed and queued URLs.
+    Returns the number of processed URLs, queued URLs, and total network used.
     """
     queued_urls = 0
 
@@ -239,8 +240,8 @@ async def _process_one(
             current_item.depth,
         )
 
-        # Return the number of processed and queued URLs
-        return (0, queued_urls)
+        # Return the number of processed URLs, queued URLs, and total network used
+        return (0, queued_urls, 0)
 
     except (ResourceNotFoundError, ValidationError):
         logger.debug("Cache miss for %s", current_item.url)
@@ -273,8 +274,8 @@ async def _process_one(
 
         logger.info("Used cache for %s (%i)", cache_item.url, current_item.depth)
 
-        # Return the number of processed and queued URLs
-        return (0, queued_urls)
+        # Return the number of processed URLs, queued URLs, and total network used
+        return (0, queued_urls, 0)
 
     # Output to a blob and queue
     model_bytes = new_result.model_dump_json().encode("utf-8")
@@ -303,8 +304,8 @@ async def _process_one(
 
     logger.info("Scraped %s (%i)", new_result.url, current_item.depth)
 
-    # Return the number of processed and queued URLs
-    return (1, queued_urls)
+    # Return the number of processed URLs, queued URLs, and total network used
+    return (1, queued_urls, new_result.network_used_mb)
 
 
 async def _worker(
@@ -342,6 +343,7 @@ async def _worker(
                         max_messages=32,
                         visibility_timeout=32 * 5,  # 5 secs per message
                     ):
+                        total_network_used_mb = 0
                         total_processed = 0
                         total_queued = 0
 
@@ -352,7 +354,7 @@ async def _worker(
                                 message.content
                             )
                             try:
-                                processed, queued = await _process_one(
+                                processed, queued, network_used_mb = await _process_one(
                                     blob=blob,
                                     browser=browser,
                                     cache_refresh=cache_refresh,
@@ -368,6 +370,7 @@ async def _worker(
                                 await in_queue.delete_message(message)
 
                                 # Update counters
+                                total_network_used_mb += network_used_mb
                                 total_processed += processed
                                 total_queued += queued
 
@@ -416,6 +419,7 @@ async def _worker(
                             state = StateJobModel()
                         # Update state
                         state.last_updated = datetime.now(UTC)
+                        state.network_used_mb += total_network_used_mb
                         state.processed += total_processed
                         state.queued += total_queued
                         # Save state
@@ -477,27 +481,41 @@ def _ads_pattern() -> re.Pattern:
     return _ads_pattern_cache
 
 
-async def _filter_routes(
-    route: Route,
-) -> None:
+def _filter_routes(
+    size_callback: Callable[[int], None],
+) -> Callable[[Route], Awaitable[None]]:
     """
     Speed up page loading by aborting some requests.
 
     It includes for images, media, fonts, and stylesheets.
     """
-    # Skip UI resources
-    if route.request.resource_type in {"image", "media", "font", "stylesheet"}:
-        logger.debug("Blocked resource type %s", route.request.resource_type)
-        await route.abort("blockedbyclient")
-        return
 
-    # Check if the request is to a known ad domain
-    if _ads_pattern().search(route.request.url) is not None:
-        logger.debug("Blocked ad %s", route.request.url)
-        await route.abort("blockedbyclient")
-        return
+    async def _wrapper(
+        route: Route,
+    ) -> None:
+        # Skip UI resources
+        if route.request.resource_type in {"image", "media", "font", "stylesheet"}:
+            logger.debug("Blocked resource type %s", route.request.resource_type)
+            await route.abort("blockedbyclient")
+            return
 
-    await route.continue_()
+        # Check if the request is to a known ad domain
+        if _ads_pattern().search(route.request.url) is not None:
+            logger.debug("Blocked ad %s", route.request.url)
+            await route.abort("blockedbyclient")
+            return
+
+        # Continue the request
+        res = await route.fetch()
+
+        # Store content size
+        size_bytes = int(content_length) if (content_length := res.headers.get("content-length")) else 0
+        size_callback(size_bytes)
+
+        # Continue the request
+        await route.fulfill(response=res)
+
+    return _wrapper
 
 
 async def _scrape_page(
@@ -523,10 +541,16 @@ async def _scrape_page(
         # Return an empty result if Playwright fails
         return ScrapedUrlModel(
             etag=etag,
+            network_used_mb=total_size_bytes / 1024 / 1024,
             status=status,
             url=url_clean.geturl(),
             valid_until=valid_until,
         )
+
+    total_size_bytes = 0
+    def _size_callback(size_bytes: int) -> None:
+        nonlocal total_size_bytes
+        total_size_bytes += size_bytes
 
     # Parse URL
     url_clean = urlparse(url)._replace(
@@ -547,7 +571,7 @@ async def _scrape_page(
         page = await context.new_page()
 
         # Apply filtering to reduce traffic and CPU usage
-        await page.route("**/*", _filter_routes)
+        await page.route("**/*", _filter_routes(_size_callback))
 
         # Caching of unchanged resources
         if previous_etag:
@@ -567,6 +591,10 @@ async def _scrape_page(
                 "Unknown error for loading %s", url_clean.geturl(), exc_info=True
             )
             return _generic_error(etag=previous_etag)
+
+        # Remove all routes, as our filter manipulates all requests, we don't need it anymore
+        # See: https://github.com/microsoft/playwright/issues/30667#issuecomment-2095788164
+        await page.unroute_all(behavior="ignoreErrors")
 
         # Skip if the content is not HTML
         content_type = res.headers.get("content-type", "")

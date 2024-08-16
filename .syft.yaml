@@ -1,0 +1,8 @@
+exclude:
+  - ./docs
+
+python:
+  guess-unpinned-requirements: true
+
+source:
+  name: Solution Architect AI

@@ -17,8 +17,10 @@ Scraper:
 - [x] Explore pages in depth by detecting links and de-duplicating them
 - [x] Extract markdown content from a page with [html2text](https://github.com/aaronsw/html2text)
 - [x] Load dynamic JavaScript content with [Playwright](https://github.com/microsoft/playwright-python)
+- [x] Preserve anonymity with a random user agent, random viewport size and no client hints headers
 - [x] Show progress with a status command
 - [x] Track progress of total network usage
+- [ ] Enhance anonymity with proxies
 - [ ] Respect [`robots.txt`](https://en.wikipedia.org/wiki/Robots.txt)
 
 Indexer:

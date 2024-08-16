@@ -186,10 +186,7 @@ def _markdown_chunck(
     The text is split by Markdown headings, and each chunk is as big as possible without exceeding the max_tokens limit.
     """
     contents = []
-    if (
-        _count_tokens(text)
-        < max_tokens
-    ):  # If the text is small enough
+    if _count_tokens(text) < max_tokens:  # If the text is small enough
         contents.append(text)
         return contents
 
@@ -266,10 +263,7 @@ def _markdown_chunck(
         ).strip()
 
         # Chunck if is still too big
-        current_cleaned_count = math.ceil(
-            _count_tokens(current_cleaned)
-            / max_tokens
-        )
+        current_cleaned_count = math.ceil(_count_tokens(current_cleaned) / max_tokens)
         current_cleaned_chunck_size = math.ceil(
             len(current_cleaned) / current_cleaned_count
         )
@@ -300,8 +294,7 @@ def _markdown_chunck(
                     current_chunk += f"### {last_h3_head}\n"
                 for h4_head, h4_content in h3_next.items():
                     if (
-                        _count_tokens(current_chunk)
-                        >= max_tokens
+                        _count_tokens(current_chunk) >= max_tokens
                     ):  # If the chunk is too big
                         # Re-apply the last heading to the next chunk
                         current_chunk = _split_paragraph(
@@ -424,7 +417,9 @@ async def _worker(
                                 # TODO: Add a dead-letter queue
                                 # TODO: Add a retry mechanism
                                 # TODO: Narrow the exception type
-                                logger.error("Error processing %s", blob_name, exc_info=True)
+                                logger.error(
+                                    "Error processing %s", blob_name, exc_info=True
+                                )
 
                         # Wait 3 sec to avoid spamming the queue if it is empty
                         await asyncio.sleep(3)

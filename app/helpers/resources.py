@@ -24,7 +24,7 @@ def scrape_container_name(job_name: str) -> str:
     """
     Get the container name for the job.
     """
-    return f"{job_name}-scrape"
+    return f"{job_name}-scraping"
 
 
 def scrape_queue_name(job_name: str) -> str:

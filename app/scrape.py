@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 from urllib.parse import urlparse
 from uuid import uuid4
 
-from azure.core.exceptions import ResourceNotFoundError, ResourceExistsError
+from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
 from azure.storage.blob.aio import ContainerClient
 from azure.storage.queue.aio import QueueClient
 from html2text import HTML2Text
@@ -121,7 +121,9 @@ async def _queue(
             # Skip if the previous attempt is too recent
             # Date is now and not the one from the model, on purposes. Otherwise, if its a cached model, the date would match the frefresher date every time.
             if previous.created_at >= datetime.now(UTC) - cache_refresh:
-                logger.debug("Skipping %s due to recent attempt at %s", url, previous.created_at)
+                logger.debug(
+                    "Skipping %s due to recent attempt at %s", url, previous.created_at
+                )
                 return False
 
         except (ResourceNotFoundError, ValidationError):
@@ -395,8 +397,12 @@ async def _worker(
                             except ResourceExistsError:  # Wait for the lease to expire
                                 logger.debug("Lease already exists, waiting")
                                 await asyncio.sleep(1)
-                            except ResourceNotFoundError:  # Create the blob if it does not exist
-                                logger.debug("State blob does not exist, creating an empty one")
+                            except (
+                                ResourceNotFoundError
+                            ):  # Create the blob if it does not exist
+                                logger.debug(
+                                    "State blob does not exist, creating an empty one"
+                                )
                                 await state_blob.upload_blob(
                                     data=b"",
                                     length=0,
@@ -421,7 +427,11 @@ async def _worker(
                         )
                         # Release the lease
                         await state_lease.release()
-                        logger.info("Updated job state to %i processed and %i queued", state.processed, state.queued)
+                        logger.info(
+                            "Updated job state to %i processed and %i queued",
+                            state.processed,
+                            state.queued,
+                        )
 
                         # Wait 3 sec to avoid spamming the queue if it is empty
                         await asyncio.sleep(3)

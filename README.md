@@ -112,10 +112,14 @@ scrape-it-now index run --help
 
 ### Source environment variables
 
-To configure easily the CLI, source environment variables from a `.env` file.
-
-For example:
+To configure easily the CLI, source environment variables from a `.env` file. For example, for the `--azure-storage-connection-string` option:
 
 ```bash
 AZURE_STORAGE_CONNECTION_STRING=xxx
+```
+
+For arguments that accept multiple values, use a space-separated list. For example, for the `--whitelist` option:
+
+```bash
+WHITELIST=learn\.microsoft\.com,^/(?!en-us).*,^/[^/]+/answers/,^/[^/]+/previous-versions/ go\.microsoft\.com,.*
 ```

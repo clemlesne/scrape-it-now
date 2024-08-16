@@ -1,12 +1,14 @@
-from app.helpers.logging import logger
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
 from azure.core.credentials import AzureKeyCredential
 from azure.core.exceptions import ResourceExistsError
 from azure.search.documents.aio import SearchClient
 from azure.storage.blob.aio import BlobServiceClient, ContainerClient
 from azure.storage.queue.aio import QueueClient, QueueServiceClient
-from contextlib import asynccontextmanager
 from openai import AsyncAzureOpenAI
-from typing import AsyncGenerator
+
+from app.helpers.logging import logger
 
 
 @asynccontextmanager
@@ -55,9 +57,7 @@ async def blob_client(
     """
     Get the Azure Blob Storage client.
     """
-    async with BlobServiceClient.from_connection_string(
-        connection_string
-    ) as x:
+    async with BlobServiceClient.from_connection_string(connection_string) as x:
         client = x.get_container_client(container)
 
         # Create if it does not exist
@@ -79,9 +79,7 @@ async def queue_client(
     """
     Get the Azure Queue Storage client.
     """
-    async with QueueServiceClient.from_connection_string(
-        connection_string
-    ) as x:
+    async with QueueServiceClient.from_connection_string(connection_string) as x:
         client = x.get_queue_client(queue)
 
         # Create if it does not exist

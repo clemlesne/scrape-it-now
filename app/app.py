@@ -269,6 +269,13 @@ def index() -> None:
     type=str,
 )
 @click.option(
+    "--azure-openai-embedding-model-name",
+    "-aoemn",
+    envvar="AZURE_OPENAI_EMBEDDING_MODEL_NAME",
+    required=True,
+    type=str,
+)
+@click.option(
     "--processes",
     "-p",
     default=int((cpu_count() or 4) / 2),
@@ -287,13 +294,6 @@ def index() -> None:
     "--azure-search-endpoint",
     "-ase",
     envvar="AZURE_SEARCH_ENDPOINT",
-    required=True,
-    type=str,
-)
-@click.option(
-    "--azure-search-index-name",
-    "-asin",
-    envvar="AZURE_SEARCH_INDEX_NAME",
     required=True,
     type=str,
 )
@@ -329,10 +329,10 @@ async def index_run(
     azure_openai_api_key: str,
     azure_openai_embedding_deployment_name: str,
     azure_openai_embedding_dimensions: int,
+    azure_openai_embedding_model_name: str,
     azure_openai_endpoint: str,
     azure_search_api_key: str,
     azure_search_endpoint: str,
-    azure_search_index_name: str,
     azure_storage_connection_string: str,
     job_name: str | None,
     openai_api_version: str,
@@ -349,13 +349,13 @@ async def index_run(
         azure_openai_api_key=azure_openai_api_key,
         azure_openai_embedding_deployment=azure_openai_embedding_deployment_name,
         azure_openai_embedding_dimensions=azure_openai_embedding_dimensions,
+        azure_openai_embedding_model=azure_openai_embedding_model_name,
         azure_openai_endpoint=azure_openai_endpoint,
         job=job_name,
         openai_api_version=openai_api_version,
         processes=processes,
         search_api_key=azure_search_api_key,
         search_endpoint=azure_search_endpoint,
-        search_index=azure_search_index_name,
         storage_connection_string=azure_storage_connection_string,
     )
 

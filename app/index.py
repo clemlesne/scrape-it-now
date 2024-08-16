@@ -26,7 +26,7 @@ from app.helpers.persistence import (
     queue_client,
     search_client,
 )
-from app.helpers.resources import chunck_queue_name, hash_url, scrape_container_name
+from app.helpers.resources import index_queue_name, hash_url, scrape_container_name, index_index_name
 from app.helpers.threading import run_workers
 from app.models.indexed import IndexedIngestModel
 from app.models.scraped import ScrapedUrlModel
@@ -334,13 +334,13 @@ async def run(
     azure_openai_api_key: str,
     azure_openai_embedding_deployment: str,
     azure_openai_embedding_dimensions: int,
+    azure_openai_embedding_model: str,
     azure_openai_endpoint: str,
     job: str,
     openai_api_version: str,
     processes: int,
     search_api_key: str,
     search_endpoint: str,
-    search_index: str,
     storage_connection_string: str,
 ) -> None:
     logger.info("Starting indexing job %s", job)
@@ -349,6 +349,7 @@ async def run(
         azure_openai_api_key=azure_openai_api_key,
         azure_openai_embedding_deployment=azure_openai_embedding_deployment,
         azure_openai_embedding_dimensions=azure_openai_embedding_dimensions,
+        azure_openai_embedding_model=azure_openai_embedding_model,
         azure_openai_endpoint=azure_openai_endpoint,
         count=processes,
         func=_worker,
@@ -357,7 +358,6 @@ async def run(
         openai_api_version=openai_api_version,
         search_api_key=search_api_key,
         search_endpoint=search_endpoint,
-        search_index=search_index,
         storage_connection_string=storage_connection_string,
     )
 
@@ -366,12 +366,12 @@ async def _worker(
     azure_openai_api_key: str,
     azure_openai_embedding_deployment: str,
     azure_openai_embedding_dimensions: int,
+    azure_openai_embedding_model: str,
     azure_openai_endpoint: str,
     job: str,
     openai_api_version: str,
     search_api_key: str,
     search_endpoint: str,
-    search_index: str,
     storage_connection_string: str,
 ) -> None:
     # Init clients
@@ -386,12 +386,17 @@ async def _worker(
         ) as openai:
             async with queue_client(
                 connection_string=storage_connection_string,
-                queue=chunck_queue_name(job),
+                queue=index_queue_name(job),
             ) as queue:
                 async with search_client(
                     api_key=search_api_key,
+                    azure_openai_api_key=azure_openai_api_key,
+                    azure_openai_embedding_deployment=azure_openai_embedding_deployment,
+                    azure_openai_embedding_dimensions=azure_openai_embedding_dimensions,
+                    azure_openai_embedding_model=azure_openai_embedding_model,
+                    azure_openai_endpoint=azure_openai_endpoint,
                     endpoint=search_endpoint,
-                    index=search_index,
+                    index=index_index_name(job),
                 ) as search:
 
                     # Process the queue

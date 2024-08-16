@@ -505,8 +505,16 @@ def _filter_routes(
             await route.abort("blockedbyclient")
             return
 
+        # Remove client hints
+        headers = route.request.headers
+        for header in list(headers.keys()):
+            if header.startswith("sec-ch-"):
+                del headers[header]
+
         # Continue the request
-        res = await route.fetch()
+        res = await route.fetch(
+            headers=headers,
+        )
 
         # Store content size
         size_bytes = int(content_length) if (content_length := res.headers.get("content-length")) else 0

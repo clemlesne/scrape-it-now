@@ -39,8 +39,8 @@ Most frequent options are:
 
 | `Options` | Description | `Environment variable` |
 |-|-|-|
-| `--azure-storage-connection-string`, `-ascs` | Azure Storage connection string | `AZURE_STORAGE_CONNECTION_STRING` |
-| `--job-name`, `-jn` | Job name | `JOB_NAME` |
+| `--azure-storage-connection-string`</br>`-ascs` | Azure Storage connection string | `AZURE_STORAGE_CONNECTION_STRING` |
+| `--job-name`</br>`-jn` | Job name | `JOB_NAME` |
 
 For documentation on all available options, run:
 
@@ -68,14 +68,14 @@ Most frequent options are:
 
 | `Options` | Description | `Environment variable` |
 |-|-|-|
-| `--azure-openai-api-key`, `-aoak` | Azure OpenAI API key | `AZURE_OPENAI_API_KEY` |
-| `--azure-openai-embedding-deployment-name`, `-aoedn` | Azure OpenAI embedding deployment name | `AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME` |
-| `--azure-openai-embedding-dimensions`, `-aoed` | Azure OpenAI embedding dimensions | `AZURE_OPENAI_EMBEDDING_DIMENSIONS` |
-| `--azure-openai-endpoint`, `-aoe` | Azure OpenAI endpoint | `AZURE_OPENAI_ENDPOINT` |
-| `--azure-search-api-key`, `-asak` | Azure Search API key | `AZURE_SEARCH_API_KEY` |
-| `--azure-search-endpoint`, `-ase` | Azure Search endpoint | `AZURE_SEARCH_ENDPOINT` |
-| `--azure-search-index-name`, `-asin` | Azure Search index name | `AZURE_SEARCH_INDEX_NAME` |
-| `--azure-storage-connection-string`, `-ascs` | Azure Storage connection string | `AZURE_STORAGE_CONNECTION_STRING` |
+| `--azure-openai-api-key`</br>`-aoak` | Azure OpenAI API key | `AZURE_OPENAI_API_KEY` |
+| `--azure-openai-embedding-deployment-name`</br>`-aoedn` | Azure OpenAI embedding deployment name | `AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME` |
+| `--azure-openai-embedding-dimensions`</br>`-aoed` | Azure OpenAI embedding dimensions | `AZURE_OPENAI_EMBEDDING_DIMENSIONS` |
+| `--azure-openai-endpoint`</br>`-aoe` | Azure OpenAI endpoint | `AZURE_OPENAI_ENDPOINT` |
+| `--azure-search-api-key`</br>`-asak` | Azure Search API key | `AZURE_SEARCH_API_KEY` |
+| `--azure-search-endpoint`</br>`-ase` | Azure Search endpoint | `AZURE_SEARCH_ENDPOINT` |
+| `--azure-search-index-name`</br>`-asin` | Azure Search index name | `AZURE_SEARCH_INDEX_NAME` |
+| `--azure-storage-connection-string`</br>`-ascs` | Azure Storage connection string | `AZURE_STORAGE_CONNECTION_STRING` |
 
 For documentation on all available options, run:
 

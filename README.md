@@ -19,6 +19,7 @@ Scraper:
 - [x] Load dynamic JavaScript content with [Playwright](https://github.com/microsoft/playwright-python)
 - [x] Show progress with a status command
 - [x] Track progress of total network usage
+- [ ] Respect [`robots.txt`](https://en.wikipedia.org/wiki/Robots.txt)
 
 Indexer:
 

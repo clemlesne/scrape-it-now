@@ -40,6 +40,19 @@ export AZURE_STORAGE_CONNECTION_STRING=xxx
 scrape-it-now scrape run https://nytimes.com
 ```
 
+Example output:
+
+```bash
+❯ Starting scraping job 7yz91ma
+Queued 71/71 links for referrer https://www.google.com/search (1)
+3 workers started
+Browser chromium launched
+Processing new messages
+...
+Queued 15/28 links for referrer https://www.nytimes.com/2024/08/15/business/economy/kamala-harris-inflation-price-gouging.html (2)
+Scraped https://www.nytimes.com/2024/08/15/business/economy/kamala-harris-inflation-price-gouging.html (2)
+```
+
 Most frequent options are:
 
 | `Options` | Description | `Environment variable` |
@@ -60,6 +73,12 @@ Basic usage:
 ```bash
 export AZURE_STORAGE_CONNECTION_STRING=xxx
 scrape-it-now scrape status [job_name]
+```
+
+Example output:
+
+```bash
+❯ {"created_at":"2024-08-16T15:33:06.602922Z","last_updated":"2024-08-16T16:17:51.571136Z","network_used_mb":5.650620460510254,"processed":1263,"queued":3120}
 ```
 
 Most frequent options are:
@@ -90,6 +109,19 @@ export AZURE_SEARCH_ENDPOINT=xxx
 export AZURE_SEARCH_INDEX_NAME=xxx
 export AZURE_STORAGE_CONNECTION_STRING=xxx
 scrape-it-now index run [job_name]
+```
+
+Example output:
+
+```bash
+❯ Starting indexing job 7yz91ma
+5 workers started
+Processing new messages
+...
+434b227 chunked into 6 parts
+434b227 is indexed
+f001b3e chunked into 86 parts
+f001b3e is already indexed
 ```
 
 Most frequent options are:

@@ -28,6 +28,8 @@ Indexer:
 
 ### Scrape a website
 
+#### Run a job
+
 Basic usage:
 
 ```bash
@@ -48,7 +50,30 @@ For documentation on all available options, run:
 scrape-it-now scrape run --help
 ```
 
+#### Show job status
+
+Basic usage:
+
+```bash
+export AZURE_STORAGE_CONNECTION_STRING=xxx
+scrape-it-now scrape status [job_name]
+```
+
+Most frequent options are:
+
+| `Options` | Description | `Environment variable` |
+|-|-|-|
+| `--azure-storage-connection-string`</br>`-ascs` | Azure Storage connection string | `AZURE_STORAGE_CONNECTION_STRING` |
+
+For documentation on all available options, run:
+
+```bash
+scrape-it-now scrape status --help
+```
+
 ### Index a scraped website
+
+#### Run a job
 
 Basic usage:
 

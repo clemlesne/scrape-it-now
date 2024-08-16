@@ -27,7 +27,7 @@ Indexer:
 - [x] Embed chuncks with OpenAI embeddings
 - [x] Indexed content is semantically searchable with [Azure AI Search](https://learn.microsoft.com/en-us/azure/search)
 
-## How to use the CLI
+## How to use
 
 ### Scrape a website
 
@@ -109,6 +109,63 @@ For documentation on all available options, run:
 
 ```bash
 scrape-it-now index run --help
+```
+
+## Architecture
+
+### Scrape
+
+```mermaid
+graph LR
+  cli["CLI"]
+  web["Website"]
+
+  subgraph "Azure Queue Storage"
+    to_chunck["To chunck"]
+    to_scrape["To scrape"]
+  end
+
+  subgraph "Azure Blob Storage"
+    subgraph "Container"
+      job["job"]
+      scraped["scraped"]
+      state["state"]
+    end
+  end
+
+  cli -- 1. Pull message --> to_scrape
+  cli -- 2. Get cache --> scraped
+  cli -- 3. Browse --> web
+  cli -- 4. Update cache --> scraped
+  cli -- 5. Push state --> state
+  cli -- 6. Add message --> to_scrape
+  cli -- 7. Add message --> to_chunck
+  cli -- 8. Update state --> job
+```
+
+### Index
+
+```mermaid
+graph LR
+  ai_search["Azure AI Search"]
+  cli["CLI"]
+  embeddings["Azure OpenAI Embeddings"]
+
+  subgraph "Azure Queue Storage"
+    to_chunck["To chunck"]
+  end
+
+  subgraph "Azure Blob Storage"
+    subgraph "Container"
+      scraped["scraped"]
+    end
+  end
+
+  cli -- 1. Pull message --> to_chunck
+  cli -- 2. Get cache --> scraped
+  cli -- 3. Chunk --> cli
+  cli -- 4. Embed --> embeddings
+  cli -- 5. Push to search --> ai_search
 ```
 
 ## Advanced usage

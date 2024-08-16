@@ -64,6 +64,7 @@ def scrape() -> None:
     "--whitelist",
     "-w",
     envvar="WHITELIST",
+    help="Comma separated list of domains and paths to whitelist. Example, to filter nytimes.com and only the pages from 2024 pages, use 'nytimes.com,^/2024/'.",
     multiple=True,
     type=str,
 )
@@ -177,6 +178,8 @@ async def scrape_run(
     for v in viewport:
         width, height = v.split("x")
         viewports_parsed.append((int(width), int(height)))
+    if viewports_parsed:
+        logger.info("Viewports: %s", viewports_parsed)
 
     # Parse whitelist
     whitelist_parsed: dict[re.Pattern, list[re.Pattern]] = {}
@@ -190,6 +193,8 @@ async def scrape_run(
         for path in w.split(",")[1:]:
             path = re.compile(path.strip())
             whitelist_parsed[domain].append(path)
+    if whitelist_parsed:
+        logger.info("Whitelist: %s", whitelist_parsed)
 
     await scrape_backend_run(
         cache_refresh=cache_refresh,

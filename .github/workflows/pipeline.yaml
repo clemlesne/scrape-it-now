@@ -111,6 +111,14 @@ jobs:
         run: |
           python3 -m pip install pywin32-ctypes pefile
 
+      - name: Write version (Linux)
+        if: runner.os == 'Linux' || runner.os == 'macOS'
+        run: echo '__version__ = "${{ needs.init.outputs.VERSION_FULL }}"' > app/__init__.py
+
+      - name: Write version (Windows)
+        if: runner.os == 'Windows'
+        run: echo '__version__ = "${{ needs.init.outputs.VERSION_FULL }}"' > app\__init__.py
+
       - name: Build to binary
         run: make build
 
@@ -193,4 +201,4 @@ jobs:
           generate_release_notes: true
           make_latest: true
           name: scrape-it-now v${{ needs.init.outputs.VERSION }}
-          tag_name: ${{ needs.init.outputs.VERSION }}
+          tag_name: v${{ needs.init.outputs.VERSION }}

@@ -1,7 +1,9 @@
 from os import environ as env
 
+from app import __version__
+
 # Version
-VERSION = env.get("VERSION", "0.0.0-unknown")
+VERSION = env.get("VERSION", __version__)
 
 # Azure Application Insights
 APPINSIGHTS_CONNECTION_STRING = env.get("APPLICATIONINSIGHTS_CONNECTION_STRING", None)

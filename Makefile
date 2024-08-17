@@ -1,3 +1,5 @@
+.PHONY: version version-full install upgrade test dev build lint
+
 # Versioning
 version_full ?= $(shell $(MAKE) --silent version-full)
 version_small ?= $(shell $(MAKE) --silent version)
@@ -19,22 +21,29 @@ version:
 version-full:
 	@bash ./cicd/version/version.sh -g . -c -m
 
+brew:
+	@echo "➡️ Installing Syft..."
+	brew install syft
+
 install:
+	$(MAKE) install-deps
+
+	@echo "➡️ Installing Playwright dependencies..."
+	python3 -m playwright install chrome --with-deps
+
+install-deps:
 	@echo "➡️ Installing pip-tools..."
 	python3 -m pip install pip-tools
 
 	@echo "➡️ Syncing dependencies..."
 	pip-sync --pip-args "--no-deps" requirements-dev.txt
 
-	@echo "➡️ Installing Playwright dependencies..."
-	python3 -m playwright install chrome --with-deps
-
 upgrade:
 	@echo "➡️ Updating Git submodules..."
 	git submodule update --init --recursive
 
 	@echo "➡️ Upgrading pip..."
-	python3 -m pip install --upgrade pip wheel
+	python3 -m pip install --upgrade pip wheel setuptools
 
 	@echo "➡️ Upgrading pip-tools..."
 	python3 -m pip install --upgrade pip-tools
@@ -73,9 +82,27 @@ dev:
 	python3 -m pip install --editable .
 	@echo "Now you can run 'scrape-it-now' CLI!"
 
+build:
+	@echo "➡️ Building app..."
+	pyinstaller \
+		--add-data resources:resources \
+		--clean \
+		--icon resources/logo.ico \
+		--name scrape-it-now \
+		--onefile \
+		--optimize 2 \
+		app/app.py
+
 lint:
 	@echo "➡️ Fix with generic formatter (Black)..."
 	python3 -m black .
 
 	@echo "➡️ Fix with import formatter (isort)..."
 	python3 -m isort --jobs -1 .
+
+sbom:
+	@echo "🔍 Generating SBOM..."
+	syft scan \
+		--source-version $(version_full)  \
+		--output spdx-json=./sbom-reports/$(version_full).json \
+		.

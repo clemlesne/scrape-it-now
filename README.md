@@ -2,6 +2,10 @@
 
 A website to scrape? There's a simple way.
 
+<!-- github.com badges -->
+[![Last release date](https://img.shields.io/github/release-date/clemlesne/scrape-it-now)](https://github.com/clemlesne/scrape-it-now/releases)
+[![Project license](https://img.shields.io/github/license/clemlesne/scrape-it-now)](https://github.com/clemlesne/scrape-it-now/blob/main/LICENSE)
+
 ## Features
 
 Shared:
@@ -29,6 +33,29 @@ Indexer:
 - [x] Chunk markdown while keeping the content coherent
 - [x] Embed chunks with OpenAI embeddings
 - [x] Indexed content is semantically searchable with [Azure AI Search](https://learn.microsoft.com/en-us/azure/search)
+
+## Installation
+
+### From binary
+
+[Download the latest release from the releases page](http://github.com/clemlesne/scrape-it-now/releases/latest). Binaries are available for Linux, macOS and Windows.
+
+For configuring the CLI (including authentication to the backend services), use environment variables, a `.env` file or command line options.
+
+### From sources
+
+Application must be run with Python 3.12 or later. If this version is not installed, an easy way to install it is [pyenv](https://github.com/pyenv/pyenv).
+
+```bash
+# Download the source code
+git clone https://github.com/clemlesne/scrape-it-now.git
+# Move to the directory
+cd scrape-it-now
+# Run install scripts
+make install dev
+# Run the CLI
+scrape-it-now --help
+```
 
 ## How to use
 

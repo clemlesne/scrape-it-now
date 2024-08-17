@@ -1,22 +1,16 @@
-import hashlib, os
-from os import path
+import hashlib
+from os import makedirs, path
 from pathlib import Path
 
+import click
 
-def resources_dir(folder: str) -> str:
+
+def resources_dir(sub: str) -> str:
     """
     Get the absolute path to the resources folder.
     """
     return str(
-        Path(
-            path.join(
-                os.path.abspath(os.getcwd()),
-                "resources",
-                folder,
-            )
-        )
-        .resolve()
-        .absolute()
+        Path(__file__).parent.parent.parent.joinpath("resources", sub).absolute()
     )
 
 
@@ -56,3 +50,23 @@ def hash_url(url: str) -> str:
         url.encode(),
         usedforsecurity=False,
     ).hexdigest()
+
+
+def cache_dir() -> str:
+    """
+    Get the path to the cache directory.
+
+    See: https://click.palletsprojects.com/en/8.1.x/api/#click.get_app_dir
+    """
+    res = click.get_app_dir("scrape-it-now")
+    # Create if not exists
+    if not path.exists(res):
+        makedirs(res)
+    return res
+
+
+def browsers_install_path() -> str:
+    """
+    Get the path to the browser executable.
+    """
+    return path.join(cache_dir(), "browsers")

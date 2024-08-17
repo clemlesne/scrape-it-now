@@ -1,5 +1,5 @@
-import asyncio, functools, random, re, string
-from os import cpu_count
+import asyncio, functools, random, re, string, sys
+from os import cpu_count, environ as env
 from platform import python_version
 
 import click
@@ -369,3 +369,16 @@ def _job_name(job_name: str | None) -> str:
     return job_name or "".join(
         random.choices(string.ascii_lowercase + string.digits, k=7)
     )
+
+
+if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):  # Running in PyInstaller
+    import certifi
+
+    # Path the bundle with certifi
+    # See: https://github.com/Azure/azure-iot-sdk-python/issues/991#issuecomment-1118235694
+    # See: https://github.com/pyinstaller/pyinstaller/issues/7229#issuecomment-1309406736
+    # See: https://github.com/pyinstaller/pyinstaller/issues/6352#issuecomment-962499220
+    env["SSL_CERT_FILE"] = certifi.where()
+
+    # Run the CLI
+    cli(sys.argv[1:])

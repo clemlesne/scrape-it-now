@@ -335,8 +335,8 @@ async def _worker(
                 # Init Playwright context
                 async with async_playwright() as p:
                     browser_type = p.chromium
-                    browser = await browser_type.launch()
-                    logger.info("Browser %s launched", browser_type.name)
+                    browser_usage = 0
+                    browser: Browser | None = None
 
                     # Process the queue
                     while messages := in_queue.receive_messages(
@@ -350,9 +350,27 @@ async def _worker(
                         # Iterate over the messages
                         logger.info("Processing new messages")
                         async for message in messages:
+                            # Parse the message
                             current_item = ScrapedQueuedModel.model_validate_json(
                                 message.content
                             )
+
+                            # Get a browser instance
+                            # Limit the usage of the browser to 100 scrapings, to avoid memory leaks. Restart the browser after that. Memory leaks have been observed in both macOS and Ubuntu, with over 150 GB of memory used after an hour.
+                            # TODO: Create an issue in the Playwright repository to investigate the memory leak
+                            if browser and browser_usage < 100:
+                                browser_usage += 1
+                            else:
+                                if browser:
+                                    await browser.close()
+                                browser = await browser_type.launch()
+                                logger.info(
+                                    "Restarted browser %s after %i iterations",
+                                    browser_type.name,
+                                    browser_usage,
+                                )
+                                browser_usage = 0
+
                             try:
                                 processed, queued, network_used_mb = await _process_one(
                                     blob=blob,

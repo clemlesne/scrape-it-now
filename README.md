@@ -26,8 +26,8 @@ Scraper:
 Indexer:
 
 - [x] AI Search index is created automatically
-- [x] Chunck markdown while keeping the content coherent
-- [x] Embed chuncks with OpenAI embeddings
+- [x] Chunk markdown while keeping the content coherent
+- [x] Embed chunks with OpenAI embeddings
 - [x] Indexed content is semantically searchable with [Azure AI Search](https://learn.microsoft.com/en-us/azure/search)
 
 ## How to use
@@ -156,7 +156,7 @@ graph LR
   web["Website"]
 
   subgraph "Azure Queue Storage"
-    to_chunck["To chunck"]
+    to_chunk["To chunk"]
     to_scrape["To scrape"]
   end
 
@@ -174,7 +174,7 @@ graph LR
   cli -- 4. Update cache --> scraped
   cli -- 5. Push state --> state
   cli -- 6. Add message --> to_scrape
-  cli -- 7. Add message --> to_chunck
+  cli -- 7. Add message --> to_chunk
   cli -- 8. Update state --> job
 ```
 
@@ -187,7 +187,7 @@ graph LR
   embeddings["Azure OpenAI Embeddings"]
 
   subgraph "Azure Queue Storage"
-    to_chunck["To chunck"]
+    to_chunk["To chunk"]
   end
 
   subgraph "Azure Blob Storage"
@@ -196,7 +196,7 @@ graph LR
     end
   end
 
-  cli -- 1. Pull message --> to_chunck
+  cli -- 1. Pull message --> to_chunk
   cli -- 2. Get cache --> scraped
   cli -- 3. Chunk --> cli
   cli -- 4. Embed --> embeddings

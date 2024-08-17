@@ -26,7 +26,12 @@ from app.helpers.persistence import (
     queue_client,
     search_client,
 )
-from app.helpers.resources import index_queue_name, hash_url, scrape_container_name, index_index_name
+from app.helpers.resources import (
+    hash_url,
+    index_index_name,
+    index_queue_name,
+    scrape_container_name,
+)
 from app.helpers.threading import run_workers
 from app.models.indexed import IndexedIngestModel
 from app.models.scraped import ScrapedUrlModel
@@ -70,13 +75,13 @@ async def _process_one(
         logger.info("%s data is invalid (code %i)", short_name, result.status)
         return
 
-    # Chunck to small markdown files
-    chuncks = _markdown_chunck(
+    # Chunk to small markdown files
+    chunks = _markdown_chunk(
         max_tokens=800,
         text=result.content,
     )
-    doc_ids = [f"{hash_url(result.url)}-{i}" for i in range(len(chuncks))]
-    logger.info("%s chunked into %i parts", short_name, len(chuncks))
+    doc_ids = [f"{hash_url(result.url)}-{i}" for i in range(len(chunks))]
+    logger.info("%s chunked into %i parts", short_name, len(chunks))
 
     # Check if the document is already indexed
     try:
@@ -90,14 +95,14 @@ async def _process_one(
         return
     except (
         ResourceNotFoundError
-    ):  # If a chunck is not found, it is not indexed, thus we can re-process the document
+    ):  # If a chunk is not found, it is not indexed, thus we can re-process the document
         pass
 
     # Generate the embeddings by block (mitigate API throughput limits)
     embeddings = []
     chunks_size = 10
-    for i in range(0, len(chuncks), chunks_size):
-        chunk_input = chuncks[i : i + chunks_size]
+    for i in range(0, len(chunks), chunks_size):
+        chunk_input = chunks[i : i + chunks_size]
         res = await _embeddings(
             embedding_deployment=embedding_deployment,
             embedding_dimensions=embedding_dimensions,
@@ -114,7 +119,7 @@ async def _process_one(
             url=result.url,
             vectors=embedding.embedding,
         )
-        for doc_id, content, embedding in zip(doc_ids, chuncks, embeddings)
+        for doc_id, content, embedding in zip(doc_ids, chunks, embeddings)
     ]
 
     # Index the documents
@@ -176,7 +181,7 @@ async def _embeddings(
     )
 
 
-def _markdown_chunck(
+def _markdown_chunk(
     max_tokens: int,
     text: str,
 ) -> list[str]:
@@ -262,19 +267,19 @@ def _markdown_chunck(
             current_chunk.splitlines()[: -(to_remove + 1)]
         ).strip()
 
-        # Chunck if is still too big
+        # Chunk if is still too big
         current_cleaned_count = math.ceil(_count_tokens(current_cleaned) / max_tokens)
-        current_cleaned_chunck_size = math.ceil(
+        current_cleaned_chunk_size = math.ceil(
             len(current_cleaned) / current_cleaned_count
         )
         for i in range(current_cleaned_count):  # Iterate over the chunks
-            chunck_content = current_cleaned[
-                i * current_cleaned_chunck_size : (i + 1) * current_cleaned_chunck_size
+            chunk_content = current_cleaned[
+                i * current_cleaned_chunk_size : (i + 1) * current_cleaned_chunk_size
             ]
             if i == 0:  # Headings only on the first chunk
-                contents.append(chunck_content)
+                contents.append(chunk_content)
             else:  # Re-apply the last heading to the next chunk
-                contents.append(_rebuild_headings() + chunck_content)
+                contents.append(_rebuild_headings() + chunk_content)
 
         return _rebuild_headings()
 

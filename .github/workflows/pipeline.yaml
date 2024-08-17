@@ -201,4 +201,4 @@ jobs:
           generate_release_notes: true
           make_latest: true
           name: scrape-it-now v${{ needs.init.outputs.VERSION }}
-          tag_name: ${{ needs.init.outputs.VERSION }}
+          tag_name: v${{ needs.init.outputs.VERSION }}

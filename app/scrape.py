@@ -39,10 +39,6 @@ JOB_STATE_NAME = "job.json"
 SCRAPED_PREFIX = "scraped"
 STATE_PREFIX = "state"
 
-# Queue
-IN_QUEUE_NAME = "learn-to-scrape"
-OUT_QUEUE_NAME = "learn-to-chunck"
-
 # HTML to Markdown converter
 html2text = HTML2Text()
 html2text.ignore_images = True

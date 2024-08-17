@@ -34,7 +34,7 @@ dev = [
   "isort==5.13.2",  # Import sorter
   "pip-tools==7.4.1",  # Compile requirements.txt from pyproject.toml
   "pyinstaller==6.10.0",
-  "pylint==3.2.5",  # Linter
+  "pylint==3.2.6",  # Linter
   "pyright==1.1.371",  # Static type checker
 ]
 

@@ -1198,9 +1198,9 @@ pyinstaller-hooks-contrib==2024.8 \
     --hash=sha256:0057fe9a5c398d3f580e73e58793a1d4a8315ca91c3df01efea1c14ed557825a \
     --hash=sha256:29b68d878ab739e967055b56a93eb9b58e529d5b054fbab7a2f2bacf80cef3e2
     # via pyinstaller
-pylint==3.2.5 \
-    --hash=sha256:32cd6c042b5004b8e857d727708720c54a676d1e22917cf1a2df9b4d4868abd6 \
-    --hash=sha256:e9b7171e242dcc6ebd0aaa7540481d1a72860748a0a7816b8fe6cf6c80a6fe7e
+pylint==3.2.6 \
+    --hash=sha256:03c8e3baa1d9fb995b12c1dbe00aa6c4bcef210c2a2634374aedeb22fb4a8f8f \
+    --hash=sha256:a5d01678349454806cff6d886fb072294f56a58c4761278c97fb557d708e1eb3
     # via scrape-it-now (pyproject.toml)
 pyproject-hooks==1.1.0 \
     --hash=sha256:4b37730834edbd6bd37f26ece6b44802fb1c1ee2ece0e54ddff8bfc06db86965 \

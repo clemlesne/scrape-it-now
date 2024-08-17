@@ -5,9 +5,6 @@ from azure.core.credentials import AzureKeyCredential
 from azure.core.exceptions import ResourceExistsError
 from azure.search.documents.aio import SearchClient
 from azure.search.documents.indexes.aio import SearchIndexClient
-from azure.storage.blob.aio import BlobServiceClient, ContainerClient
-from azure.storage.queue.aio import QueueClient, QueueServiceClient
-from openai import AsyncAzureOpenAI
 from azure.search.documents.indexes.models import (
     AzureOpenAIParameters,
     AzureOpenAIVectorizer,
@@ -21,6 +18,9 @@ from azure.search.documents.indexes.models import (
     VectorSearch,
     VectorSearchProfile,
 )
+from azure.storage.blob.aio import BlobServiceClient, ContainerClient
+from azure.storage.queue.aio import QueueClient, QueueServiceClient
+from openai import AsyncAzureOpenAI
 
 from app.helpers.logging import logger
 
@@ -105,9 +105,9 @@ async def search_client(
                     deployment_id=azure_openai_embedding_deployment,
                     model_name=azure_openai_embedding_model,
                     resource_uri=azure_openai_endpoint,
-                )
+                ),
             )
-        ]
+        ],
     )
 
     # Create index if it does not exist
@@ -122,11 +122,13 @@ async def search_client(
         credential=AzureKeyCredential(api_key),
     ) as client:
         try:
-            await client.create_index(SearchIndex(
-                fields=fields,
-                name=index,
-                vector_search=vector_search,
-            ))
+            await client.create_index(
+                SearchIndex(
+                    fields=fields,
+                    name=index,
+                    vector_search=vector_search,
+                )
+            )
             logger.info('Created Search "%s"', index)
         except ResourceExistsError:
             pass

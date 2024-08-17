@@ -21,8 +21,8 @@ from pydantic import ValidationError
 from app.helpers.logging import logger
 from app.helpers.persistence import blob_client, queue_client
 from app.helpers.resources import (
-    index_queue_name,
     hash_url,
+    index_queue_name,
     resources_dir,
     scrape_container_name,
     scrape_queue_name,
@@ -531,7 +531,11 @@ def _filter_routes(
         )
 
         # Store content size
-        size_bytes = int(content_length) if (content_length := res.headers.get("content-length")) else 0
+        size_bytes = (
+            int(content_length)
+            if (content_length := res.headers.get("content-length"))
+            else 0
+        )
         size_callback(size_bytes)
 
         # Continue the request
@@ -570,6 +574,7 @@ async def _scrape_page(
         )
 
     total_size_bytes = 0
+
     def _size_callback(size_bytes: int) -> None:
         nonlocal total_size_bytes
         total_size_bytes += size_bytes

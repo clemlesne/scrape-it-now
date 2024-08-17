@@ -26,7 +26,12 @@ from app.helpers.persistence import (
     queue_client,
     search_client,
 )
-from app.helpers.resources import index_queue_name, hash_url, scrape_container_name, index_index_name
+from app.helpers.resources import (
+    hash_url,
+    index_index_name,
+    index_queue_name,
+    scrape_container_name,
+)
 from app.helpers.threading import run_workers
 from app.models.indexed import IndexedIngestModel
 from app.models.scraped import ScrapedUrlModel

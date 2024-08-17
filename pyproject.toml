@@ -54,6 +54,15 @@ strip-extras = true
 ignore_notebooks = true
 pep621_dev_dependency_groups = ["dev"]
 
+[tool.deptry.per_rule_ignores]
+DEP002 = [
+  "aiodns",  # Resolver is required for the AIOHTTP AsyncResolver TCP resolver
+  "aiohttp",  # Async HTTP client for Azure SDKs
+]
+DEP003 = [
+  "certifi",  # Patch for CA certificates when built with PyInstaller
+]
+
 [tool.black]
 target-version = ["py312"]
 

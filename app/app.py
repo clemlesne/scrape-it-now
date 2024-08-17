@@ -226,7 +226,7 @@ async def scrape_run(
 @run_in_async
 async def scrape_status(
     azure_storage_connection_string: str,
-    job_name: str | None,
+    job_name: str,
 ) -> None:
     """
     Get the state of a scraping job.
@@ -235,6 +235,14 @@ async def scrape_status(
         job=job_name,
         storage_connection_string=azure_storage_connection_string,
     )
+
+    # Log error if no state found
+    if not state:
+        # TODO: Respect JSON output?
+        logger.info("No state found for job %s", job_name)
+        return
+
+    # Log state
     logger.info(state.model_dump_json())
 
 
@@ -334,7 +342,7 @@ async def index_run(
     azure_search_api_key: str,
     azure_search_endpoint: str,
     azure_storage_connection_string: str,
-    job_name: str | None,
+    job_name: str,
     openai_api_version: str,
     processes: int,
 ) -> None:

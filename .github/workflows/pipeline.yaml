@@ -1,0 +1,171 @@
+name: Pipeline
+
+on:
+  push:
+    branches:
+      - develop
+      - feat/*
+      - hotfix/*
+      - main
+  pull_request:
+    branches:
+      - develop
+      - feat/*
+      - hotfix/*
+      - main
+
+jobs:
+  init:
+    name: Init
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    outputs:
+      VERSION: ${{ steps.version.outputs.version }}
+      VERSION_FULL: ${{ steps.version.outputs.version_full }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.1.7
+        with:
+          # We need all Git history for "version.sh"
+          fetch-depth: 0
+          # Ensure "version.sh" submodule are up-to-date
+          submodules: recursive
+
+      - name: Generate versions
+        id: version
+        run: |
+          echo "version=$(bash cicd/version/version.sh -g . -c)" >> $GITHUB_OUTPUT
+          echo "version_full=$(bash cicd/version/version.sh -g . -c -m)" >> $GITHUB_OUTPUT
+
+  build-app:
+    name: Build & publish app
+    permissions:
+      contents: write
+      packages: write
+    runs-on: ${{ matrix.os }}
+    needs:
+      - init
+    strategy:
+      fail-fast: false
+      matrix:
+        # TODO: Build for musl (Alpine Linux)
+        os:
+          # Last 2 versions of macOS
+          - macos-13
+          - macos-14
+          # Last 2 versions of Ubuntu
+          - ubuntu-22.04
+          - ubuntu-24.04
+          # Last 2 versions of Windows
+          - windows-2019
+          - windows-2022
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.1.2
+
+      - name: Configure Git
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5.1.1
+        with:
+          cache: pip
+          python-version: "3.12"
+
+      - name: Install make (Windows)
+        if: runner.os == 'Windows'
+        run: choco install make
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip wheel setuptools
+          make install-deps
+
+      - name: Install dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          python3 -m pip install pywin32-ctypes pefile
+
+      - name: Build to binary
+        run: make build
+
+      - name: Rename binary (Linux)
+        if: runner.os == 'Linux' || runner.os == 'macOS'
+        run: mv dist/scrape-it-now dist/scrape-it-now-${{ needs.init.outputs.VERSION }}-${{ matrix.os }}
+
+      - name: Rename binary (Windows)
+        if: runner.os == 'Windows'
+        run: mv dist\scrape-it-now.exe dist\scrape-it-now-${{ needs.init.outputs.VERSION }}-${{ matrix.os }}.exe
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: binary-${{ matrix.os }}
+          path: dist/*
+
+  attest-dependencies:
+    name: Attest - Dependencies
+    permissions:
+      contents: write
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.1.7
+
+      - name: Run attestation
+        uses: advanced-security/component-detection-dependency-submission-action@v0.0.2
+        with:
+          directoryExclusionList: docs
+
+  attest-sbom:
+    name: Attest - SBOM
+    runs-on: ubuntu-22.04
+    needs:
+      - init
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.1.7
+
+      - name: Init Syft
+        uses: anchore/sbom-action/download-syft@v0.16.1
+
+      - name: Run attestation
+        run: make sbom version_full=${{ needs.init.outputs.VERSION_FULL }}
+
+      - name: Upload results to release
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: sbom
+          path: sbom-reports/*
+
+  publish-release:
+    name: Release
+    permissions:
+      contents: write
+    runs-on: ubuntu-22.04
+    needs:
+      - attest-dependencies
+      - attest-sbom
+      - build-app
+      - init
+    # Only publish on non-scheduled default branch
+    if: (github.event_name != 'schedule') && (github.ref == 'refs/heads/main')
+    steps:
+      - name: Download artifacts
+        id: download
+        uses: actions/download-artifact@v4.1.8
+        with:
+          merge-multiple: true
+          path: artifacts
+
+      - name: Publish
+        uses: softprops/action-gh-release@v2.0.8
+        with:
+          files: artifacts/*
+          generate_release_notes: true
+          make_latest: true
+          name: scrape-it-now v${{ needs.init.outputs.VERSION }}
+          tag_name: ${{ needs.init.outputs.VERSION }}

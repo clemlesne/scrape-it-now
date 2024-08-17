@@ -1,5 +1,6 @@
-import asyncio, random, re
+import asyncio, random, re, subprocess
 from datetime import UTC, datetime, timedelta
+from os import environ as env
 from typing import Awaitable, Callable
 from urllib.parse import urlparse
 from uuid import uuid4
@@ -8,8 +9,10 @@ from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
 from azure.storage.blob.aio import ContainerClient
 from azure.storage.queue.aio import QueueClient
 from html2text import HTML2Text
+from playwright._impl._driver import compute_driver_executable, get_driver_env
 from playwright.async_api import (
     Browser,
+    BrowserType,
     Error,
     Route,
     TimeoutError,
@@ -21,6 +24,7 @@ from pydantic import ValidationError
 from app.helpers.logging import logger
 from app.helpers.persistence import blob_client, queue_client
 from app.helpers.resources import (
+    browsers_install_path,
     hash_url,
     index_queue_name,
     resources_dir,
@@ -381,6 +385,7 @@ async def _update_job_state(
 
 
 async def _worker(
+    browser_name: str,
     cache_refresh: timedelta,
     job: str,
     max_depth: int,
@@ -406,7 +411,7 @@ async def _worker(
 
                 # Init Playwright context
                 async with async_playwright() as p:
-                    browser_type = p.chromium
+                    browser_type: BrowserType = getattr(p, browser_name)
                     browser_usage = 0
                     browser: Browser | None = None
 
@@ -435,7 +440,9 @@ async def _worker(
                             else:
                                 if browser:
                                     await browser.close()
-                                browser = await browser_type.launch()
+                                browser = await browser_type.launch(
+                                    downloads_path=browsers_install_path(),
+                                )
                                 logger.info(
                                     "Restarted browser %s after %i iterations",
                                     browser_type.name,
@@ -814,6 +821,16 @@ async def run(
 ) -> None:
     logger.info("Starting scraping job %s", job)
 
+    # Patch Playwright
+    # See: https://playwright.dev/docs/browsers#hermetic-install
+    env["PLAYWRIGHT_BROWSERS_PATH"] = browsers_install_path()
+
+    # Install Playwright dependencies
+    browser_name = "chromium"
+    async with async_playwright() as p:
+        browser_type = getattr(p, browser_name)
+        _install_browser(browser_type)
+
     # Parse cache_refresh
     cache_refresh_parsed = timedelta(hours=cache_refresh)
 
@@ -850,6 +867,7 @@ async def run(
             )
 
     run_workers(
+        browser_name=browser_name,
         cache_refresh=cache_refresh_parsed,
         count=processes,
         func=_worker,
@@ -886,3 +904,43 @@ async def state(
 
         # Return model
         return state
+
+
+def _install_browser(
+    browser_type: BrowserType,
+    with_deps: bool = False,
+) -> None:
+    """
+    Install playwright and its dependencies if needed.
+
+    Return True if the installation was successful.
+    """
+    # Get location of Playwright driver
+    driver_executable, driver_cli = compute_driver_executable()
+
+    # Build the command arguments
+    args = [driver_executable, driver_cli, "install", browser_type.name]
+    if with_deps:
+        args.append("--with-deps")
+
+    # Run
+    proc = subprocess.run(
+        args=args,
+        capture_output=True,
+        check=False,
+        env=get_driver_env(),
+        text=True,
+    )
+
+    # Display error logs if any
+    err = proc.stderr
+    if err:
+        logger.error("Browser install error:\n%s", err)
+
+    # Display standard logs if any
+    logs = proc.stdout
+    if logs:
+        logger.info("Browser install logs:\n%s", proc.stdout)
+
+    if proc.returncode != 0:
+        raise RuntimeError("Failed to install browser")

@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 from azure.core.credentials import AzureKeyCredential
-from azure.core.exceptions import ResourceExistsError
+from azure.core.exceptions import HttpResponseError, ResourceExistsError
 from azure.search.documents.aio import SearchClient
 from azure.search.documents.indexes.aio import SearchIndexClient
 from azure.search.documents.indexes.models import (
@@ -130,8 +130,9 @@ async def search_client(
                 )
             )
             logger.info('Created Search "%s"', index)
-        except ResourceExistsError:
-            pass
+        except HttpResponseError as e:
+            if not e.error or not e.error.code == "ResourceNameAlreadyInUse":
+                raise e
 
     # Return client
     async with SearchClient(

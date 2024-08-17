@@ -195,12 +195,13 @@ def _markdown_chunk(
         contents.append(text)
         return contents
 
-    # Split the text by Markdown headings
     h1_title = ""
     h2_title = ""
     h3_title = ""
     h4_title = ""
-    headings: dict[dict[dict[dict[str, str], str], str], str] = {}
+
+    # Split the text by Markdown headings
+    headings: dict[str, dict[str, dict[str, dict[str, str]]]] = {}
     for line in text.splitlines():
         if line.startswith("# "):
             h1_title = line[2:]
@@ -235,9 +236,9 @@ def _markdown_chunk(
     def _split_paragraph(
         contents: list[str],
         current_chunk: str,
-        h1_head: str,
-        h2_head: str,
-        h3_head: str,
+        h1_head: str | None,
+        h2_head: str | None,
+        h3_head: str | None,
     ) -> str:
         """
         Split the current Markdown chunk into smaller chunks if it is inherently too big.
@@ -283,8 +284,12 @@ def _markdown_chunk(
 
         return _rebuild_headings()
 
-    # Split document into the biggest chunks possible
     current_chunk = ""
+    last_h1_head: str | None = None
+    last_h2_head: str | None = None
+    last_h3_head: str | None = None
+
+    # Split document into the biggest chunks possible
     for h1_head, h1_next in headings.items():
         last_h1_head = h1_head
         if last_h1_head:

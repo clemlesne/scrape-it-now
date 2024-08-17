@@ -773,9 +773,9 @@ opentelemetry-instrumentation-httpx==0.47b0 \
     --hash=sha256:24a2db480919b326e50c6a5ad01bb53b717fbd4116bb4d736d104608bf34a25a \
     --hash=sha256:4a4f7ff4726445e81aaedc025ee0f9ac66c2e9074987879082edea882c4aa22d
     # via scrape-it-now (pyproject.toml)
-opentelemetry-instrumentation-openai==0.26.5 \
-    --hash=sha256:6b33b4e491ef4f92e358bb86f010d3044e3edee46964c20d5e9040bcdacc8759 \
-    --hash=sha256:ab155544a733eb922d51a7332fff723be01d24108c454bf0511dba24d8160f04
+opentelemetry-instrumentation-openai==0.27.0 \
+    --hash=sha256:0b7fec7715579c2bb923ece0a8dbe6bdeaf887a8e9552b9f7233f01847ca41ce \
+    --hash=sha256:afa46a5ce365122f29a479d0f2be0519ab1490ff90759566981f09b213bde257
     # via scrape-it-now (pyproject.toml)
 opentelemetry-instrumentation-psycopg2==0.47b0 \
     --hash=sha256:35085c295d1ef9b299ba7fb0ed19e6ff31c2be010b3e7371df196c17a43885f8 \

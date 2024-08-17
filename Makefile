@@ -87,6 +87,8 @@ build:
 	pyinstaller \
 		--add-data resources:resources \
 		--clean \
+		--hidden-import=tiktoken_ext \
+		--hidden-import=tiktoken_ext.openai_public \
 		--icon resources/logo.ico \
 		--name scrape-it-now \
 		--onefile \

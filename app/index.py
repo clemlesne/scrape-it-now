@@ -1,4 +1,5 @@
 import asyncio, math
+from os import environ as env
 
 import tiktoken
 from azure.core.exceptions import (
@@ -30,6 +31,7 @@ from app.helpers.resources import (
     hash_url,
     index_index_name,
     index_queue_name,
+    resources_dir,
     scrape_container_name,
 )
 from app.helpers.threading import run_workers
@@ -354,6 +356,10 @@ async def run(
     storage_connection_string: str,
 ) -> None:
     logger.info("Starting indexing job %s", job)
+
+    # Patch Tiktoken
+    # See: https://stackoverflow.com/a/76107077
+    env["TIKTOKEN_CACHE_DIR"] = resources_dir("tiktoken")
 
     run_workers(
         azure_openai_api_key=azure_openai_api_key,

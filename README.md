@@ -11,6 +11,7 @@ A website to scrape? There's a simple way.
 Shared:
 
 - [x] Decoupled architecture with [Azure Queue Storage](https://learn.microsoft.com/en-us/azure/storage/queues)
+- [x] Executable as a CLI with a [standalone binary](http://github.com/clemlesne/scrape-it-now/releases/latest)
 - [x] Idenpotent operations that can be run in parallel
 - [x] Scraped content is stored in [Azure Blob Storage](https://learn.microsoft.com/en-us/azure/storage/blobs)
 
@@ -245,3 +246,13 @@ For arguments that accept multiple values, use a space-separated list. For examp
 ```bash
 WHITELIST=learn\.microsoft\.com,^/(?!en-us).*,^/[^/]+/answers/,^/[^/]+/previous-versions/ go\.microsoft\.com,.*
 ```
+
+### Broswer binary installation
+
+Browser binaries are automatically downloaded or updated at each run. Browser is Chromium and it is not configurable (feel free to open an issue if you need another browser), it weights around 450MB.
+
+The cache directoty depends on the operating system:
+
+- `~/.config/scrape-it-now` (Unix)
+- `~/Library/Application Support/scrape-it-now` (macOS)
+- `C:\Users\<user>\AppData\Roaming\scrape-it-now` (Windows)

@@ -49,7 +49,7 @@ html2text.ignore_images = True
 html2text.ignore_links = True
 
 # Ads pattern
-_ads_pattern_cache: re.Pattern = None
+_ads_pattern_cache: re.Pattern | None = None
 
 
 async def _queue(
@@ -174,7 +174,7 @@ async def _process_one(
     user_agents: list[str],
     viewports: list[ViewportSize],
     whitelist: dict[re.Pattern, list[re.Pattern]],
-) -> tuple[int, int, int]:
+) -> tuple[int, int, float]:
     """
     Process one URL from the queue.
 
@@ -230,7 +230,7 @@ async def _process_one(
             in_queue=in_queue,
             max_depth=max_depth,
             referrer=cache_item.url,
-            urls=cache_item.links,
+            urls=set(cache_item.links),
             whitelist=whitelist,
         )
 
@@ -241,7 +241,7 @@ async def _process_one(
         )
 
         # Return the number of processed URLs, queued URLs, and total network used
-        return (0, queued_urls, 0)
+        return (0, queued_urls, 0.0)
 
     except (ResourceNotFoundError, ValidationError):
         logger.debug("Cache miss for %s", current_item.url)
@@ -268,14 +268,16 @@ async def _process_one(
             in_queue=in_queue,
             max_depth=max_depth,
             referrer=cache_item.url,
-            urls=cache_item.links,
+            urls=set(cache_item.links),
             whitelist=whitelist,
         )
-
         logger.info("Used cache for %s (%i)", cache_item.url, current_item.depth)
-
         # Return the number of processed URLs, queued URLs, and total network used
-        return (0, queued_urls, 0)
+        return (0, queued_urls, 0.0)
+
+    # TODO: Review the algorithm to avoid the use of exceptions for control flow
+    if not new_result:
+        raise RuntimeError("Failed to scrape URL and no cache available, fill an issue")
 
     # Output to a blob and queue
     model_bytes = new_result.model_dump_json().encode("utf-8")
@@ -298,7 +300,7 @@ async def _process_one(
         in_queue=in_queue,
         max_depth=max_depth,
         referrer=new_result.url,
-        urls=new_result.links,
+        urls=set(new_result.links),
         whitelist=whitelist,
     )
 
@@ -310,7 +312,7 @@ async def _process_one(
 
 async def _update_job_state(
     blob: ContainerClient,
-    network_used_mb: int,
+    network_used_mb: float,
     processed: int,
     queued: int,
 ) -> None:
@@ -319,14 +321,14 @@ async def _update_job_state(
 
     # Acquire a lease
     logger.debug("Acquiring lease for job state")
-    lease_continue = True
-    while lease_continue:
+    # TODO: Avoid while True loops, it is a recipe for disaster
+    while True:
         try:
             state_lease = await state_blob.acquire_lease(
                 lease_duration=15,
                 lease_id=str(uuid4()),
             )
-            lease_continue = False
+            break
 
         except ResourceExistsError:  # Wait for the lease to expire
             logger.debug("Lease already exists, waiting")
@@ -370,7 +372,7 @@ async def _update_job_state(
         logger.warning(
             "Retry updating job state, lease expired, thread was paused; if this message appears in loop, fill an issue"
         )
-        return _update_job_state(
+        return await _update_job_state(
             blob=blob,
             network_used_mb=network_used_mb,
             processed=processed,
@@ -420,7 +422,7 @@ async def _worker(
                         max_messages=32,
                         visibility_timeout=32 * 5,  # 5 secs per message
                     ):
-                        total_network_used_mb = 0
+                        total_network_used_mb = 0.0
                         total_processed = 0
                         total_queued = 0
 
@@ -496,10 +498,11 @@ async def _worker(
                     logger.info("No more queued messages, exiting")
 
                     # Close the browser
-                    await browser.close()
+                    if browser:
+                        await browser.close()
 
 
-def _ads_pattern() -> re.Pattern:
+def _ads_pattern() -> re.Pattern | None:
     """
     Return a regex pattern to match ads and trackers.
     """
@@ -523,13 +526,15 @@ def _ads_pattern() -> re.Pattern:
                 counter += 1
 
             # Build regex
-            _ads_pattern_cache = re.compile(
-                r"\b" + trie.pattern() + r"\b", re.IGNORECASE
-            )
+            _ads_pattern_cache = trie.pattern()
 
         # Output is huge, uncomment only for debugging
         # logger.debug("Compiled ads pattern %s", _ads_pattern_cache.pattern)
         logger.info("Loaded %i ads and trackers", counter)
+
+    # Alert user if no rules are loaded
+    if not _ads_pattern_cache:
+        logger.warning("No ads and trackers loaded, skipping")
 
     return _ads_pattern_cache
 
@@ -553,10 +558,11 @@ def _filter_routes(
             return
 
         # Check if the request is to a known ad domain
-        if _ads_pattern().search(route.request.url) is not None:
-            logger.debug("Blocked ad %s", route.request.url)
-            await route.abort("blockedbyclient")
-            return
+        if pattern := _ads_pattern():
+            if pattern.search(route.request.url) is not None:
+                logger.debug("Blocked ad %s", route.request.url)
+                await route.abort("blockedbyclient")
+                return
 
         # Remove client hints
         headers = route.request.headers
@@ -662,6 +668,13 @@ async def _scrape_page(
         # See: https://github.com/microsoft/playwright/issues/30667#issuecomment-2095788164
         await page.unroute_all(behavior="ignoreErrors")
 
+        # Skip if no response from Playwright
+        if not res:
+            logger.warning(
+                "No response from Playwright for loading %s", url_clean.geturl()
+            )
+            return _generic_error(etag=previous_etag)
+
         # Skip if the content is not HTML
         content_type = res.headers.get("content-type", "")
         if "text/html" not in content_type:
@@ -704,14 +717,29 @@ async def _scrape_page(
                 valid_until=valid_until,
             )
 
-        # Fetch content
+        # Get title
         title = await page.title()
+
+        # Get HTML
+        html = None
         try:
-            html = await (
-                await page.wait_for_selector("html")
-            ).inner_html()  # Get HTML content of the visible page
+            html_selector = await page.wait_for_selector("html")
+            if html_selector:
+                html = (
+                    await html_selector.inner_html()
+                )  # Get HTML content of the visible page
         except TimeoutError:  # TODO: Is those timeouts normal? They happen quite often.
             logger.debug("Timeout for selecting HTML content")
+            return _generic_error(
+                etag=etag,
+                valid_until=valid_until,
+            )
+
+        # Skip if no HTML content
+        if not html:
+            logger.warning(
+                "No HTML content returned from Playwright for %s", url_clean.geturl()
+            )
             return _generic_error(
                 etag=etag,
                 valid_until=valid_until,

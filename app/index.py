@@ -390,6 +390,14 @@ async def run(
     )
 
 
+@retry(
+    reraise=True,
+    retry=retry_if_exception_type(
+        ServiceRequestError
+    ),  # Catch for network errors from Azure SDKs
+    stop=stop_after_attempt(8),
+    wait=wait_random_exponential(multiplier=0.8, max=60),
+)
 async def _worker(
     azure_openai_api_key: str,
     azure_openai_embedding_deployment: str,

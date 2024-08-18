@@ -5,7 +5,11 @@ from typing import Awaitable, Callable
 from urllib.parse import urlparse
 from uuid import uuid4
 
-from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
+from azure.core.exceptions import (
+    ResourceExistsError,
+    ResourceNotFoundError,
+    ServiceRequestError,
+)
 from azure.storage.blob.aio import ContainerClient
 from azure.storage.queue.aio import QueueClient
 from html2text import HTML2Text
@@ -20,6 +24,13 @@ from playwright.async_api import (
     async_playwright,
 )
 from pydantic import ValidationError
+from tenacity import (
+    retry,
+    retry_any,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_random_exponential,
+)
 
 from app.helpers.logging import logger
 from app.helpers.persistence import blob_client, queue_client
@@ -386,6 +397,14 @@ async def _update_job_state(
     )
 
 
+@retry(
+    reraise=True,
+    retry=retry_if_exception_type(
+        ServiceRequestError
+    ),  # Catch for network errors from Azure SDKs
+    stop=stop_after_attempt(8),
+    wait=wait_random_exponential(multiplier=0.8, max=60),
+)
 async def _worker(
     browser_name: str,
     cache_refresh: timedelta,

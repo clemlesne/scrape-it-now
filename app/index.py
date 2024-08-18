@@ -345,7 +345,13 @@ def _count_tokens(content: str) -> int:
     Count the number of tokens in a text using the OpenAI GPT-3.5 tokenitzer.
     """
     encoding_name = tiktoken.encoding_name_for_model("gpt-3.5")
-    return len(tiktoken.get_encoding(encoding_name).encode(content))
+    encoding = tiktoken.get_encoding(encoding_name)
+    return len(
+        encoding.encode(
+            disallowed_special=(),
+            text=content,
+        )
+    )
 
 
 async def run(

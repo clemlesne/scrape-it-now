@@ -9,7 +9,12 @@ from azure.core.exceptions import (
 )
 from azure.search.documents.aio import SearchClient
 from azure.storage.blob.aio import ContainerClient
-from openai import AsyncAzureOpenAI, InternalServerError, RateLimitError
+from openai import (
+    APIConnectionError,
+    AsyncAzureOpenAI,
+    InternalServerError,
+    RateLimitError,
+)
 from openai.types import CreateEmbeddingResponse
 from pydantic import ValidationError
 from tenacity import (
@@ -154,6 +159,7 @@ async def _index_to_store(
 @retry(
     reraise=True,
     retry=retry_any(
+        retry_if_exception_type(APIConnectionError),
         retry_if_exception_type(HttpResponseError),
         retry_if_exception_type(InternalServerError),
         retry_if_exception_type(RateLimitError),

@@ -2,13 +2,6 @@ import asyncio, math
 from os import environ as env
 
 import tiktoken
-from azure.core.exceptions import (
-    HttpResponseError,
-    ResourceNotFoundError,
-    ServiceRequestError,
-)
-from azure.search.documents.aio import SearchClient
-from azure.storage.blob.aio import ContainerClient
 from openai import (
     APIConnectionError,
     AsyncAzureOpenAI,
@@ -42,15 +35,17 @@ from app.helpers.resources import (
 from app.helpers.threading import run_workers
 from app.models.indexed import IndexedIngestModel
 from app.models.scraped import ScrapedUrlModel
+from app.persistence.iblob import IBlob
+from app.persistence.isearch import DocumentNotFoundError, ISearch
 
 
 async def _process_one(
-    blob: ContainerClient,
+    blob: IBlob,
     file_name: str,
     embedding_deployment: str,
     embedding_dimensions: int,
     openai: AsyncAzureOpenAI,
-    search: SearchClient,
+    search: ISearch,
 ) -> None:
     """
     Import a scraped file into the search index.
@@ -58,16 +53,13 @@ async def _process_one(
     The file is split into smaller chunks, and each chunk is indexed separately. If the document is already indexed, it is skipped.
     """
     # Read scraped content
-    f = await blob.download_blob(
-        blob=file_name,
-        encoding="utf-8",
-    )
+    result_raw = await blob.download_blob(file_name)
     # Extract the short name for logging
     short_name = file_name.split("/")[-1].split(".")[0][:7]
 
     # Validate the data
     try:
-        result = ScrapedUrlModel.model_validate_json(await f.readall())
+        result = ScrapedUrlModel.model_validate_json(result_raw)
     except ValidationError:
         logger.warning("%s cannot be parsed", short_name)
         return
@@ -94,14 +86,14 @@ async def _process_one(
     try:
         await asyncio.gather(
             *[
-                search.get_document(key=doc_id, selected_fields=["id"])
+                search.get_document(key=doc_id, selected_fields={"id"})
                 for doc_id in doc_ids
             ]
         )
         logger.info("%s is already indexed", short_name)
         return
     except (
-        ResourceNotFoundError
+        DocumentNotFoundError
     ):  # If a chunk is not found, it is not indexed, thus we can re-process the document
         pass
 
@@ -137,16 +129,9 @@ async def _process_one(
     logger.info("%s is indexed", short_name)
 
 
-@retry(
-    reraise=True,
-    retry=retry_if_exception_type(ServiceRequestError),
-    # This is a batch, we have all the time we want
-    stop=stop_after_attempt(20),
-    wait=wait_random_exponential(multiplier=0.8, max=60),
-)
 async def _index_to_store(
     models: list[IndexedIngestModel],
-    search: SearchClient,
+    search: ISearch,
 ) -> None:
     """
     Index a list of documents in the Azure Cognitive Search service.
@@ -160,7 +145,6 @@ async def _index_to_store(
     reraise=True,
     retry=retry_any(
         retry_if_exception_type(APIConnectionError),
-        retry_if_exception_type(HttpResponseError),
         retry_if_exception_type(InternalServerError),
         retry_if_exception_type(RateLimitError),
     ),
@@ -390,14 +374,6 @@ async def run(
     )
 
 
-@retry(
-    reraise=True,
-    retry=retry_if_exception_type(
-        ServiceRequestError
-    ),  # Catch for network errors from Azure SDKs
-    stop=stop_after_attempt(8),
-    wait=wait_random_exponential(multiplier=0.8, max=60),
-)
 async def _worker(
     azure_openai_api_key: str,
     azure_openai_embedding_deployment: str,

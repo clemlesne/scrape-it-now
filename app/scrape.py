@@ -3,23 +3,26 @@ from datetime import UTC, datetime, timedelta
 from os import environ as env
 from typing import Awaitable, Callable
 from urllib.parse import urlparse
-from uuid import uuid4
 
-from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
-from azure.storage.blob.aio import ContainerClient
-from azure.storage.queue.aio import QueueClient
 from html2text import HTML2Text
 from playwright._impl._driver import compute_driver_executable, get_driver_env
 from playwright.async_api import (
     Browser,
     BrowserType,
-    Error,
+    Error as PlaywrightError,
     Route,
     TimeoutError,
     ViewportSize,
     async_playwright,
 )
 from pydantic import ValidationError
+from tenacity import (
+    retry,
+    retry_any,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_random_exponential,
+)
 
 from app.helpers.logging import logger
 from app.helpers.persistence import blob_client, queue_client
@@ -35,6 +38,13 @@ from app.helpers.threading import run_workers
 from app.helpers.trie import Trie
 from app.models.scraped import ScrapedQueuedModel, ScrapedUrlModel
 from app.models.state import StateJobModel, StateScrapedModel
+from app.persistence.iblob import (
+    BlobNotFoundError,
+    IBlob,
+    LeaseAlreadyExistsError,
+    Provider as BlobProvider,
+)
+from app.persistence.iqueue import IQueue, Provider as QueueProvider
 
 # State
 JOB_STATE_NAME = "job.json"
@@ -53,11 +63,11 @@ _ads_pattern_cache: re.Pattern | None = None
 
 
 async def _queue(
-    blob: ContainerClient,
+    blob: IBlob,
     cache_refresh: timedelta,
     deph: int,
     id: str,
-    in_queue: QueueClient,
+    in_queue: IQueue,
     max_depth: int,
     referrer: str,
     urls: set[str],
@@ -78,11 +88,11 @@ async def _queue(
         return 0
 
     # Add the referrer to the set of scraped URLs
-    state_bytes = StateScrapedModel().model_dump_json().encode("utf-8")
+    state_bytes = StateScrapedModel().model_dump_json().encode(blob.encoding)
     await blob.upload_blob(
+        blob=f"{STATE_PREFIX}/{id}",
         data=state_bytes,
         length=len(state_bytes),
-        name=f"{STATE_PREFIX}/{id}",
         overwrite=True,
     )
 
@@ -113,11 +123,8 @@ async def _queue(
         # Test previous attempts
         try:
             # Load from the validity cache
-            f = await blob.download_blob(
-                blob=f"{STATE_PREFIX}/{hash_url(url)}",
-                encoding="utf-8",
-            )
-            previous = StateScrapedModel.model_validate_json(await f.readall())
+            previous_raw = await blob.download_blob(f"{STATE_PREFIX}/{hash_url(url)}")
+            previous = StateScrapedModel.model_validate_json(previous_raw)
 
             # Skip if the previous attempt is too recent
             # Date is now and not the one from the model, on purposes. Otherwise, if its a cached model, the date would match the frefresher date every time.
@@ -127,20 +134,20 @@ async def _queue(
                 )
                 return False
 
-        except (ResourceNotFoundError, ValidationError):
+        except (BlobNotFoundError, ValidationError):
             logger.debug("State miss for %s", url)
 
         # Update the validity cache
         await blob.upload_blob(
+            blob=f"{STATE_PREFIX}/{hash_url(url)}",
             data=state_bytes,
             length=len(state_bytes),
-            name=f"{STATE_PREFIX}/{hash_url(url)}",
             overwrite=True,
         )
 
         # Add the sub URL to the input queue
         await in_queue.send_message(
-            content=ScrapedQueuedModel(
+            ScrapedQueuedModel(
                 depth=new_depth,
                 referrer=referrer,
                 url=url,
@@ -163,13 +170,13 @@ async def _queue(
 
 
 async def _process_one(
-    blob: ContainerClient,
+    blob: IBlob,
     browser: Browser,
     cache_refresh: timedelta,
     current_item: ScrapedQueuedModel,
-    in_queue: QueueClient,
+    in_queue: IQueue,
     max_depth: int,
-    out_queue: QueueClient,
+    out_queue: IQueue,
     timezones: list[str],
     user_agents: list[str],
     viewports: list[ViewportSize],
@@ -188,11 +195,8 @@ async def _process_one(
     cache_item = None
     try:
         # Load the cache
-        f = await blob.download_blob(
-            blob=cache_name,
-            encoding="utf-8",
-        )
-        cache_item = ScrapedUrlModel.model_validate_json(await f.readall())
+        cache_raw = await blob.download_blob(cache_name)
+        cache_item = ScrapedUrlModel.model_validate_json(cache_raw)
 
         # Skip if previous attempt encountered a server error
         if cache_item.status >= 500:
@@ -201,7 +205,7 @@ async def _process_one(
                 cache_item.url,
                 current_item.depth,
             )
-            raise ResourceNotFoundError
+            raise BlobNotFoundError
 
         # Skip if the cache has no validity date
         if not cache_item.valid_until:
@@ -210,7 +214,7 @@ async def _process_one(
                 cache_item.url,
                 current_item.depth,
             )
-            raise ResourceNotFoundError
+            raise BlobNotFoundError
 
         # Skip if the cache is explicitly marked as expired
         if cache_item.valid_until and cache_item.valid_until < datetime.now(UTC):
@@ -219,7 +223,7 @@ async def _process_one(
                 cache_item.url,
                 current_item.depth,
             )
-            raise ResourceNotFoundError
+            raise BlobNotFoundError
 
         # Add the links to the queue
         queued_urls = await _queue(
@@ -243,7 +247,7 @@ async def _process_one(
         # Return the number of processed URLs, queued URLs, and total network used
         return (0, queued_urls, 0.0)
 
-    except (ResourceNotFoundError, ValidationError):
+    except (BlobNotFoundError, ValidationError):
         logger.debug("Cache miss for %s", current_item.url)
 
     # Process the URL
@@ -280,16 +284,16 @@ async def _process_one(
         raise RuntimeError("Failed to scrape URL and no cache available, fill an issue")
 
     # Output to a blob and queue
-    model_bytes = new_result.model_dump_json().encode("utf-8")
+    model_bytes = new_result.model_dump_json().encode(blob.encoding)
     await blob.upload_blob(
+        blob=cache_name,
         data=model_bytes,
         length=len(model_bytes),
-        name=cache_name,
         overwrite=True,
     )
 
     # Mark current file to be processed for chunking
-    await out_queue.send_message(content=f"{SCRAPED_PREFIX}/{current_id}.json")
+    await out_queue.send_message(f"{SCRAPED_PREFIX}/{current_id}.json")
 
     # Add the links to the queue
     queued_urls = await _queue(
@@ -311,66 +315,58 @@ async def _process_one(
 
 
 async def _update_job_state(
-    blob: ContainerClient,
+    blob: IBlob,
     network_used_mb: float,
     processed: int,
     queued: int,
 ) -> None:
-    # Update job state
-    state_blob = blob.get_blob_client(JOB_STATE_NAME)
-
     # Acquire a lease
     logger.debug("Acquiring lease for job state")
-    # TODO: Avoid while True loops, it is a recipe for disaster
-    while True:
-        try:
-            state_lease = await state_blob.acquire_lease(
-                lease_duration=15,
-                lease_id=str(uuid4()),
-            )
-            break
 
-        except ResourceExistsError:  # Wait for the lease to expire
-            logger.debug("Lease already exists, waiting")
-            await asyncio.sleep(1)
+    try:
+        async with blob.lease(
+            blob=JOB_STATE_NAME,
+            lease_duration=15,  # 15 secs
+        ) as lease_id:
+            # Parse existing state
+            try:
+                model_raw = await blob.download_blob(JOB_STATE_NAME)
+                model = StateJobModel.model_validate_json(model_raw)
+            except (BlobNotFoundError, ValidationError):
+                model = StateJobModel()
 
-        except ResourceNotFoundError:  # Create the blob if it does not exist
-            logger.debug("State blob does not exist, creating an empty one")
-            await state_blob.upload_blob(
-                data=b"",
-                length=0,
+            # Update state
+            model.last_updated = datetime.now(UTC)
+            model.network_used_mb += network_used_mb
+            model.processed += processed
+            model.queued += queued
+
+            # Save state
+            await blob.upload_blob(
+                blob=JOB_STATE_NAME,
+                data=model.model_dump_json().encode(blob.encoding),
+                lease_id=lease_id,
+                length=len(model.model_dump_json()),
                 overwrite=True,
             )
 
-    # Parse existing state
-    try:
-        f = await state_blob.download_blob(encoding="utf-8")
-        state = StateJobModel.model_validate_json(await f.readall())
-    except (ResourceNotFoundError, ValidationError):
-        state = StateJobModel()
+    except LeaseAlreadyExistsError:  # Wait for the lease to expire
+        logger.debug("Lease already exists, waiting and retry")
+        await asyncio.sleep(1)
+        return await _update_job_state(
+            blob=blob,
+            network_used_mb=network_used_mb,
+            processed=processed,
+            queued=queued,
+        )
 
-    # Update state
-    state.last_updated = datetime.now(UTC)
-    state.network_used_mb += network_used_mb
-    state.processed += processed
-    state.queued += queued
-
-    # Save state
-    await state_blob.upload_blob(
-        data=state.model_dump_json().encode("utf-8"),
-        lease=state_lease.id,
-        length=len(state.model_dump_json()),
-        overwrite=True,
-    )
-
-    # Release the lease
-    try:
-        await state_lease.release()
-    except ResourceNotFoundError:
-        # The lease has already expired, the 15 seconds are up; thread was probably paused for an unknown reason
-        # TODO: Set a maximum number of retries to avoid infinite loops
-        logger.warning(
-            "Retry updating job state, lease expired, thread was paused; if this message appears in loop, fill an issue"
+    except BlobNotFoundError:  # Create the blob if it does not exist
+        logger.debug("State blob does not exist, creating an empty one and retry")
+        await blob.upload_blob(
+            blob=JOB_STATE_NAME,
+            data=b"",
+            length=0,
+            overwrite=True,
         )
         return await _update_job_state(
             blob=blob,
@@ -381,17 +377,20 @@ async def _update_job_state(
 
     logger.info(
         "Updated job state to %i processed and %i queued",
-        state.processed,
-        state.queued,
+        model.processed,
+        model.queued,
     )
 
 
 async def _worker(
+    azure_storage_connection_string: str,
+    blob_path: str,
+    blob_provider: BlobProvider,
     browser_name: str,
     cache_refresh: timedelta,
     job: str,
     max_depth: int,
-    storage_connection_string: str,
+    queue_provider: QueueProvider,
     timezones: list[str],
     user_agents: list[str],
     viewports: list[ViewportSize],
@@ -399,15 +398,19 @@ async def _worker(
 ) -> None:
     # Init clients
     async with blob_client(
-        connection_string=storage_connection_string,
+        azure_storage_connection_string=azure_storage_connection_string,
         container=scrape_container_name(job),
+        path=blob_path,
+        provider=blob_provider,
     ) as blob:
         async with queue_client(
-            connection_string=storage_connection_string,
+            azure_storage_connection_string=azure_storage_connection_string,
+            provider=queue_provider,
             queue=scrape_queue_name(job),
         ) as in_queue:
             async with queue_client(
-                connection_string=storage_connection_string,
+                azure_storage_connection_string=azure_storage_connection_string,
+                provider=queue_provider,
                 queue=index_queue_name(job),
             ) as out_queue:
 
@@ -432,6 +435,11 @@ async def _worker(
                             # Parse the message
                             current_item = ScrapedQueuedModel.model_validate_json(
                                 message.content
+                            )
+                            logger.info(
+                                'Processing "%s" (%i)',
+                                current_item.url,
+                                current_item.depth,
                             )
 
                             # Get a browser instance
@@ -548,6 +556,14 @@ def _filter_routes(
     It includes for images, media, fonts, and stylesheets.
     """
 
+    @retry(
+        reraise=True,
+        retry=retry_if_exception_type(
+            PlaywrightError
+        ),  # Catch for network errors from Playwright
+        stop=stop_after_attempt(8),
+        wait=wait_random_exponential(multiplier=0.8, max=60),
+    )
     async def _wrapper(
         route: Route,
     ) -> None:
@@ -658,7 +674,7 @@ async def _scrape_page(
         except TimeoutError:  # TODO: Retry maybe a few times for timeout errors?
             logger.debug("Timeout for loading %s", url_clean.geturl())
             return _generic_error(etag=previous_etag)
-        except Error:
+        except PlaywrightError:
             logger.error(
                 "Unknown error for loading %s", url_clean.geturl(), exc_info=True
             )
@@ -836,16 +852,19 @@ def format_path(path: str) -> str:
 
 
 async def run(
+    azure_storage_connection_string: str | None,
+    blob_path: str,
+    blob_provider: BlobProvider,
     cache_refresh: int,
     job: str,
     max_depth: int,
-    storage_connection_string: str,
+    processes: int,
+    queue_provider: QueueProvider,
     timezones: list[str],
     url: str,
     user_agents: list[str],
     viewports: list[tuple[int, int]],
     whitelist: dict[re.Pattern, list[re.Pattern]],
-    processes: int,
 ) -> None:
     logger.info("Starting scraping job %s", job)
 
@@ -869,11 +888,14 @@ async def run(
 
     # Init clients
     async with blob_client(
-        connection_string=storage_connection_string,
+        azure_storage_connection_string=azure_storage_connection_string,
         container=scrape_container_name(job),
+        path=blob_path,
+        provider=blob_provider,
     ) as blob:
         async with queue_client(
-            connection_string=storage_connection_string,
+            azure_storage_connection_string=azure_storage_connection_string,
+            provider=queue_provider,
             queue=scrape_queue_name(job),
         ) as in_queue:
             # Add initial URL to the queue
@@ -882,7 +904,7 @@ async def run(
                 referrer="https://www.google.com/search",
                 url=url,
             )
-            await _queue(
+            queued_urls = await _queue(
                 blob=blob,
                 cache_refresh=cache_refresh_parsed,
                 deph=model.depth,
@@ -894,7 +916,18 @@ async def run(
                 whitelist=whitelist,
             )
 
+            # Initialize the job state as user can execute the "status" command right after
+            await _update_job_state(
+                blob=blob,
+                network_used_mb=0.0,
+                processed=0,
+                queued=queued_urls,
+            )
+
     run_workers(
+        azure_storage_connection_string=azure_storage_connection_string,
+        blob_path=blob_path,
+        blob_provider=blob_provider,
         browser_name=browser_name,
         cache_refresh=cache_refresh_parsed,
         count=processes,
@@ -902,7 +935,7 @@ async def run(
         job=job,
         max_depth=max_depth,
         name=f"scrape-{job}",
-        storage_connection_string=storage_connection_string,
+        queue_provider=queue_provider,
         timezones=timezones,
         user_agents=user_agents,
         viewports=viewports_parsed,
@@ -911,27 +944,27 @@ async def run(
 
 
 async def state(
-    storage_connection_string: str,
+    blob_path: str,
+    blob_provider: BlobProvider,
     job: str,
+    azure_storage_connection_string: str | None,
 ) -> StateJobModel | None:
     # Init clients
     async with blob_client(
-        connection_string=storage_connection_string,
+        azure_storage_connection_string=azure_storage_connection_string,
         container=scrape_container_name(job),
+        path=blob_path,
+        provider=blob_provider,
     ) as blob:
+        model = None
         # Load the state
-        state = None
         try:
-            f = await blob.download_blob(
-                blob=JOB_STATE_NAME,
-                encoding="utf-8",
-            )
-            state = StateJobModel.model_validate_json(await f.readall())
-        except (ResourceNotFoundError, ValidationError):
+            state_raw = await blob.download_blob(JOB_STATE_NAME)
+            model = StateJobModel.model_validate_json(state_raw)
+        except (BlobNotFoundError, ValidationError):
             pass
-
         # Return model
-        return state
+        return model
 
 
 def _install_browser(

@@ -2,14 +2,12 @@ import asyncio, math
 from os import environ as env
 
 import tiktoken
-from azure.core.exceptions import (
-    HttpResponseError,
-    ResourceNotFoundError,
-    ServiceRequestError,
+from openai import (
+    APIConnectionError,
+    AsyncAzureOpenAI,
+    InternalServerError,
+    RateLimitError,
 )
-from azure.search.documents.aio import SearchClient
-from azure.storage.blob.aio import ContainerClient
-from openai import AsyncAzureOpenAI, InternalServerError, RateLimitError
 from openai.types import CreateEmbeddingResponse
 from pydantic import ValidationError
 from tenacity import (
@@ -37,15 +35,22 @@ from app.helpers.resources import (
 from app.helpers.threading import run_workers
 from app.models.indexed import IndexedIngestModel
 from app.models.scraped import ScrapedUrlModel
+from app.persistence.iblob import IBlob, Provider as BlobProvider
+from app.persistence.iqueue import Provider as QueueProvider
+from app.persistence.isearch import (
+    DocumentNotFoundError,
+    ISearch,
+    Provider as SearchProvider,
+)
 
 
 async def _process_one(
-    blob: ContainerClient,
+    blob: IBlob,
     file_name: str,
     embedding_deployment: str,
     embedding_dimensions: int,
     openai: AsyncAzureOpenAI,
-    search: SearchClient,
+    search: ISearch,
 ) -> None:
     """
     Import a scraped file into the search index.
@@ -53,16 +58,13 @@ async def _process_one(
     The file is split into smaller chunks, and each chunk is indexed separately. If the document is already indexed, it is skipped.
     """
     # Read scraped content
-    f = await blob.download_blob(
-        blob=file_name,
-        encoding="utf-8",
-    )
+    result_raw = await blob.download_blob(file_name)
     # Extract the short name for logging
     short_name = file_name.split("/")[-1].split(".")[0][:7]
 
     # Validate the data
     try:
-        result = ScrapedUrlModel.model_validate_json(await f.readall())
+        result = ScrapedUrlModel.model_validate_json(result_raw)
     except ValidationError:
         logger.warning("%s cannot be parsed", short_name)
         return
@@ -89,14 +91,14 @@ async def _process_one(
     try:
         await asyncio.gather(
             *[
-                search.get_document(key=doc_id, selected_fields=["id"])
+                search.get_document(key=doc_id, selected_fields={"id"})
                 for doc_id in doc_ids
             ]
         )
         logger.info("%s is already indexed", short_name)
         return
     except (
-        ResourceNotFoundError
+        DocumentNotFoundError
     ):  # If a chunk is not found, it is not indexed, thus we can re-process the document
         pass
 
@@ -132,16 +134,9 @@ async def _process_one(
     logger.info("%s is indexed", short_name)
 
 
-@retry(
-    reraise=True,
-    retry=retry_if_exception_type(ServiceRequestError),
-    # This is a batch, we have all the time we want
-    stop=stop_after_attempt(20),
-    wait=wait_random_exponential(multiplier=0.8, max=60),
-)
 async def _index_to_store(
     models: list[IndexedIngestModel],
-    search: SearchClient,
+    search: ISearch,
 ) -> None:
     """
     Index a list of documents in the Azure Cognitive Search service.
@@ -154,7 +149,7 @@ async def _index_to_store(
 @retry(
     reraise=True,
     retry=retry_any(
-        retry_if_exception_type(HttpResponseError),
+        retry_if_exception_type(APIConnectionError),
         retry_if_exception_type(InternalServerError),
         retry_if_exception_type(RateLimitError),
     ),
@@ -339,21 +334,31 @@ def _count_tokens(content: str) -> int:
     Count the number of tokens in a text using the OpenAI GPT-3.5 tokenitzer.
     """
     encoding_name = tiktoken.encoding_name_for_model("gpt-3.5")
-    return len(tiktoken.get_encoding(encoding_name).encode(content))
+    encoding = tiktoken.get_encoding(encoding_name)
+    return len(
+        encoding.encode(
+            disallowed_special=(),
+            text=content,
+        )
+    )
 
 
 async def run(
+    azure_search_api_key: str | None,
+    azure_search_endpoint: str | None,
     azure_openai_api_key: str,
     azure_openai_embedding_deployment: str,
     azure_openai_embedding_dimensions: int,
     azure_openai_embedding_model: str,
     azure_openai_endpoint: str,
+    azure_storage_connection_string: str | None,
+    blob_path: str,
+    blob_provider: BlobProvider,
     job: str,
     openai_api_version: str,
     processes: int,
-    search_api_key: str,
-    search_endpoint: str,
-    storage_connection_string: str,
+    queue_provider: QueueProvider,
+    search_provider: SearchProvider,
 ) -> None:
     logger.info("Starting indexing job %s", job)
 
@@ -362,57 +367,69 @@ async def run(
     env["TIKTOKEN_CACHE_DIR"] = resources_dir("tiktoken")
 
     run_workers(
+        azure_search_api_key=azure_search_api_key,
+        azure_search_endpoint=azure_search_endpoint,
         azure_openai_api_key=azure_openai_api_key,
         azure_openai_embedding_deployment=azure_openai_embedding_deployment,
         azure_openai_embedding_dimensions=azure_openai_embedding_dimensions,
         azure_openai_embedding_model=azure_openai_embedding_model,
         azure_openai_endpoint=azure_openai_endpoint,
+        azure_storage_connection_string=azure_storage_connection_string,
+        blob_path=blob_path,
+        blob_provider=blob_provider,
         count=processes,
         func=_worker,
         job=job,
         name=f"index-{job}",
         openai_api_version=openai_api_version,
-        search_api_key=search_api_key,
-        search_endpoint=search_endpoint,
-        storage_connection_string=storage_connection_string,
+        queue_provider=queue_provider,
+        search_provider=search_provider,
     )
 
 
 async def _worker(
+    azure_search_api_key: str | None,
+    azure_search_endpoint: str | None,
     azure_openai_api_key: str,
     azure_openai_embedding_deployment: str,
     azure_openai_embedding_dimensions: int,
     azure_openai_embedding_model: str,
     azure_openai_endpoint: str,
+    azure_storage_connection_string: str | None,
+    blob_path: str,
+    blob_provider: BlobProvider,
     job: str,
     openai_api_version: str,
-    search_api_key: str,
-    search_endpoint: str,
-    storage_connection_string: str,
+    queue_provider: QueueProvider,
+    search_provider: SearchProvider,
 ) -> None:
     # Init clients
     async with blob_client(
-        connection_string=storage_connection_string,
+        azure_storage_connection_string=azure_storage_connection_string,
         container=scrape_container_name(job),
+        path=blob_path,
+        provider=blob_provider,
     ) as blob:
         async with openai_client(
-            api_key=azure_openai_api_key,
-            api_version=openai_api_version,
-            endpoint=azure_openai_endpoint,
+            azure_openai_api_key=azure_openai_api_key,
+            azure_openai_endpoint=azure_openai_endpoint,
+            openai_api_version=openai_api_version,
         ) as openai:
             async with queue_client(
-                connection_string=storage_connection_string,
+                azure_storage_connection_string=azure_storage_connection_string,
+                provider=queue_provider,
                 queue=index_queue_name(job),
             ) as queue:
                 async with search_client(
-                    api_key=search_api_key,
+                    azure_search_api_key=azure_search_api_key,
+                    azure_search_endpoint=azure_search_endpoint,
                     azure_openai_api_key=azure_openai_api_key,
                     azure_openai_embedding_deployment=azure_openai_embedding_deployment,
                     azure_openai_embedding_dimensions=azure_openai_embedding_dimensions,
                     azure_openai_embedding_model=azure_openai_embedding_model,
                     azure_openai_endpoint=azure_openai_endpoint,
-                    endpoint=search_endpoint,
                     index=index_index_name(job),
+                    provider=search_provider,
                 ) as search:
 
                     # Process the queue
@@ -423,6 +440,7 @@ async def _worker(
                         logger.info("Processing new messages")
                         async for message in messages:
                             blob_name = message.content
+                            logger.info('Processing "%s"', blob_name)
                             try:
                                 await _process_one(
                                     blob=blob,

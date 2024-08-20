@@ -7,6 +7,10 @@ import click
 from app.helpers.logging import logger
 from app.helpers.monitoring import VERSION
 from app.index import run as index_backend_run
+from app.persistence.iblob import Provider as BlobProvider
+from app.persistence.iqueue import Provider as QueueProvider
+from app.persistence.isearch import Provider as SearchProvider
+from app.persistence.local_disk import BLOB_DEFAULT_PATH
 from app.scrape import run as scrape_backend_run, state as scrape_backend_state
 
 
@@ -49,6 +53,7 @@ def scrape() -> None:
     "-md",
     default=3,
     envvar="MAX_DEPTH",
+    help="Maximum depth to scrape. This is the number of iterative links to follow from the initial URL. Be warning that the number of pages to scrape grows exponentially with the depth, this can lead to millions of pages to scrape.",
     required=True,
     type=int,
 )
@@ -57,6 +62,7 @@ def scrape() -> None:
     "-cr",
     default=24 * 7,
     envvar="CACHE_REFRESH",
+    help="Cache refresh time in hours. After this delay, the cache is considered stale and the page is rescraped if needed.",
     required=True,
     type=int,
 )
@@ -72,6 +78,7 @@ def scrape() -> None:
     "--user-agent",
     "-ua",
     envvar="USER_AGENT",
+    help="Comma separated list of user agents to scrape. They are used to generate random browser profiles.",
     multiple=True,
     required=True,
     type=str,
@@ -88,6 +95,7 @@ def scrape() -> None:
     "--timezone",
     "-tz",
     envvar="TIMEZONE",
+    help="Comma separated list of timezones to scrape. Example, 'America/New_York,Europe/London'. They are used to generate random browser profiles.",
     multiple=True,
     required=True,
     type=str,
@@ -112,6 +120,7 @@ def scrape() -> None:
     "--viewport",
     "-v",
     envvar="VIEWPORT",
+    help="Comma separated list of viewports to scrape. Example, '1920x1080,1280x720'. They are used to generate random browser profiles.",
     multiple=True,
     required=True,
     type=str,
@@ -125,11 +134,37 @@ def scrape() -> None:
     ],
 )
 @click.option(
+    "--blob-provider",
+    "-bp",
+    default=BlobProvider.AZURE_BLOB_STORAGE,
+    envvar="BLOB_PROVIDER",
+    help="Blob provider to use.",
+    required=True,
+    type=click.Choice([x.value for x in BlobProvider]),
+)
+@click.option(
+    "--queue-provider",
+    "-qp",
+    default=QueueProvider.AZURE_QUEUE_STORAGE,
+    envvar="QUEUE_PROVIDER",
+    help="Queue provider to use.",
+    required=True,
+    type=click.Choice([x.value for x in QueueProvider]),
+)
+@click.option(
+    "--blob-path",
+    "-bpa",
+    default=BLOB_DEFAULT_PATH,
+    envvar="BLOB_PATH",
+    help="Path to the blob container. Mandatory for Local Disk Blob provider.",
+    type=str,
+)
+@click.option(
     "--azure-storage-connection-string",
     "-ascs",
     envvar="AZURE_STORAGE_CONNECTION_STRING",
+    help="Azure Storage connection string. Mandatory for Azure Blob Storage and Azure Queue Storage providers.",
     hide_input=True,
-    required=True,
     type=str,
 )
 @click.option(
@@ -137,12 +172,14 @@ def scrape() -> None:
     "-p",
     default=int((cpu_count() or 4) / 2),
     envvar="PROCESSES",
+    help="Number of processes to use for scraping.",
     required=True,
     type=int,
 )
 @click.option(
     "--job-name",
     "-jn",
+    help="Name of the job. If not provided, a random name will be generated. Job name is not tested for uniqueness.",
     type=str,
 )
 @click.argument(
@@ -152,11 +189,14 @@ def scrape() -> None:
 @scrape.command("run")
 @run_in_async
 async def scrape_run(
-    azure_storage_connection_string: str,
+    azure_storage_connection_string: str | None,
+    blob_path: str,
+    blob_provider: BlobProvider,
     cache_refresh: int,
     job_name: str | None,
     max_depth: int,
     processes: int,
+    queue_provider: QueueProvider,
     timezone: list[str],
     url: str,
     user_agent: list[str],
@@ -197,11 +237,14 @@ async def scrape_run(
         logger.info("Whitelist: %s", whitelist_parsed)
 
     await scrape_backend_run(
+        azure_storage_connection_string=azure_storage_connection_string,
+        blob_path=blob_path,
+        blob_provider=blob_provider,
         cache_refresh=cache_refresh,
         job=job_name_parsed,
         max_depth=max_depth,
         processes=processes,
-        storage_connection_string=azure_storage_connection_string,
+        queue_provider=queue_provider,
         timezones=timezone,
         url=url,
         user_agents=user_agent,
@@ -211,11 +254,28 @@ async def scrape_run(
 
 
 @click.option(
+    "--blob-provider",
+    "-bp",
+    default=BlobProvider.AZURE_BLOB_STORAGE,
+    envvar="BLOB_PROVIDER",
+    help="Blob provider to use.",
+    required=True,
+    type=click.Choice([x.value for x in BlobProvider]),
+)
+@click.option(
+    "--blob-path",
+    "-bpa",
+    default=BLOB_DEFAULT_PATH,
+    envvar="BLOB_PATH",
+    help="Path to the blob container. Mandatory for Local Disk Blob provider.",
+    type=str,
+)
+@click.option(
     "--azure-storage-connection-string",
     "-ascs",
     envvar="AZURE_STORAGE_CONNECTION_STRING",
+    help="Azure Storage connection string. Mandatory for Azure Blob Storage provider.",
     hide_input=True,
-    required=True,
     type=str,
 )
 @click.argument(
@@ -225,15 +285,19 @@ async def scrape_run(
 @scrape.command("status")
 @run_in_async
 async def scrape_status(
-    azure_storage_connection_string: str,
+    azure_storage_connection_string: str | None,
+    blob_path: str,
+    blob_provider: BlobProvider,
     job_name: str,
 ) -> None:
     """
     Get the state of a scraping job.
     """
     state = await scrape_backend_state(
+        blob_path=blob_path,
+        blob_provider=blob_provider,
         job=job_name,
-        storage_connection_string=azure_storage_connection_string,
+        azure_storage_connection_string=azure_storage_connection_string,
     )
 
     # Log error if no state found
@@ -255,17 +319,53 @@ def index() -> None:
 
 
 @click.option(
+    "--blob-provider",
+    "-bp",
+    default=BlobProvider.AZURE_BLOB_STORAGE,
+    envvar="BLOB_PROVIDER",
+    help="Blob provider to use.",
+    required=True,
+    type=click.Choice([x.value for x in BlobProvider]),
+)
+@click.option(
+    "--queue-provider",
+    "-qp",
+    default=QueueProvider.AZURE_QUEUE_STORAGE,
+    envvar="QUEUE_PROVIDER",
+    help="Queue provider to use.",
+    required=True,
+    type=click.Choice([x.value for x in QueueProvider]),
+)
+@click.option(
+    "--search-provider",
+    "-sp",
+    default=SearchProvider.AZURE_SEARCH,
+    envvar="SEARCH_PROVIDER",
+    help="Search provider to use.",
+    required=True,
+    type=click.Choice([x.value for x in SearchProvider]),
+)
+@click.option(
+    "--blob-path",
+    "-bpa",
+    default=BLOB_DEFAULT_PATH,
+    envvar="BLOB_PATH",
+    help="Path to the blob container. Mandatory for Local Disk Blob provider.",
+    type=str,
+)
+@click.option(
     "--azure-storage-connection-string",
     "-ascs",
     envvar="AZURE_STORAGE_CONNECTION_STRING",
+    help="Azure Storage connection string. Mandatory for Azure Blob Storage and Azure Queue Storage providers.",
     hide_input=True,
-    required=True,
     type=str,
 )
 @click.option(
     "--azure-openai-embedding-dimensions",
     "-aoed",
     envvar="AZURE_OPENAI_EMBEDDING_DIMENSIONS",
+    help="Dimensions of the OpenAI embedding model.",
     required=True,
     type=int,
 )
@@ -273,6 +373,7 @@ def index() -> None:
     "--azure-openai-embedding-deployment-name",
     "-aoedn",
     envvar="AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME",
+    help="Deployment name of the OpenAI embedding model.",
     required=True,
     type=str,
 )
@@ -280,6 +381,7 @@ def index() -> None:
     "--azure-openai-embedding-model-name",
     "-aoemn",
     envvar="AZURE_OPENAI_EMBEDDING_MODEL_NAME",
+    help="Model name of the OpenAI embedding model.",
     required=True,
     type=str,
 )
@@ -295,20 +397,21 @@ def index() -> None:
     "--azure-search-api-key",
     "-asak",
     envvar="AZURE_SEARCH_API_KEY",
-    required=True,
+    help="Azure Search API key. Mandatory for Azure AI Search provider.",
     type=str,
 )
 @click.option(
     "--azure-search-endpoint",
     "-ase",
     envvar="AZURE_SEARCH_ENDPOINT",
-    required=True,
+    help="Azure Search endpoint. Mandatory for Azure AI Search provider.",
     type=str,
 )
 @click.option(
     "--azure-openai-api-key",
     "-aoak",
     envvar="AZURE_OPENAI_API_KEY",
+    help="Azure OpenAI API key.",
     required=True,
     type=str,
 )
@@ -317,6 +420,7 @@ def index() -> None:
     "-oav",
     default="2024-06-01",
     envvar="OPENAI_API_VERSION",
+    help="OpenAI API version.",
     required=True,
     type=str,
 )
@@ -324,6 +428,7 @@ def index() -> None:
     "--azure-openai-endpoint",
     "-aoe",
     envvar="AZURE_OPENAI_ENDPOINT",
+    help="Azure OpenAI endpoint.",
     required=True,
     type=str,
 )
@@ -339,12 +444,16 @@ async def index_run(
     azure_openai_embedding_dimensions: int,
     azure_openai_embedding_model_name: str,
     azure_openai_endpoint: str,
-    azure_search_api_key: str,
-    azure_search_endpoint: str,
-    azure_storage_connection_string: str,
+    azure_search_api_key: str | None,
+    azure_search_endpoint: str | None,
+    azure_storage_connection_string: str | None,
+    blob_path: str,
+    blob_provider: BlobProvider,
     job_name: str,
     openai_api_version: str,
     processes: int,
+    queue_provider: QueueProvider,
+    search_provider: SearchProvider,
 ) -> None:
     """
     Run an indexing job.
@@ -354,17 +463,21 @@ async def index_run(
     Program is built to be idempotent. Multiple runs of the same job can be ran simultaneously and won't duplicate data.
     """
     await index_backend_run(
+        azure_search_api_key=azure_search_api_key,
+        azure_search_endpoint=azure_search_endpoint,
         azure_openai_api_key=azure_openai_api_key,
         azure_openai_embedding_deployment=azure_openai_embedding_deployment_name,
         azure_openai_embedding_dimensions=azure_openai_embedding_dimensions,
         azure_openai_embedding_model=azure_openai_embedding_model_name,
         azure_openai_endpoint=azure_openai_endpoint,
+        blob_path=blob_path,
+        blob_provider=blob_provider,
         job=job_name,
         openai_api_version=openai_api_version,
         processes=processes,
-        search_api_key=azure_search_api_key,
-        search_endpoint=azure_search_endpoint,
-        storage_connection_string=azure_storage_connection_string,
+        queue_provider=queue_provider,
+        search_provider=search_provider,
+        azure_storage_connection_string=azure_storage_connection_string,
     )
 
 

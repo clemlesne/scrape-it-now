@@ -1,189 +1,138 @@
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from azure.core.credentials import AzureKeyCredential
-from azure.core.exceptions import HttpResponseError, ResourceExistsError
-from azure.search.documents.aio import SearchClient
-from azure.search.documents.indexes.aio import SearchIndexClient
-from azure.search.documents.indexes.models import (
-    AzureOpenAIParameters,
-    AzureOpenAIVectorizer,
-    HnswAlgorithmConfiguration,
-    LexicalAnalyzerName,
-    SearchableField,
-    SearchField,
-    SearchFieldDataType,
-    SearchIndex,
-    SimpleField,
-    VectorSearch,
-    VectorSearchProfile,
-)
-from azure.storage.blob.aio import BlobServiceClient, ContainerClient
-from azure.storage.queue.aio import QueueClient, QueueServiceClient
 from openai import AsyncAzureOpenAI
 
-from app.helpers.logging import logger
+from app.persistence.azure_blob_storage import (
+    AzureBlobStorage,
+    Config as AzureBlobStorageConfig,
+)
+from app.persistence.azure_queue_storage import (
+    AzureQueueStorage,
+    Config as AzureQueueStorageConfig,
+)
+from app.persistence.azure_search import AzureSearch, Config as AzureSearchConfig
+from app.persistence.iblob import IBlob, Provider as BlobProvider
+from app.persistence.iqueue import IQueue, Provider as QueueProvider
+from app.persistence.isearch import ISearch, Provider as SearchProvider
+from app.persistence.local_disk import (
+    BlobConfig as LocalDiskBlobConfig,
+    LocalDiskBlob,
+    LocalDiskQueue,
+    QueueConfig as LocalDiskQueueConfig,
+)
 
 
 @asynccontextmanager
 async def openai_client(
-    api_key: str,
-    api_version: str,
-    endpoint: str,
+    azure_openai_api_key: str,
+    azure_openai_endpoint: str,
+    openai_api_version: str,
 ) -> AsyncGenerator[AsyncAzureOpenAI, None]:
     """
     Get the Azure OpenAI client.
     """
     async with AsyncAzureOpenAI(
         # Deployment
-        api_version=api_version,
-        azure_endpoint=endpoint,
+        api_version=openai_api_version,
+        azure_endpoint=azure_openai_endpoint,
         # Authentication
-        api_key=api_key,
+        api_key=azure_openai_api_key,
     ) as client:
         yield client
 
 
 @asynccontextmanager
 async def search_client(
-    api_key: str,
-    azure_openai_api_key: str,
-    azure_openai_embedding_deployment: str,
-    azure_openai_embedding_dimensions: int,
-    azure_openai_embedding_model: str,
-    azure_openai_endpoint: str,
-    endpoint: str,
+    azure_search_api_key: str | None,
+    azure_search_endpoint: str | None,
+    azure_openai_api_key: str | None,
+    azure_openai_embedding_deployment: str | None,
+    azure_openai_embedding_dimensions: int | None,
+    azure_openai_embedding_model: str | None,
+    azure_openai_endpoint: str | None,
     index: str,
-) -> AsyncGenerator[SearchClient, None]:
+    provider: SearchProvider,
+) -> AsyncGenerator[ISearch, None]:
     """
-    Get the Azure AI Search client.
+    Get the search client.
     """
-    # Index configuration
-    fields = [
-        SimpleField(
-            name="id",
-            key=True,
-            type=SearchFieldDataType.String,
-        ),
-        SearchableField(
-            name="content",
-            analyzer_name=LexicalAnalyzerName.STANDARD_LUCENE,
-            type=SearchFieldDataType.String,
-        ),
-        SimpleField(
-            name="url",
-            analyzer_name=LexicalAnalyzerName.STANDARD_LUCENE,
-            filterable=True,
-            sortable=True,
-            type=SearchFieldDataType.String,
-        ),
-        SearchField(
-            name="vectors",
-            searchable=True,
-            type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
-            vector_search_dimensions=azure_openai_embedding_dimensions,
-            vector_search_profile_name="default",
-        ),
-    ]
-    vector_search = VectorSearch(
-        profiles=[
-            VectorSearchProfile(
-                algorithm_configuration_name="default",
-                name="default",
-            ),
-        ],
-        algorithms=[
-            HnswAlgorithmConfiguration(
-                name="default",
-            ),
-        ],
-        vectorizers=[
-            AzureOpenAIVectorizer(
-                name="default",
-                azure_open_ai_parameters=AzureOpenAIParameters(
-                    api_key=azure_openai_api_key,
-                    deployment_id=azure_openai_embedding_deployment,
-                    model_name=azure_openai_embedding_model,
-                    resource_uri=azure_openai_endpoint,
-                ),
-            )
-        ],
-    )
-
-    # Create index if it does not exist
-    async with SearchIndexClient(
-        # Deployment
-        endpoint=endpoint,
-        index_name=index,
-        # Index configuration
-        fields=fields,
-        vector_search=vector_search,
-        # Authentication
-        credential=AzureKeyCredential(api_key),
-    ) as client:
-        try:
-            await client.create_index(
-                SearchIndex(
-                    fields=fields,
-                    name=index,
-                    vector_search=vector_search,
-                )
-            )
-            logger.info('Created Search "%s"', index)
-        except HttpResponseError as e:
-            if not e.error or not e.error.code == "ResourceNameAlreadyInUse":
-                raise e
-
-    # Return client
-    async with SearchClient(
-        # Deployment
-        endpoint=endpoint,
-        index_name=index,
-        # Authentication
-        credential=AzureKeyCredential(api_key),
-    ) as client:
-        yield client
+    # Azure AI Search
+    if provider == SearchProvider.AZURE_SEARCH:
+        # Validate arguments
+        config = AzureSearchConfig(
+            api_key=azure_search_api_key,  # pyright: ignore [reportArgumentType]
+            azure_openai_api_key=azure_openai_api_key,  # pyright: ignore [reportArgumentType]
+            azure_openai_embedding_deployment=azure_openai_embedding_deployment,  # pyright: ignore [reportArgumentType]
+            azure_openai_embedding_dimensions=azure_openai_embedding_dimensions,  # pyright: ignore [reportArgumentType]
+            azure_openai_embedding_model=azure_openai_embedding_model,  # pyright: ignore [reportArgumentType]
+            azure_openai_endpoint=azure_openai_endpoint,  # pyright: ignore [reportArgumentType]
+            endpoint=azure_search_endpoint,  # pyright: ignore [reportArgumentType]
+            index=index,
+        )  # pyright: ignore [reportArgumentType]
+        # Init client
+        async with AzureSearch(config) as client:
+            yield client
 
 
 @asynccontextmanager
 async def blob_client(
-    connection_string: str,
+    azure_storage_connection_string: str | None,
     container: str,
-) -> AsyncGenerator[ContainerClient, None]:
+    path: str | None,
+    provider: BlobProvider,
+) -> AsyncGenerator[IBlob, None]:
     """
-    Get the Azure Blob Storage client.
+    Get the blob client.
     """
-    async with BlobServiceClient.from_connection_string(connection_string) as x:
-        client = x.get_container_client(container)
+    # Azure Blob Storage
+    if provider == BlobProvider.AZURE_BLOB_STORAGE:
+        # Validate arguments
+        config = AzureBlobStorageConfig(
+            connection_string=azure_storage_connection_string,  # pyright: ignore [reportArgumentType]
+            name=container,
+        )  # pyright: ignore [reportArgumentType]
+        # Init client
+        async with AzureBlobStorage(config) as client:
+            yield client
 
-        # Create if it does not exist
-        try:
-            await client.create_container()
-            logger.info('Created Blob Storage "%s"', container)
-        except ResourceExistsError:
-            pass
-
-        # Return client
-        yield client
+    # Local Disk Blob
+    elif provider == BlobProvider.LOCAL_DISK:
+        # Validate arguments
+        config = LocalDiskBlobConfig(
+            name=container,
+            path=path,  # pyright: ignore [reportArgumentType]
+        )  # pyright: ignore [reportArgumentType]
+        # Init client
+        async with LocalDiskBlob(config) as client:
+            yield client
 
 
 @asynccontextmanager
 async def queue_client(
-    connection_string: str,
+    azure_storage_connection_string: str | None,
+    provider: QueueProvider,
     queue: str,
-) -> AsyncGenerator[QueueClient, None]:
+) -> AsyncGenerator[IQueue, None]:
     """
-    Get the Azure Queue Storage client.
+    Get the queue client.
     """
-    async with QueueServiceClient.from_connection_string(connection_string) as x:
-        client = x.get_queue_client(queue)
+    # Azure Queue Storage
+    if provider == QueueProvider.AZURE_QUEUE_STORAGE:
+        # Validate arguments
+        config = AzureQueueStorageConfig(
+            connection_string=azure_storage_connection_string,  # pyright: ignore [reportArgumentType]
+            name=queue,
+        )
+        # Init client
+        async with AzureQueueStorage(config) as client:
+            yield client
 
-        # Create if it does not exist
-        try:
-            await client.create_queue()
-            logger.info('Created Queue Storage "%s"', queue)
-        except ResourceExistsError:
-            pass
-
-        # Return client
-        yield client
+    # Local Disk Queue
+    elif provider == QueueProvider.LOCAL_DISK:
+        config = LocalDiskQueueConfig(
+            name=queue,
+        )  # pyright: ignore [reportArgumentType]
+        # Init client
+        async with LocalDiskQueue(config) as client:
+            yield client

@@ -8,6 +8,7 @@ from azure.core.exceptions import (
     ServiceRequestError,
 )
 from azure.storage.blob.aio import BlobServiceClient, ContainerClient
+from pydantic import BaseModel
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -16,22 +17,30 @@ from tenacity import (
 )
 
 from app.helpers.logging import logger
-from app.persistence.iblob import BlobNotFoundError, IBlob, LeaseAlreadyExistsError
+from app.persistence.iblob import (
+    BlobAlreadyExistsError,
+    BlobNotFoundError,
+    IBlob,
+    LeaseAlreadyExistsError,
+)
+
+
+class Config(BaseModel):
+    connection_string: str
+    name: str
 
 
 class AzureBlobStorage(IBlob):
     _client: ContainerClient
-    _connection_string: str
-    _name: str
+    _config: Config
     _service: BlobServiceClient
 
     def __init__(
         self,
-        connection_string: str,
-        name: str,
+        config: Config,
     ) -> None:
-        self._connection_string = connection_string
-        self._name = name
+        logger.info('Azure Blob Storage "%s" is configured', config.name)
+        self._config = config
 
     @retry(
         reraise=True,
@@ -46,10 +55,12 @@ class AzureBlobStorage(IBlob):
         lease_duration: int,
     ) -> AsyncGenerator[str, None]:
         try:
+            # Create the lease
             async with await self._client.get_blob_client(blob).acquire_lease(
                 lease_duration=lease_duration,
                 lease_id=str(uuid4()),
             ) as lease:
+                # Return the lease ID
                 yield lease.id
         except ResourceExistsError as e:
             raise LeaseAlreadyExistsError(
@@ -72,13 +83,16 @@ class AzureBlobStorage(IBlob):
         overwrite: bool,
         lease_id: str | None = None,
     ) -> None:
-        await self._client.upload_blob(
-            data=data,
-            lease=lease_id,
-            length=length,
-            name=blob,
-            overwrite=overwrite,
-        )
+        try:
+            await self._client.upload_blob(
+                data=data,
+                lease=lease_id,
+                length=length,
+                name=blob,
+                overwrite=overwrite,
+            )
+        except ResourceExistsError as e:
+            raise BlobAlreadyExistsError(f'Blob "{blob}" already exists') from e
 
     @retry(
         reraise=True,
@@ -101,13 +115,13 @@ class AzureBlobStorage(IBlob):
 
     async def __aenter__(self) -> "AzureBlobStorage":
         self._service = BlobServiceClient.from_connection_string(
-            self._connection_string
+            self._config.connection_string
         )
-        self._client = self._service.get_container_client(self._name)
+        self._client = self._service.get_container_client(self._config.name)
         # Create if it does not exist
         try:
             await self._client.create_container()
-            logger.info('Created Blob Storage "%s"', self._name)
+            logger.info('Created Blob Storage "%s"', self._config.name)
         except ResourceExistsError:
             pass
         return self

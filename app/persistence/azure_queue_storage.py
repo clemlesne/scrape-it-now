@@ -6,6 +6,7 @@ from azure.core.exceptions import (
     ServiceRequestError,
 )
 from azure.storage.queue.aio import QueueClient, QueueServiceClient
+from pydantic import BaseModel
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -18,19 +19,22 @@ from app.models.message import Message
 from app.persistence.iqueue import IQueue, MessageNotFoundError
 
 
+class Config(BaseModel):
+    connection_string: str
+    name: str
+
+
 class AzureQueueStorage(IQueue):
     _client: QueueClient
-    _connection_string: str
-    _name: str
+    _config: Config
     _service: QueueServiceClient
 
     def __init__(
         self,
-        connection_string: str,
-        name: str,
+        config: Config,
     ) -> None:
-        self._connection_string = connection_string
-        self._name = name
+        logger.info('Azure Queue Storage "%s" is configured', config.name)
+        self._config = config
 
     @retry(
         reraise=True,
@@ -63,7 +67,9 @@ class AzureQueueStorage(IQueue):
             yield Message(
                 content=message.content,
                 delete_token=message.pop_receipt,
+                dequeue_count=message.dequeue_count,
                 message_id=message.id,
+                visibility_timeout=message.next_visible_on,
             )
 
     async def delete_message(
@@ -82,13 +88,13 @@ class AzureQueueStorage(IQueue):
 
     async def __aenter__(self) -> "AzureQueueStorage":
         self._service = QueueServiceClient.from_connection_string(
-            self._connection_string
+            self._config.connection_string
         )
-        self._client = self._service.get_queue_client(self._name)
+        self._client = self._service.get_queue_client(self._config.name)
         # Create if it does not exist
         try:
             await self._client.create_queue()
-            logger.info('Created Queue Storage "%s"', self._name)
+            logger.info('Created Queue Storage "%s"', self._config.name)
         except ResourceExistsError:
             pass
         return self

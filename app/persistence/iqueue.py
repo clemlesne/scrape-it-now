@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from enum import Enum, unique
 from typing import Any, AsyncGenerator
 
 from app.models.message import Message
@@ -6,6 +7,12 @@ from app.models.message import Message
 
 class MessageNotFoundError(Exception):
     pass
+
+
+@unique
+class Provider(str, Enum):
+    AZURE_QUEUE_STORAGE = "azure_queue_storage"
+    LOCAL_DISK = "local_disk"
 
 
 class IQueue:

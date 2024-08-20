@@ -38,8 +38,13 @@ from app.helpers.threading import run_workers
 from app.helpers.trie import Trie
 from app.models.scraped import ScrapedQueuedModel, ScrapedUrlModel
 from app.models.state import StateJobModel, StateScrapedModel
-from app.persistence.iblob import BlobNotFoundError, IBlob, LeaseAlreadyExistsError
-from app.persistence.iqueue import IQueue
+from app.persistence.iblob import (
+    BlobNotFoundError,
+    IBlob,
+    LeaseAlreadyExistsError,
+    Provider as BlobProvider,
+)
+from app.persistence.iqueue import IQueue, Provider as QueueProvider
 
 # State
 JOB_STATE_NAME = "job.json"
@@ -378,11 +383,14 @@ async def _update_job_state(
 
 
 async def _worker(
+    azure_storage_connection_string: str,
+    blob_path: str,
+    blob_provider: BlobProvider,
     browser_name: str,
     cache_refresh: timedelta,
     job: str,
     max_depth: int,
-    storage_connection_string: str,
+    queue_provider: QueueProvider,
     timezones: list[str],
     user_agents: list[str],
     viewports: list[ViewportSize],
@@ -390,15 +398,19 @@ async def _worker(
 ) -> None:
     # Init clients
     async with blob_client(
-        connection_string=storage_connection_string,
+        azure_storage_connection_string=azure_storage_connection_string,
         container=scrape_container_name(job),
+        path=blob_path,
+        provider=blob_provider,
     ) as blob:
         async with queue_client(
-            connection_string=storage_connection_string,
+            azure_storage_connection_string=azure_storage_connection_string,
+            provider=queue_provider,
             queue=scrape_queue_name(job),
         ) as in_queue:
             async with queue_client(
-                connection_string=storage_connection_string,
+                azure_storage_connection_string=azure_storage_connection_string,
+                provider=queue_provider,
                 queue=index_queue_name(job),
             ) as out_queue:
 
@@ -423,6 +435,11 @@ async def _worker(
                             # Parse the message
                             current_item = ScrapedQueuedModel.model_validate_json(
                                 message.content
+                            )
+                            logger.info(
+                                'Processing "%s" (%i)',
+                                current_item.url,
+                                current_item.depth,
                             )
 
                             # Get a browser instance
@@ -835,16 +852,19 @@ def format_path(path: str) -> str:
 
 
 async def run(
+    azure_storage_connection_string: str | None,
+    blob_path: str,
+    blob_provider: BlobProvider,
     cache_refresh: int,
     job: str,
     max_depth: int,
-    storage_connection_string: str,
+    processes: int,
+    queue_provider: QueueProvider,
     timezones: list[str],
     url: str,
     user_agents: list[str],
     viewports: list[tuple[int, int]],
     whitelist: dict[re.Pattern, list[re.Pattern]],
-    processes: int,
 ) -> None:
     logger.info("Starting scraping job %s", job)
 
@@ -868,11 +888,14 @@ async def run(
 
     # Init clients
     async with blob_client(
-        connection_string=storage_connection_string,
+        azure_storage_connection_string=azure_storage_connection_string,
         container=scrape_container_name(job),
+        path=blob_path,
+        provider=blob_provider,
     ) as blob:
         async with queue_client(
-            connection_string=storage_connection_string,
+            azure_storage_connection_string=azure_storage_connection_string,
+            provider=queue_provider,
             queue=scrape_queue_name(job),
         ) as in_queue:
             # Add initial URL to the queue
@@ -881,7 +904,7 @@ async def run(
                 referrer="https://www.google.com/search",
                 url=url,
             )
-            await _queue(
+            queued_urls = await _queue(
                 blob=blob,
                 cache_refresh=cache_refresh_parsed,
                 deph=model.depth,
@@ -893,7 +916,18 @@ async def run(
                 whitelist=whitelist,
             )
 
+            # Initialize the job state as user can execute the "status" command right after
+            await _update_job_state(
+                blob=blob,
+                network_used_mb=0.0,
+                processed=0,
+                queued=queued_urls,
+            )
+
     run_workers(
+        azure_storage_connection_string=azure_storage_connection_string,
+        blob_path=blob_path,
+        blob_provider=blob_provider,
         browser_name=browser_name,
         cache_refresh=cache_refresh_parsed,
         count=processes,
@@ -901,7 +935,7 @@ async def run(
         job=job,
         max_depth=max_depth,
         name=f"scrape-{job}",
-        storage_connection_string=storage_connection_string,
+        queue_provider=queue_provider,
         timezones=timezones,
         user_agents=user_agents,
         viewports=viewports_parsed,
@@ -910,13 +944,17 @@ async def run(
 
 
 async def state(
-    storage_connection_string: str,
+    blob_path: str,
+    blob_provider: BlobProvider,
     job: str,
+    azure_storage_connection_string: str | None,
 ) -> StateJobModel | None:
     # Init clients
     async with blob_client(
-        connection_string=storage_connection_string,
+        azure_storage_connection_string=azure_storage_connection_string,
         container=scrape_container_name(job),
+        path=blob_path,
+        provider=blob_provider,
     ) as blob:
         model = None
         # Load the state

@@ -10,10 +10,10 @@ A website to scrape? There's a simple way.
 
 Shared:
 
-- [x] Decoupled architecture with [Azure Queue Storage](https://learn.microsoft.com/en-us/azure/storage/queues)
+- [x] Decoupled architecture with [Azure Queue Storage](https://learn.microsoft.com/en-us/azure/storage/queues) or local [sqlite](https://sqlite.org)
 - [x] Executable as a CLI with a [standalone binary](http://github.com/clemlesne/scrape-it-now/releases/latest)
 - [x] Idenpotent operations that can be run in parallel
-- [x] Scraped content is stored in [Azure Blob Storage](https://learn.microsoft.com/en-us/azure/storage/blobs)
+- [x] Scraped content is stored in [Azure Blob Storage](https://learn.microsoft.com/en-us/azure/storage/blobs) or local disk
 
 Scraper:
 
@@ -64,10 +64,22 @@ scrape-it-now --help
 
 #### Run a job
 
-Basic usage:
+Usage with Azure Blob Storage and Azure Queue Storage:
 
 ```bash
+# Azure Storage configuration
 export AZURE_STORAGE_CONNECTION_STRING=xxx
+# Run the job
+scrape-it-now scrape run https://nytimes.com
+```
+
+Usage with Local Disk Blob and Local Disk Queue:
+
+```bash
+# Local disk configuration
+export BLOB_PROVIDER=local_disk
+export QUEUE_PROVIDER=local_disk
+# Run the job
 scrape-it-now scrape run https://nytimes.com
 ```
 
@@ -89,7 +101,11 @@ Most frequent options are:
 | `Options` | Description | `Environment variable` |
 |-|-|-|
 | `--azure-storage-connection-string`</br>`-ascs` | Azure Storage connection string | `AZURE_STORAGE_CONNECTION_STRING` |
+| `--blob-provider`</br>`-bp` | Blob provider | `BLOB_PROVIDER` |
 | `--job-name`</br>`-jn` | Job name | `JOB_NAME` |
+| `--max-depth`</br>`-md` | Maximum depth | `MAX_DEPTH` |
+| `--queue-provider`</br>`-qp` | Queue provider | `QUEUE_PROVIDER` |
+| `--whitelist`</br>`-w` | Whitelist | `WHITELIST` |
 
 For documentation on all available options, run:
 
@@ -99,10 +115,21 @@ scrape-it-now scrape run --help
 
 #### Show job status
 
-Basic usage:
+Usage with Azure Blob Storage:
 
 ```bash
+# Azure Storage configuration
 export AZURE_STORAGE_CONNECTION_STRING=xxx
+# Show the job status
+scrape-it-now scrape status [job_name]
+```
+
+Usage with Local Disk Blob:
+
+```bash
+# Local disk configuration
+export BLOB_PROVIDER=local_disk
+# Show the job status
 scrape-it-now scrape status [job_name]
 ```
 
@@ -117,6 +144,7 @@ Most frequent options are:
 | `Options` | Description | `Environment variable` |
 |-|-|-|
 | `--azure-storage-connection-string`</br>`-ascs` | Azure Storage connection string | `AZURE_STORAGE_CONNECTION_STRING` |
+| `--blob-provider`</br>`-bp` | Blob provider | `BLOB_PROVIDER` |
 
 For documentation on all available options, run:
 
@@ -128,17 +156,40 @@ scrape-it-now scrape status --help
 
 #### Run a job
 
-Basic usage:
+Usage with Azure Blob Storage, Azure Queue Storage and Azure AI Search:
 
 ```bash
+# Azure OpenAI configuration
 export AZURE_OPENAI_API_KEY=xxx
 export AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME=xxx
 export AZURE_OPENAI_EMBEDDING_DIMENSIONS=xxx
 export AZURE_OPENAI_EMBEDDING_MODEL_NAME=xxx
 export AZURE_OPENAI_ENDPOINT=xxx
+# Azure Search configuration
 export AZURE_SEARCH_API_KEY=xxx
 export AZURE_SEARCH_ENDPOINT=xxx
+# Azure Storage configuration
 export AZURE_STORAGE_CONNECTION_STRING=xxx
+# Run the job
+scrape-it-now index run [job_name]
+```
+
+Usage with Local Disk Blob, Local Disk Queue and Azure AI Search:
+
+```bash
+# Azure OpenAI configuration
+export AZURE_OPENAI_API_KEY=xxx
+export AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME=xxx
+export AZURE_OPENAI_EMBEDDING_DIMENSIONS=xxx
+export AZURE_OPENAI_EMBEDDING_MODEL_NAME=xxx
+export AZURE_OPENAI_ENDPOINT=xxx
+# Azure Search configuration
+export AZURE_SEARCH_API_KEY=xxx
+export AZURE_SEARCH_ENDPOINT=xxx
+# Local disk configuration
+export BLOB_PROVIDER=local_disk
+export QUEUE_PROVIDER=local_disk
+# Run the job
 scrape-it-now index run [job_name]
 ```
 
@@ -167,6 +218,8 @@ Most frequent options are:
 | `--azure-search-api-key`</br>`-asak` | Azure Search API key | `AZURE_SEARCH_API_KEY` |
 | `--azure-search-endpoint`</br>`-ase` | Azure Search endpoint | `AZURE_SEARCH_ENDPOINT` |
 | `--azure-storage-connection-string`</br>`-ascs` | Azure Storage connection string | `AZURE_STORAGE_CONNECTION_STRING` |
+| `--blob-provider`</br>`-bp` | Blob provider | `BLOB_PROVIDER` |
+| `--queue-provider`</br>`-qp` | Queue provider | `QUEUE_PROVIDER` |
 
 For documentation on all available options, run:
 
@@ -179,6 +232,9 @@ scrape-it-now index run --help
 ### Scrape
 
 ```mermaid
+---
+title: Scrape process with Azure Storage
+---
 graph LR
   cli["CLI"]
   web["Website"]
@@ -209,8 +265,11 @@ graph LR
 ### Index
 
 ```mermaid
+---
+title: Scrape process with Azure Storage and Azure AI Search
+---
 graph LR
-  ai_search["Azure AI Search"]
+  search["Azure AI Search"]
   cli["CLI"]
   embeddings["Azure OpenAI Embeddings"]
 
@@ -228,7 +287,7 @@ graph LR
   cli -- 2. Get cache --> scraped
   cli -- 3. Chunk --> cli
   cli -- 4. Embed --> embeddings
-  cli -- 5. Push to search --> ai_search
+  cli -- 5. Push to search --> search
 ```
 
 ## Advanced usage
@@ -247,12 +306,22 @@ For arguments that accept multiple values, use a space-separated list. For examp
 WHITELIST=learn\.microsoft\.com,^/(?!en-us).*,^/[^/]+/answers/,^/[^/]+/previous-versions/ go\.microsoft\.com,.*
 ```
 
-### Broswer binary installation
-
-Browser binaries are automatically downloaded or updated at each run. Browser is Chromium and it is not configurable (feel free to open an issue if you need another browser), it weights around 450MB.
+### Application cache directory
 
 The cache directoty depends on the operating system:
 
 - `~/.config/scrape-it-now` (Unix)
 - `~/Library/Application Support/scrape-it-now` (macOS)
 - `C:\Users\<user>\AppData\Roaming\scrape-it-now` (Windows)
+
+### Broswer binary installation
+
+Browser binaries are automatically downloaded or updated at each run. Browser is Chromium and it is not configurable (feel free to open an issue if you need another browser), it weights around 450MB. Cache is stored in the cache directory.
+
+### How Local Disk storage works
+
+Local Disk storage is used for both blob and queue. It is not recommended for production use, as it is not scalable, not fault-tolerant and not parallelizable.
+
+Local Disk Blob uses a directory structure to store blobs. Each blob is stored in a file with the blob name as the file name. Lease is implemented with lock files. By default, files are stored in a directory relative to the command execution directory.
+
+Local Disk Queue uses a SQLite database to store messages. Database is stored in the cache directory. SQL databases implement visibility timeout and deletion tokens to ensure consistency to the stateless queue services like Azure Queue Storage.

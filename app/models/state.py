@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field
 
 
 class StateJobModel(BaseModel):
@@ -10,7 +10,6 @@ class StateJobModel(BaseModel):
     processed: int = 0
     queued: int = 0
 
-    @computed_field
     @property
     def stats(self) -> dict[str, float]:
         """

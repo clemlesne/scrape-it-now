@@ -58,7 +58,7 @@ def cache_dir() -> str:
 
     See: https://click.palletsprojects.com/en/8.1.x/api/#click.get_app_dir
     """
-    res = click.get_app_dir("scrape-it-now")
+    res = path.abspath(click.get_app_dir("scrape-it-now"))
     # Create if not exists
     if not path.exists(res):
         makedirs(res)
@@ -70,3 +70,10 @@ def browsers_install_path() -> str:
     Get the path to the browser executable.
     """
     return path.join(cache_dir(), "browsers")
+
+
+def local_disk_cache_path() -> str:
+    """
+    Get the path to the local disk persistance.
+    """
+    return path.join(cache_dir(), "local_disk")

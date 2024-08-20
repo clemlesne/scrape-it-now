@@ -35,8 +35,13 @@ from app.helpers.resources import (
 from app.helpers.threading import run_workers
 from app.models.indexed import IndexedIngestModel
 from app.models.scraped import ScrapedUrlModel
-from app.persistence.iblob import IBlob
-from app.persistence.isearch import DocumentNotFoundError, ISearch
+from app.persistence.iblob import IBlob, Provider as BlobProvider
+from app.persistence.iqueue import Provider as QueueProvider
+from app.persistence.isearch import (
+    DocumentNotFoundError,
+    ISearch,
+    Provider as SearchProvider,
+)
 
 
 async def _process_one(
@@ -339,17 +344,21 @@ def _count_tokens(content: str) -> int:
 
 
 async def run(
+    azure_search_api_key: str | None,
+    azure_search_endpoint: str | None,
     azure_openai_api_key: str,
     azure_openai_embedding_deployment: str,
     azure_openai_embedding_dimensions: int,
     azure_openai_embedding_model: str,
     azure_openai_endpoint: str,
+    azure_storage_connection_string: str | None,
+    blob_path: str,
+    blob_provider: BlobProvider,
     job: str,
     openai_api_version: str,
     processes: int,
-    search_api_key: str,
-    search_endpoint: str,
-    storage_connection_string: str,
+    queue_provider: QueueProvider,
+    search_provider: SearchProvider,
 ) -> None:
     logger.info("Starting indexing job %s", job)
 
@@ -358,57 +367,69 @@ async def run(
     env["TIKTOKEN_CACHE_DIR"] = resources_dir("tiktoken")
 
     run_workers(
+        azure_search_api_key=azure_search_api_key,
+        azure_search_endpoint=azure_search_endpoint,
         azure_openai_api_key=azure_openai_api_key,
         azure_openai_embedding_deployment=azure_openai_embedding_deployment,
         azure_openai_embedding_dimensions=azure_openai_embedding_dimensions,
         azure_openai_embedding_model=azure_openai_embedding_model,
         azure_openai_endpoint=azure_openai_endpoint,
+        azure_storage_connection_string=azure_storage_connection_string,
+        blob_path=blob_path,
+        blob_provider=blob_provider,
         count=processes,
         func=_worker,
         job=job,
         name=f"index-{job}",
         openai_api_version=openai_api_version,
-        search_api_key=search_api_key,
-        search_endpoint=search_endpoint,
-        storage_connection_string=storage_connection_string,
+        queue_provider=queue_provider,
+        search_provider=search_provider,
     )
 
 
 async def _worker(
+    azure_search_api_key: str | None,
+    azure_search_endpoint: str | None,
     azure_openai_api_key: str,
     azure_openai_embedding_deployment: str,
     azure_openai_embedding_dimensions: int,
     azure_openai_embedding_model: str,
     azure_openai_endpoint: str,
+    azure_storage_connection_string: str | None,
+    blob_path: str,
+    blob_provider: BlobProvider,
     job: str,
     openai_api_version: str,
-    search_api_key: str,
-    search_endpoint: str,
-    storage_connection_string: str,
+    queue_provider: QueueProvider,
+    search_provider: SearchProvider,
 ) -> None:
     # Init clients
     async with blob_client(
-        connection_string=storage_connection_string,
+        azure_storage_connection_string=azure_storage_connection_string,
         container=scrape_container_name(job),
+        path=blob_path,
+        provider=blob_provider,
     ) as blob:
         async with openai_client(
-            api_key=azure_openai_api_key,
-            api_version=openai_api_version,
-            endpoint=azure_openai_endpoint,
+            azure_openai_api_key=azure_openai_api_key,
+            azure_openai_endpoint=azure_openai_endpoint,
+            openai_api_version=openai_api_version,
         ) as openai:
             async with queue_client(
-                connection_string=storage_connection_string,
+                azure_storage_connection_string=azure_storage_connection_string,
+                provider=queue_provider,
                 queue=index_queue_name(job),
             ) as queue:
                 async with search_client(
-                    api_key=search_api_key,
+                    azure_search_api_key=azure_search_api_key,
+                    azure_search_endpoint=azure_search_endpoint,
                     azure_openai_api_key=azure_openai_api_key,
                     azure_openai_embedding_deployment=azure_openai_embedding_deployment,
                     azure_openai_embedding_dimensions=azure_openai_embedding_dimensions,
                     azure_openai_embedding_model=azure_openai_embedding_model,
                     azure_openai_endpoint=azure_openai_endpoint,
-                    endpoint=search_endpoint,
                     index=index_index_name(job),
+                    provider=search_provider,
                 ) as search:
 
                     # Process the queue
@@ -419,6 +440,7 @@ async def _worker(
                         logger.info("Processing new messages")
                         async for message in messages:
                             blob_name = message.content
+                            logger.info('Processing "%s"', blob_name)
                             try:
                                 await _process_one(
                                     blob=blob,

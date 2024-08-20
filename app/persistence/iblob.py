@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from enum import Enum, unique
 from typing import Any, AsyncContextManager
 
 
@@ -6,8 +7,18 @@ class BlobNotFoundError(Exception):
     pass
 
 
+class BlobAlreadyExistsError(Exception):
+    pass
+
+
 class LeaseAlreadyExistsError(Exception):
     pass
+
+
+@unique
+class Provider(str, Enum):
+    AZURE_BLOB_STORAGE = "azure_blob_storage"
+    LOCAL_DISK = "local_disk"
 
 
 class IBlob:

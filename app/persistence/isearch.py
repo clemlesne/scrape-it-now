@@ -1,9 +1,15 @@
 from abc import abstractmethod
+from enum import Enum, unique
 from typing import Any
 
 
 class DocumentNotFoundError(Exception):
     pass
+
+
+@unique
+class Provider(str, Enum):
+    AZURE_SEARCH = "azure_search"
 
 
 class ISearch:

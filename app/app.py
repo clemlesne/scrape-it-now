@@ -53,6 +53,7 @@ def scrape() -> None:
     "-md",
     default=3,
     envvar="MAX_DEPTH",
+    help="Maximum depth to scrape. This is the number of iterative links to follow from the initial URL. Be warning that the number of pages to scrape grows exponentially with the depth, this can lead to millions of pages to scrape.",
     required=True,
     type=int,
 )
@@ -61,6 +62,7 @@ def scrape() -> None:
     "-cr",
     default=24 * 7,
     envvar="CACHE_REFRESH",
+    help="Cache refresh time in hours. After this delay, the cache is considered stale and the page is rescraped if needed.",
     required=True,
     type=int,
 )
@@ -76,6 +78,7 @@ def scrape() -> None:
     "--user-agent",
     "-ua",
     envvar="USER_AGENT",
+    help="Comma separated list of user agents to scrape. They are used to generate random browser profiles.",
     multiple=True,
     required=True,
     type=str,
@@ -92,6 +95,7 @@ def scrape() -> None:
     "--timezone",
     "-tz",
     envvar="TIMEZONE",
+    help="Comma separated list of timezones to scrape. Example, 'America/New_York,Europe/London'. They are used to generate random browser profiles.",
     multiple=True,
     required=True,
     type=str,
@@ -116,6 +120,7 @@ def scrape() -> None:
     "--viewport",
     "-v",
     envvar="VIEWPORT",
+    help="Comma separated list of viewports to scrape. Example, '1920x1080,1280x720'. They are used to generate random browser profiles.",
     multiple=True,
     required=True,
     type=str,
@@ -158,6 +163,7 @@ def scrape() -> None:
     "--azure-storage-connection-string",
     "-ascs",
     envvar="AZURE_STORAGE_CONNECTION_STRING",
+    help="Azure Storage connection string. Mandatory for Azure Blob Storage and Azure Queue Storage providers.",
     hide_input=True,
     type=str,
 )
@@ -166,12 +172,14 @@ def scrape() -> None:
     "-p",
     default=int((cpu_count() or 4) / 2),
     envvar="PROCESSES",
+    help="Number of processes to use for scraping.",
     required=True,
     type=int,
 )
 @click.option(
     "--job-name",
     "-jn",
+    help="Name of the job. If not provided, a random name will be generated. Job name is not tested for uniqueness.",
     type=str,
 )
 @click.argument(
@@ -266,6 +274,7 @@ async def scrape_run(
     "--azure-storage-connection-string",
     "-ascs",
     envvar="AZURE_STORAGE_CONNECTION_STRING",
+    help="Azure Storage connection string. Mandatory for Azure Blob Storage provider.",
     hide_input=True,
     type=str,
 )
@@ -348,6 +357,7 @@ def index() -> None:
     "--azure-storage-connection-string",
     "-ascs",
     envvar="AZURE_STORAGE_CONNECTION_STRING",
+    help="Azure Storage connection string. Mandatory for Azure Blob Storage and Azure Queue Storage providers.",
     hide_input=True,
     type=str,
 )
@@ -355,6 +365,7 @@ def index() -> None:
     "--azure-openai-embedding-dimensions",
     "-aoed",
     envvar="AZURE_OPENAI_EMBEDDING_DIMENSIONS",
+    help="Dimensions of the OpenAI embedding model.",
     required=True,
     type=int,
 )
@@ -362,6 +373,7 @@ def index() -> None:
     "--azure-openai-embedding-deployment-name",
     "-aoedn",
     envvar="AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME",
+    help="Deployment name of the OpenAI embedding model.",
     required=True,
     type=str,
 )
@@ -369,6 +381,7 @@ def index() -> None:
     "--azure-openai-embedding-model-name",
     "-aoemn",
     envvar="AZURE_OPENAI_EMBEDDING_MODEL_NAME",
+    help="Model name of the OpenAI embedding model.",
     required=True,
     type=str,
 )
@@ -384,20 +397,21 @@ def index() -> None:
     "--azure-search-api-key",
     "-asak",
     envvar="AZURE_SEARCH_API_KEY",
-    required=True,
+    help="Azure Search API key. Mandatory for Azure AI Search provider.",
     type=str,
 )
 @click.option(
     "--azure-search-endpoint",
     "-ase",
     envvar="AZURE_SEARCH_ENDPOINT",
-    required=True,
+    help="Azure Search endpoint. Mandatory for Azure AI Search provider.",
     type=str,
 )
 @click.option(
     "--azure-openai-api-key",
     "-aoak",
     envvar="AZURE_OPENAI_API_KEY",
+    help="Azure OpenAI API key.",
     required=True,
     type=str,
 )
@@ -406,6 +420,7 @@ def index() -> None:
     "-oav",
     default="2024-06-01",
     envvar="OPENAI_API_VERSION",
+    help="OpenAI API version.",
     required=True,
     type=str,
 )
@@ -413,6 +428,7 @@ def index() -> None:
     "--azure-openai-endpoint",
     "-aoe",
     envvar="AZURE_OPENAI_ENDPOINT",
+    help="Azure OpenAI endpoint.",
     required=True,
     type=str,
 )

@@ -43,6 +43,12 @@ jobs:
     runs-on: ubuntu-22.04
     needs:
       - init
+    strategy:
+      fail-fast: false
+      matrix:
+        step:
+          - test-static
+          - test-unit
     steps:
       - name: Checkout
         uses: actions/checkout@v4.1.7
@@ -56,11 +62,20 @@ jobs:
       - name: Install dependencies
         run: make install-deps
 
+      - name: Configure environment variables
+        run: echo "${{ secrets.DOTENV_UNIT_TESTS }}" > .env
+
       - name: Run tests
-        run: make test
+        run: make ${{ matrix.step }} version_full=${{ needs.init.outputs.VERSION_FULL }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: test-results
+          path: test-reports/*
 
   build-app:
-    name: Build & publish app
+    name: Build & archive app
     permissions:
       contents: write
       packages: write

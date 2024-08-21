@@ -145,7 +145,7 @@ jobs:
         if: runner.os == 'Windows'
         run: mv dist\scrape-it-now.exe dist\scrape-it-now-${{ needs.init.outputs.VERSION }}-${{ matrix.os }}.exe
 
-      - name: Upload artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4.3.6
         with:
           name: binary-${{ matrix.os }}
@@ -190,7 +190,7 @@ jobs:
           path: sbom-reports/*
 
   publish-release:
-    name: Release
+    name: Publish release
     permissions:
       contents: write
     runs-on: ubuntu-22.04

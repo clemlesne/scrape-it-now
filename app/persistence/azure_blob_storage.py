@@ -157,6 +157,7 @@ class AzureBlobStorage(IBlob):
         self,
     ) -> None:
         await self._client.delete_container()
+        logger.info('Deleted Blob Storage "%s"', self._config.name)
 
     async def __aenter__(self) -> "AzureBlobStorage":
         self._service = BlobServiceClient.from_connection_string(

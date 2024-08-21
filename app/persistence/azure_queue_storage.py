@@ -97,6 +97,7 @@ class AzureQueueStorage(IQueue):
         self,
     ) -> None:
         await self._client.delete_queue()
+        logger.info('Deleted Queue Storage "%s"', self._config.name)
 
     async def __aenter__(self) -> "AzureQueueStorage":
         self._service = QueueServiceClient.from_connection_string(

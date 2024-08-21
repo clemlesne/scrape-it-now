@@ -194,6 +194,7 @@ class LocalDiskBlob(IBlob):
                 await remove(join(root, file))
             for dir in dirs:
                 await rmdir(join(root, dir))
+        logger.info('Deleted Local Disk Blob "%s"', self._config.name)
 
     @asynccontextmanager
     async def _file_lock(self, file_path: str) -> AsyncGenerator[None, None]:
@@ -361,8 +362,8 @@ class LocalDiskQueue(IQueue):
     async def delete_queue(
         self,
     ) -> None:
-        # Delete the database file
         await remove(self._config.db_path)
+        logger.info('Deleted Local Disk Queue "%s"', self._config.name)
 
     @asynccontextmanager
     async def _use_connection(self) -> AsyncGenerator[aiosqlite.Connection, None]:

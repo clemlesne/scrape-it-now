@@ -6,37 +6,41 @@ name = "scrape-it-now"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-  "aiodns==3.2.0",
-  "aiohttp==3.9.5",
+  "aiofiles==24.1.0",
+  "aiohttp==3.10.5",
   "aiosqlite==0.20.0",
   "azure-monitor-opentelemetry==1.6.1",
   "azure-search-documents==11.6.0b4",
-  "azure-storage-blob==12.21.0",
+  "azure-storage-blob==12.22.0",
   "azure-storage-queue==12.11.0",
   "click==8.1.7",
   "html2text==2024.2.26",
-  "openai==1.40.1",
+  "openai==1.42.0",
   "opentelemetry-instrumentation-aiohttp-client==0.47b0",
   "opentelemetry-instrumentation-httpx==0.47b0",
-  "opentelemetry-instrumentation-openai==0.26.5",
+  "opentelemetry-instrumentation-openai==0.27.0",
   "opentelemetry-instrumentation-redis==0.47b0",
   "opentelemetry-instrumentation-sqlite3==0.47b0",
-  "playwright==1.45.1",
-  "pydantic==2.7.4",
+  "playwright==1.46.0",
+  "pydantic==2.8.2",
   "python-dotenv==1.0.1",
-  "tenacity==8.4.1",
+  "tenacity==9.0.0",
   "tiktoken==0.7.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-  "black[jupyter]==24.4.2",  # Code formatter
-  "deptry==0.16.1",  # Dependency tree testing
+  "black==24.8.0",  # Code formatter
+  "deptry==0.19.1",  # Dependency tree testing
   "isort==5.13.2",  # Import sorter
   "pip-tools==7.4.1",  # Compile requirements.txt from pyproject.toml
   "pyinstaller==6.10.0",
-  "pylint==3.2.5",  # Linter
-  "pyright==1.1.371",  # Static type checker
+  "pylint==3.2.6",  # Linter
+  "pyright==1.1.377",  # Static type checker
+  "pytest-asyncio==0.23.7",  # Pytest plugin for async tests
+  "pytest-repeat==0.9.3",  # Pytest plugin for repeating tests
+  "pytest-xdist[psutil]==3.6.1",  # Pytest plugin for parallel testing
+  "pytest==8.3.2",  # Testing framework
 ]
 
 [project.scripts]
@@ -57,7 +61,6 @@ pep621_dev_dependency_groups = ["dev"]
 
 [tool.deptry.per_rule_ignores]
 DEP002 = [
-  "aiodns",  # Resolver is required for the AIOHTTP AsyncResolver TCP resolver
   "aiohttp",  # Async HTTP client for Azure SDKs
 ]
 DEP003 = [

@@ -18,7 +18,6 @@ from playwright.async_api import (
 from pydantic import ValidationError
 from tenacity import (
     retry,
-    retry_any,
     retry_if_exception_type,
     stop_after_attempt,
     wait_random_exponential,
@@ -625,10 +624,12 @@ async def _scrape_page(
     """
 
     def _generic_error(
+        message: str,
         status: int = -1,
         etag: str | None = None,
         valid_until: datetime | None = None,
     ) -> ScrapedUrlModel:
+        logger.info("Cannot scrape: %s (%s)", message, url)
         # Return an empty result if Playwright fails
         return ScrapedUrlModel(
             etag=etag,
@@ -676,13 +677,15 @@ async def _scrape_page(
                 timeout=30000,  # 30 seconds
             )
         except TimeoutError:  # TODO: Retry maybe a few times for timeout errors?
-            logger.debug("Timeout for loading %s", url_clean.geturl())
-            return _generic_error(etag=previous_etag)
-        except PlaywrightError:
-            logger.error(
-                "Unknown error for loading %s", url_clean.geturl(), exc_info=True
+            return _generic_error(
+                etag=previous_etag,
+                message="Timeout while loading",
             )
-            return _generic_error(etag=previous_etag)
+        except PlaywrightError as e:
+            return _generic_error(
+                etag=previous_etag,
+                message=f"Unknown error: {e}",
+            )
 
         # Remove all routes, as our filter manipulates all requests, we don't need it anymore
         # See: https://github.com/microsoft/playwright/issues/30667#issuecomment-2095788164
@@ -690,23 +693,22 @@ async def _scrape_page(
 
         # Skip if no response from Playwright
         if not res:
-            logger.warning(
-                "No response from Playwright for loading %s", url_clean.geturl()
+            return _generic_error(
+                etag=previous_etag,
+                message="No HTML response from Playwright browser",
             )
-            return _generic_error(etag=previous_etag)
 
         # Skip if the content is not HTML
         content_type = res.headers.get("content-type", "")
         if "text/html" not in content_type:
-            logger.info("Content type is not HTML, skipping")
-            return _generic_error(etag=previous_etag)
+            return _generic_error(
+                etag=previous_etag,
+                message=f"Content type is {content_type}, not HTML",
+            )
 
         # Check for cache control
         cache_control = res.headers.get("cache-control", "")
         # TODO: Should "private" value be excluded? (see: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#private)
-        # if "private" in cache_control:
-        #     logger.info("Page is marked as private, skipping")
-        #     return _generic_error(etag=previous_etag)
         valid_until = None
         # The "s-maxage" directive is ignored by private caches, and overrides the value specified by the max-age directive or the Expires header for shared caches, if they are present.
         # See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#s-maxage
@@ -733,6 +735,7 @@ async def _scrape_page(
         if status != 200:
             return _generic_error(
                 etag=etag,
+                message=f"Status code {status}, not 200",
                 status=status,
                 valid_until=valid_until,
             )
@@ -749,27 +752,25 @@ async def _scrape_page(
                     await html_selector.inner_html()
                 )  # Get HTML content of the visible page
         except TimeoutError:  # TODO: Is those timeouts normal? They happen quite often.
-            logger.debug("Timeout for selecting HTML content")
             return _generic_error(
                 etag=etag,
+                message="Timeout for selecting HTML content",
                 valid_until=valid_until,
             )
 
         # Skip if no HTML content
         if not html:
-            logger.warning(
-                "No HTML content returned from Playwright for %s", url_clean.geturl()
-            )
             return _generic_error(
                 etag=etag,
+                message="No HTML content returned",
                 valid_until=valid_until,
             )
 
         # Check for Cloudflare blocking
         if "Why have I been blocked?" in html:
-            logger.warning("Blocked by Cloudflare")
             return _generic_error(
                 etag=etag,
+                message="Blocked by Cloudflare",
                 status=403,
                 valid_until=valid_until,
             )
@@ -787,12 +788,10 @@ async def _scrape_page(
             )
         except (
             AssertionError
-        ):  # When HTML2Text fails to parse the content, it raises an assertion error
-            logger.debug(
-                "Generic error for parsing HTML content to markdown", exc_info=True
-            )
+        ) as e:  # When HTML2Text fails to parse the content, it raises an assertion error
             return _generic_error(
                 etag=etag,
+                message=f"HTML to text conversion failed: {e}",
                 valid_until=valid_until,
             )
 
@@ -828,6 +827,7 @@ async def _scrape_page(
             content=content,
             etag=etag,
             links=list(links),
+            network_used_mb=total_size_bytes / 1024 / 1024,
             raw=html,
             redirect=redirect,
             status=status,

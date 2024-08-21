@@ -27,9 +27,9 @@ from app.helpers.logging import logger
 from app.helpers.persistence import blob_client, queue_client
 from app.helpers.resources import (
     browsers_install_path,
+    dir_resources,
     hash_url,
     index_queue_name,
-    resources_dir,
     scrape_container_name,
     scrape_queue_name,
 )
@@ -525,7 +525,7 @@ def _ads_pattern() -> re.Pattern | None:
 
         with open(
             encoding="utf-8",
-            file=resources_dir("ads-nl.txt"),
+            file=dir_resources("ads-nl.txt"),
             mode="r",
         ) as f:
             # Parse the list of domains

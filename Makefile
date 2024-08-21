@@ -83,10 +83,18 @@ test-static:
 	python3 -m pyright .
 
 test-unit:
+	bash cicd/test-unit-ci.sh
+
+test-static-server:
+	@echo "➡️ Starting local static server..."
+	python3 -m http.server -d ./tests/websites 8000
+
+test-unit-run:
 	@echo "➡️ Unit tests (Pytest)..."
 	pytest \
 		--junit-xml=test-reports/$(version_full).xml \
-		-n auto \
+		--maxprocesses=4 \
+		-n logical \
 		tests/*.py
 
 dev:

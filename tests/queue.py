@@ -110,6 +110,69 @@ async def test_acid(provider: QueueProvider) -> None:
         await client.delete_queue()
 
 
+@pytest.mark.parametrize(
+    "provider",
+    [
+        pytest.param(
+            QueueProvider.AZURE_QUEUE_STORAGE,
+            id=QueueProvider.AZURE_QUEUE_STORAGE.value,
+        ),
+        pytest.param(
+            QueueProvider.LOCAL_DISK,
+            id=QueueProvider.LOCAL_DISK.value,
+        ),
+    ],
+)
+@pytest.mark.asyncio(scope="session")
+@pytest.mark.repeat(10)  # Catch multi-threading and concurrency issues
+async def test_send_many(provider: QueueProvider) -> None:
+    # Init values
+    queue_name = _random_name()
+
+    messages: list[tuple[bool, str]] = []
+    for _ in range(100):
+        message_content = _random_content()
+        messages.append((False, message_content))
+
+    # Debug
+    logger.info("Queue name: %s", queue_name)
+
+    # Init client
+    async with queue_client(
+        azure_storage_connection_string=env["AZURE_STORAGE_CONNECTION_STRING"],
+        provider=provider,
+        queue=queue_name,
+    ) as client:
+
+        # Send test messages
+        tasks = [client.send_message(content) for _, content in messages]
+        await asyncio.gather(*tasks)
+
+        # Receive test messages
+        async for message in client.receive_messages(
+            max_messages=len(messages) + 1,  # +1 to catch extra messages
+            visibility_timeout=5,
+        ):
+            # Search for message; order nor duplicates are guaranteed
+            found = False
+            for i, (_, content) in enumerate(messages):
+                if content == message.content:
+                    # Mark as found
+                    found = True
+                    messages[i] = (True, content)
+                    break
+            # Raise if not found
+            if not found:
+                raise AssertionError("Message content mismatch")
+
+        # Check if all messages were found
+        if not all(found for found, _ in messages):
+            raise AssertionError("Not all messages were found")
+
+        # Clean up
+        await client.delete_queue()
+
+
 def _random_name() -> str:
     return "".join(
         random.choice(string.ascii_lowercase + string.digits) for _ in range(32)

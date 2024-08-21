@@ -1,4 +1,4 @@
-import random, string
+import asyncio, random, string
 from os import environ as env
 from uuid import uuid4
 
@@ -121,6 +121,7 @@ async def test_lease(provider: BlobProvider) -> None:
 
     # Debug
     logger.info("Blob name: %s", blob_name)
+    logger.info("Container name: %s", container_name)
 
     # Init client
     async with blob_client(
@@ -232,6 +233,70 @@ async def test_lease(provider: BlobProvider) -> None:
                 length=len(fourth_content_bytes),
                 overwrite=True,
             )
+
+        # Clean up
+        await client.delete_container()
+
+
+@pytest.mark.parametrize(
+    "provider",
+    [
+        pytest.param(
+            BlobProvider.AZURE_BLOB_STORAGE,
+            id=BlobProvider.AZURE_BLOB_STORAGE.value,
+        ),
+        pytest.param(
+            BlobProvider.LOCAL_DISK,
+            id=BlobProvider.LOCAL_DISK.value,
+        ),
+    ],
+)
+@pytest.mark.asyncio(scope="session")
+@pytest.mark.repeat(5)  # Catch multi-threading and concurrency issues
+async def test_upload_many(provider: BlobProvider) -> None:
+    # Init values
+    container_name = _random_name()
+
+    # Build blobs
+    blobs: list[tuple[str, str]] = []
+    for _ in range(100):
+        blob_name = _random_name()
+        blob_content = _random_content()
+        blobs.append((blob_name, blob_content))
+
+    # Debug
+    logger.info("Container name: %s", container_name)
+
+    # Init client
+    async with blob_client(
+        azure_storage_connection_string=env["AZURE_STORAGE_CONNECTION_STRING"],
+        container=container_name,
+        path="scraping-test",
+        provider=provider,
+    ) as client:
+
+        # Upload blobs
+        tasks = [
+            client.upload_blob(
+                blob=name,
+                data=content.encode(client.encoding),
+                length=len(content.encode(client.encoding)),
+                overwrite=False,
+            )
+            for name, content in blobs
+        ]
+        await asyncio.gather(*tasks)
+
+        # Check blobs content
+        async def _validate(
+            name: str,
+            original_content: str,
+        ) -> None:
+            download_content = await client.download_blob(name)
+            assert download_content == original_content, "Content mismatch"
+
+        tasks = [_validate(name, content) for name, content in blobs]
+        await asyncio.gather(*tasks)
 
         # Clean up
         await client.delete_container()

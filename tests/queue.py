@@ -140,7 +140,9 @@ async def test_send_many(provider: QueueProvider) -> None:
 
         # Receive test messages
         async for message in client.receive_messages(
-            max_messages=len(messages) + 1,  # +1 to catch extra messages
+            max_messages=int(
+                len(messages) * 1.5
+            ),  # +50%, only-one delivery is not guaranteed
             visibility_timeout=5,
         ):
             # Search for message; order nor duplicates are guaranteed

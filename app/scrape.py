@@ -324,7 +324,7 @@ async def _update_job_state(
     logger.debug("Acquiring lease for job state")
 
     try:
-        async with blob.lease(
+        async with blob.lease_blob(
             blob=JOB_STATE_NAME,
             lease_duration=15,  # 15 secs
         ) as lease_id:
@@ -649,7 +649,7 @@ async def _scrape_page(
     # Load page
     async with await browser.new_context(
         color_scheme=random.choice(["dark", "light", "no-preference"]),
-        device_scale_factor=round(random.uniform(1, 3), 1),
+        device_scale_factor=random.randint(1, 3),
         has_touch=random.choice([True, False]),
         locale="en-US",
         timezone_id=random.choice(list(timezones)),

@@ -119,7 +119,7 @@ async def _process_one(
     models = [
         IndexedIngestModel(
             content=content,
-            id=doc_id,
+            indexed_id=doc_id,
             url=result.url,
             vectors=embedding.embedding,
         )

@@ -5,6 +5,7 @@ from azure.core.exceptions import (
     ResourceNotFoundError,
     ServiceRequestError,
 )
+from azure.storage.queue import TextBase64DecodePolicy, TextBase64EncodePolicy
 from azure.storage.queue.aio import QueueClient, QueueServiceClient
 from pydantic import BaseModel
 from tenacity import (
@@ -86,11 +87,26 @@ class AzureQueueStorage(IQueue):
                 f'Message "{message.message_id}" not found'
             ) from e
 
+    @retry(
+        reraise=True,
+        retry=retry_if_exception_type(ServiceRequestError),  # Catch for network errors
+        stop=stop_after_attempt(8),
+        wait=wait_random_exponential(multiplier=0.8, max=60),
+    )
+    async def delete_queue(
+        self,
+    ) -> None:
+        await self._client.delete_queue()
+
     async def __aenter__(self) -> "AzureQueueStorage":
         self._service = QueueServiceClient.from_connection_string(
             self._config.connection_string
         )
-        self._client = self._service.get_queue_client(self._config.name)
+        self._client = self._service.get_queue_client(
+            message_decode_policy=TextBase64DecodePolicy(),
+            message_encode_policy=TextBase64EncodePolicy(),
+            queue=self._config.name,
+        )
         # Create if it does not exist
         try:
             await self._client.create_queue()

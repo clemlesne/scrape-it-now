@@ -816,10 +816,10 @@ async def _scrape_page(
             elif a_href.startswith("http"):
                 a_url = urlparse(a_href)
             elif a_href.startswith("/"):
-                path = format_path(urlparse(a_href).path)
+                path = _format_path(urlparse(a_href).path)
                 a_url = url_clean._replace(path=path)
             else:
-                path = format_path(f"{url_clean.path}/{urlparse(a_href).path}")
+                path = _format_path(f"{url_clean.path}/{urlparse(a_href).path}")
                 a_url = url_clean._replace(path=path)
             links.add(a_url.geturl())
 
@@ -837,7 +837,7 @@ async def _scrape_page(
         )
 
 
-def format_path(path: str) -> str:
+def _format_path(path: str) -> str:
     """
     Solve relative URL paths and return its absolute form.
     """

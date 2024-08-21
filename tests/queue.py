@@ -11,15 +11,10 @@ from app.persistence.iqueue import MessageNotFoundError, Provider as QueueProvid
 @pytest.mark.parametrize(
     "provider",
     [
-        pytest.param(
-            QueueProvider.AZURE_QUEUE_STORAGE,
-            id=QueueProvider.AZURE_QUEUE_STORAGE.value,
-        ),
-        pytest.param(
-            QueueProvider.LOCAL_DISK,
-            id=QueueProvider.LOCAL_DISK.value,
-        ),
+        QueueProvider.AZURE_QUEUE_STORAGE,
+        QueueProvider.LOCAL_DISK,
     ],
+    ids=lambda x: x.value,
 )
 @pytest.mark.asyncio(scope="session")
 @pytest.mark.repeat(10)  # Catch multi-threading and concurrency issues
@@ -113,15 +108,10 @@ async def test_acid(provider: QueueProvider) -> None:
 @pytest.mark.parametrize(
     "provider",
     [
-        pytest.param(
-            QueueProvider.AZURE_QUEUE_STORAGE,
-            id=QueueProvider.AZURE_QUEUE_STORAGE.value,
-        ),
-        pytest.param(
-            QueueProvider.LOCAL_DISK,
-            id=QueueProvider.LOCAL_DISK.value,
-        ),
+        QueueProvider.AZURE_QUEUE_STORAGE,
+        QueueProvider.LOCAL_DISK,
     ],
+    ids=lambda x: x.value,
 )
 @pytest.mark.asyncio(scope="session")
 @pytest.mark.repeat(10)  # Catch multi-threading and concurrency issues

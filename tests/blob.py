@@ -18,15 +18,10 @@ from app.persistence.iblob import (
 @pytest.mark.parametrize(
     "provider",
     [
-        pytest.param(
-            BlobProvider.AZURE_BLOB_STORAGE,
-            id=BlobProvider.AZURE_BLOB_STORAGE.value,
-        ),
-        pytest.param(
-            BlobProvider.LOCAL_DISK,
-            id=BlobProvider.LOCAL_DISK.value,
-        ),
+        BlobProvider.AZURE_BLOB_STORAGE,
+        BlobProvider.LOCAL_DISK,
     ],
+    ids=lambda x: x.value,
 )
 @pytest.mark.asyncio(scope="session")
 @pytest.mark.repeat(10)  # Catch multi-threading and concurrency issues
@@ -101,15 +96,10 @@ async def test_acid(provider: BlobProvider) -> None:
 @pytest.mark.parametrize(
     "provider",
     [
-        pytest.param(
-            BlobProvider.AZURE_BLOB_STORAGE,
-            id=BlobProvider.AZURE_BLOB_STORAGE.value,
-        ),
-        pytest.param(
-            BlobProvider.LOCAL_DISK,
-            id=BlobProvider.LOCAL_DISK.value,
-        ),
+        BlobProvider.AZURE_BLOB_STORAGE,
+        BlobProvider.LOCAL_DISK,
     ],
+    ids=lambda x: x.value,
 )
 @pytest.mark.asyncio(scope="session")
 @pytest.mark.repeat(10)  # Catch multi-threading and concurrency issues
@@ -241,15 +231,10 @@ async def test_lease(provider: BlobProvider) -> None:
 @pytest.mark.parametrize(
     "provider",
     [
-        pytest.param(
-            BlobProvider.AZURE_BLOB_STORAGE,
-            id=BlobProvider.AZURE_BLOB_STORAGE.value,
-        ),
-        pytest.param(
-            BlobProvider.LOCAL_DISK,
-            id=BlobProvider.LOCAL_DISK.value,
-        ),
+        BlobProvider.AZURE_BLOB_STORAGE,
+        BlobProvider.LOCAL_DISK,
     ],
+    ids=lambda x: x.value,
 )
 @pytest.mark.asyncio(scope="session")
 @pytest.mark.repeat(5)  # Catch multi-threading and concurrency issues

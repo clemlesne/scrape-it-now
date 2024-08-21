@@ -451,7 +451,11 @@ async def _worker(
                                 if browser:
                                     await browser.close()
                                 browser = await browser_type.launch(
-                                    downloads_path=browsers_install_path(),
+                                    downloads_path=browsers_install_path(),  # Using the application path not the default one from the SDK
+                                    args=[
+                                        "--disable-gpu",  # Disable GPU acceleration, able to run in computers without GPU
+                                        "--mute-audio",  # Mute audio to avoid annoying sounds
+                                    ],
                                 )
                                 logger.info(
                                     "Restarted browser %s after %i iterations",

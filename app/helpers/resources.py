@@ -47,7 +47,7 @@ def hash_url(url: str) -> str:
     Hash a URL to a unique identifier.
     """
     return hashlib.sha256(
-        url.encode(),
+        url.encode("utf-8"),
         usedforsecurity=False,
     ).hexdigest()
 

@@ -11,6 +11,10 @@ class BlobAlreadyExistsError(Exception):
     pass
 
 
+class LeaseNotFoundError(Exception):
+    pass
+
+
 class LeaseAlreadyExistsError(Exception):
     pass
 
@@ -25,7 +29,7 @@ class IBlob:
     encoding = "utf-8"
 
     @abstractmethod
-    def lease(
+    def lease_blob(
         self,
         blob: str,
         lease_duration: int,
@@ -48,6 +52,12 @@ class IBlob:
         self,
         blob: str,
     ) -> str:
+        pass
+
+    @abstractmethod
+    async def delete_container(
+        self,
+    ) -> None:
         pass
 
     @abstractmethod

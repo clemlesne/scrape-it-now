@@ -1,3 +1,5 @@
+from base64 import b64decode, b64encode
+from binascii import Error as BinasciiError
 from typing import Any, AsyncGenerator
 
 from azure.core.exceptions import (
@@ -5,7 +7,6 @@ from azure.core.exceptions import (
     ResourceNotFoundError,
     ServiceRequestError,
 )
-from azure.storage.queue import TextBase64DecodePolicy, TextBase64EncodePolicy
 from azure.storage.queue.aio import QueueClient, QueueServiceClient
 from pydantic import BaseModel
 from tenacity import (
@@ -47,7 +48,7 @@ class AzureQueueStorage(IQueue):
         self,
         message: str,
     ) -> None:
-        await self._client.send_message(message)
+        await self._client.send_message(self._escape(message))
 
     @retry(
         reraise=True,
@@ -66,7 +67,7 @@ class AzureQueueStorage(IQueue):
         )
         async for message in messages:
             yield Message(
-                content=message.content,
+                content=self._unescape(message.content),
                 delete_token=message.pop_receipt,
                 dequeue_count=message.dequeue_count,
                 message_id=message.id,
@@ -99,13 +100,28 @@ class AzureQueueStorage(IQueue):
         await self._client.delete_queue()
         logger.info('Deleted Queue Storage "%s"', self._config.name)
 
+    def _escape(self, value: str) -> str:
+        """
+        Escape value to base64 encoding.
+        """
+        return b64encode(value.encode(self.encoding)).decode(self.encoding)
+
+    def _unescape(self, value: str) -> str:
+        """
+        Unescape value from base64 encoding.
+
+        If the value is not base64 encoded, return the original value as string. This will handle retro-compatibility with old messages.
+        """
+        try:
+            return b64decode(value.encode(self.encoding)).decode(self.encoding)
+        except (UnicodeDecodeError, BinasciiError):
+            return value
+
     async def __aenter__(self) -> "AzureQueueStorage":
         self._service = QueueServiceClient.from_connection_string(
             self._config.connection_string
         )
         self._client = self._service.get_queue_client(
-            message_decode_policy=TextBase64DecodePolicy(),
-            message_encode_policy=TextBase64EncodePolicy(),
             queue=self._config.name,
         )
         # Create if it does not exist

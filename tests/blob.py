@@ -297,12 +297,20 @@ async def test_upload_many(provider: BlobProvider) -> None:
 
 
 def _random_name() -> str:
+    """
+    Generate a random name with 32 characters.
+
+    All lowercase letters and digits are used.
+    """
     return "".join(
         random.choice(string.ascii_lowercase + string.digits) for _ in range(32)
     )
 
 
 def _random_content() -> str:
-    return "".join(
-        random.choice(string.printable) for _ in range(random.randint(1, 512))
-    )
+    """
+    Generate a random content with a length of 512 characters.
+
+    All printable ASCII characters are used.
+    """
+    return "".join(random.choice(string.printable) for _ in range(512))

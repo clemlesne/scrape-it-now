@@ -16,6 +16,8 @@ class Provider(str, Enum):
 
 
 class IQueue:
+    encoding = "utf-8"
+
     @abstractmethod
     async def send_message(
         self,

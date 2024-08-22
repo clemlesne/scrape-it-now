@@ -74,17 +74,22 @@ class LocalDiskBlob(IBlob):
         async with self._file_lock(lease_file):
             # Skip if the lease file already exists and is not expired
             if await path.exists(lease_file):
-                async with open(
-                    file=lease_file,
-                    mode="rb",
-                ) as f:
-                    previous = LeaseModel.model_validate(
-                        loads((await f.read()).decode(self.encoding))
-                    )
-                if previous.until > datetime.now():
-                    raise LeaseAlreadyExistsError(
-                        f'Lease for blob "{blob}" already exists'
-                    )
+                try:
+                    async with open(
+                        file=lease_file,
+                        mode="rb",
+                    ) as f:
+                        previous = LeaseModel.model_validate(
+                            loads((await f.read()).decode(self.encoding))
+                        )
+                    if previous.until > datetime.now():
+                        raise LeaseAlreadyExistsError(
+                            f'Lease for blob "{blob}" already exists'
+                        )
+                except (
+                    FileNotFoundError
+                ):  # If the file is removed by another worker, we are in best effort mode
+                    pass
 
             # Create the lease file
             lease = LeaseModel(until=datetime.now() + timedelta(seconds=lease_duration))

@@ -378,7 +378,7 @@ async def _update_job_state(
             queued=queued,
         )
 
-    logger.info(
+    logger.debug(
         "Updated job state to %i processed and %i queued",
         model.processed,
         model.queued,
@@ -433,7 +433,7 @@ async def _worker(
                         total_queued = 0
 
                         # Iterate over the messages
-                        logger.info("Processing new messages")
+                        logger.debug("Processing new messages")
                         async for message in messages:
                             # Parse the message
                             current_item = ScrapedQueuedModel.model_validate_json(

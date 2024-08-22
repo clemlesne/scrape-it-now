@@ -90,7 +90,6 @@ Example output:
 Queued 71/71 links for referrer https://www.google.com/search (1)
 3 workers started
 Browser chromium launched
-Processing new messages
 ...
 Queued 15/28 links for referrer https://www.nytimes.com/2024/08/15/business/economy/kamala-harris-inflation-price-gouging.html (2)
 Scraped https://www.nytimes.com/2024/08/15/business/economy/kamala-harris-inflation-price-gouging.html (2)
@@ -198,7 +197,6 @@ Example output:
 ```bash
 ❯ Starting indexing job 7yz91ma
 5 workers started
-Processing new messages
 ...
 434b227 chunked into 6 parts
 434b227 is indexed

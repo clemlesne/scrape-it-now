@@ -437,10 +437,11 @@ async def _worker(
                         max_messages=32,
                         visibility_timeout=32 * 10,  # 10 secs per message
                     ):
-                        logger.info("Processing new messages")
+                        logger.debug("Processing new messages")
                         async for message in messages:
                             blob_name = message.content
                             logger.info('Processing "%s"', blob_name)
+
                             try:
                                 await _process_one(
                                     blob=blob,

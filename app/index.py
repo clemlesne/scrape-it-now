@@ -456,7 +456,7 @@ async def _worker(
                                     await queue.delete_message(message)
                                 except (
                                     MessageNotFoundError
-                                ):  # If the message has already been deleted by another worker, pass silently to the next message, as it has already been processed
+                                ):  # Race condition, message has already been deleted by another worker, pass silently to the next message, as it has already been processed
                                     continue
 
                             except Exception:

@@ -10,6 +10,7 @@ from playwright.async_api import (
     Browser,
     BrowserType,
     Error as PlaywrightError,
+    Locator,
     Route,
     TimeoutError,
     ViewportSize,
@@ -643,17 +644,17 @@ async def _scrape_page(
         # Return an empty result if Playwright fails
         return ScrapedUrlModel(
             etag=etag,
-            network_used_mb=total_size_bytes / 1024 / 1024,
+            network_used_mb=network_used_bytes / 1024 / 1024,
             status=status,
             url=url_clean.geturl(),
             valid_until=valid_until,
         )
 
-    total_size_bytes = 0
+    network_used_bytes = 0
 
-    def _size_callback(size_bytes: int) -> None:
-        nonlocal total_size_bytes
-        total_size_bytes += size_bytes
+    def _network_used_callback(size_bytes: int) -> None:
+        nonlocal network_used_bytes
+        network_used_bytes += size_bytes
 
     # Parse URL
     url_clean = urlparse(url)._replace(
@@ -674,7 +675,7 @@ async def _scrape_page(
         page = await context.new_page()
 
         # Apply filtering to reduce traffic and CPU usage
-        await page.route("**/*", _filter_routes(_size_callback))
+        await page.route("**/*", _filter_routes(_network_used_callback))
 
         # Caching of unchanged resources
         if previous_etag:
@@ -750,26 +751,28 @@ async def _scrape_page(
                 valid_until=valid_until,
             )
 
-        # Get title
-        title = await page.title()
+        # Get title value, HTML selector, full page content, and all links
+        title, body_selector, full_html, links_selector = await asyncio.gather(
+            # Page title specified in the metadata
+            page.title(),
+            # HTML tag element (= body)
+            page.query_selector("html"),
+            # Entire DOM (= all HTML)
+            page.content(),
+            # All elements treated as links
+            page.get_by_role(
+                "link",
+                include_hidden=True,  # Gather links in navigation menus, those are usually hidden
+            ).all(),
+        )
 
-        # Get HTML
-        html = None
-        try:
-            html_selector = await page.wait_for_selector("html")
-            if html_selector:
-                html = (
-                    await html_selector.inner_html()
-                )  # Get HTML content of the visible page
-        except TimeoutError:  # TODO: Is those timeouts normal? They happen quite often.
-            return _generic_error(
-                etag=etag,
-                message="Timeout for selecting HTML content",
-                valid_until=valid_until,
-            )
+        # Extract body
+        body_html = None
+        if body_selector:
+            body_html = await body_selector.inner_html()
 
         # Skip if no HTML content
-        if not html:
+        if not body_html:
             return _generic_error(
                 etag=etag,
                 message="No HTML content returned",
@@ -777,7 +780,7 @@ async def _scrape_page(
             )
 
         # Check for Cloudflare blocking
-        if "Why have I been blocked?" in html:
+        if "Why have I been blocked?" in body_html:
             return _generic_error(
                 etag=etag,
                 message="Blocked by Cloudflare",
@@ -786,15 +789,12 @@ async def _scrape_page(
             )
 
         # Extract text content
-        redirect = res.url  # Get final URL after redirects
         try:
             # Convert HTML to Markdown
-            content = html2text.handle(
-                data=await page.content()  # Get text content of the full page (including HTML head and hidden elements)
-            )
+            full_markdown = html2text.handle(full_html)
             # Remove empty lines and leading/trailing whitespace
-            content = "\n".join(
-                clean for line in content.splitlines() if (clean := line.strip())
+            full_markdown = "\n".join(
+                clean for line in full_markdown.splitlines() if (clean := line.strip())
             )
         except (
             AssertionError
@@ -806,39 +806,52 @@ async def _scrape_page(
             )
 
         # Extract links
-        links: set[str] = set()
-        # Iterate over all links on the page, even those that are not visible
-        for a_selector in await page.get_by_role(
-            "link",
-            include_hidden=True,  # Gather links in navigation menus, those are usually hidden
-        ).all():
+        async def _extract_link(selector: Locator) -> str | None:
             try:
-                a_href = await a_selector.get_attribute(
-                    "href",
+                href = await selector.get_attribute(
+                    name="href",
                     timeout=1000,  # 1 second
                 )
-            except TimeoutError:
+            except (
+                TimeoutError
+            ):  # TODO: Is those timeouts normal? They happen quite often
                 logger.debug("Timeout for selecting href attribute", exc_info=True)
-                continue
-            if not a_href:
-                continue
-            elif a_href.startswith("http"):
-                a_url = urlparse(a_href)
-            elif a_href.startswith("/"):
-                path = _format_path(urlparse(a_href).path)
-                a_url = url_clean._replace(path=path)
-            else:
-                path = _format_path(f"{url_clean.path}/{urlparse(a_href).path}")
-                a_url = url_clean._replace(path=path)
-            links.add(a_url.geturl())
+                return
+            # Skip if no href attribute
+            if not href:
+                return
+            # href is a full URL
+            if href.startswith("http"):
+                return urlparse(href).geturl()
+            # href is a relative URL
+            if href.startswith("/"):
+                path = _format_path(urlparse(href).path)
+                return url_clean._replace(path=path).geturl()
+            # href is a relative URL with a path
+            path = _format_path(f"{url_clean.path}/{urlparse(href).path}")
+            return url_clean._replace(path=path).geturl()
+
+        # Extract links
+        links = set(
+            [
+                link
+                for link in await asyncio.gather(
+                    *[_extract_link(selector) for selector in links_selector]
+                )
+                if link
+            ]
+        )
+
+        # Get final URL after redirects
+        redirect = res.url
 
         # Return result
         return ScrapedUrlModel(
-            content=content,
+            content=full_markdown,
             etag=etag,
             links=list(links),
-            network_used_mb=total_size_bytes / 1024 / 1024,
-            raw=html,
+            network_used_mb=network_used_bytes / 1024 / 1024,
+            raw=body_html,
             redirect=redirect,
             status=status,
             title=title,

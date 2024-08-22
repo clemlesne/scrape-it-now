@@ -1,7 +1,7 @@
 import asyncio, random, string
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
-from json import loads
+from json import JSONDecodeError, loads
 from os import walk
 from os.path import abspath, dirname, join
 from typing import Any, AsyncGenerator
@@ -87,9 +87,15 @@ class LocalDiskBlob(IBlob):
                             f'Lease for blob "{blob}" already exists'
                         )
                 except (
-                    FileNotFoundError
-                ):  # If the file is removed by another worker, we are in best effort mode
-                    pass
+                    FileNotFoundError,
+                    JSONDecodeError,
+                ):  # Race condition, file has been removed by another worker, retry
+                    async with self.lease_blob(
+                        blob=blob,
+                        lease_duration=lease_duration,
+                    ) as retry_id:
+                        yield retry_id
+                    return
 
             # Create the lease file
             lease = LeaseModel(until=datetime.now() + timedelta(seconds=lease_duration))
@@ -335,7 +341,7 @@ class LocalDiskQueue(IQueue):
                     ),
                 ) as cursor:
                     await connection.commit()
-                    # If the message was not found, skip, it should has been deleted or picked by another worker
+                    # If message not updated, race condition, skip, it should has been deleted or picked by another worker
                     if cursor.rowcount == 0:
                         continue
             # Return the message

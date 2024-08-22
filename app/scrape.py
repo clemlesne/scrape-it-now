@@ -41,6 +41,7 @@ from app.persistence.iblob import (
     BlobNotFoundError,
     IBlob,
     LeaseAlreadyExistsError,
+    LeaseNotFoundError,
     Provider as BlobProvider,
 )
 from app.persistence.iqueue import (
@@ -353,8 +354,11 @@ async def _update_job_state(
                 overwrite=True,
             )
 
-    except LeaseAlreadyExistsError:  # Wait for the lease to expire
-        logger.debug("Lease already exists, waiting and retry")
+    except (
+        LeaseAlreadyExistsError,  # Wait for the lease to expire
+        LeaseNotFoundError,  # Race condition, retry
+    ):
+        logger.debug("Lease error, waiting and retry")
         await asyncio.sleep(1)
         return await _update_job_state(
             blob=blob,

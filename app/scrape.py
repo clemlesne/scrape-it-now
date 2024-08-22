@@ -27,9 +27,9 @@ from app.helpers.logging import logger
 from app.helpers.persistence import blob_client, queue_client
 from app.helpers.resources import (
     browsers_install_path,
+    dir_resources,
     hash_url,
     index_queue_name,
-    resources_dir,
     scrape_container_name,
     scrape_queue_name,
 )
@@ -444,18 +444,14 @@ async def _worker(
                             # Get a browser instance
                             # Limit the usage of the browser to 100 scrapings, to avoid memory leaks. Restart the browser after that. Memory leaks have been observed in both macOS and Ubuntu, with over 150 GB of memory used after an hour.
                             # TODO: Create an issue in the Playwright repository to investigate the memory leak
-                            if browser and browser_usage < 100:
+                            if not browser:  # First start
+                                browser = await _get_broswer(browser_type)
+                                logger.debug("Started browser %s", browser_type.name)
+                            elif browser_usage < 100:  # Reuse
                                 browser_usage += 1
-                            else:
-                                if browser:
-                                    await browser.close()
-                                browser = await browser_type.launch(
-                                    downloads_path=browsers_install_path(),  # Using the application path not the default one from the SDK
-                                    args=[
-                                        "--disable-gpu",  # Disable GPU acceleration, able to run in computers without GPU
-                                        "--mute-audio",  # Mute audio to avoid annoying sounds
-                                    ],
-                                )
+                            else:  # Restart
+                                await browser.close()
+                                browser = await _get_broswer(browser_type)
                                 logger.info(
                                     "Restarted browser %s after %i iterations",
                                     browser_type.name,
@@ -525,7 +521,7 @@ def _ads_pattern() -> re.Pattern | None:
 
         with open(
             encoding="utf-8",
-            file=resources_dir("ads-nl.txt"),
+            file=dir_resources("ads-nl.txt"),
             mode="r",
         ) as f:
             # Parse the list of domains
@@ -1009,3 +1005,19 @@ def _install_browser(
 
     if proc.returncode != 0:
         raise RuntimeError("Failed to install browser")
+
+
+async def _get_broswer(
+    browser_type: BrowserType,
+) -> Browser:
+    """
+    Launch a browser instance.
+    """
+    browser = await browser_type.launch(
+        downloads_path=browsers_install_path(),  # Using the application path not the default one from the SDK
+        args=[
+            "--disable-gl-drawing-for-tests",  # Disable totally UI rendering, lowering CPU usage
+            "--mute-audio",  # Mutes audio sent to the audio device so it is not audible
+        ],
+    )
+    return browser

@@ -26,10 +26,10 @@ from app.helpers.persistence import (
     search_client,
 )
 from app.helpers.resources import (
+    dir_resources,
     hash_url,
     index_index_name,
     index_queue_name,
-    resources_dir,
     scrape_container_name,
 )
 from app.helpers.threading import run_workers
@@ -364,7 +364,7 @@ async def run(
 
     # Patch Tiktoken
     # See: https://stackoverflow.com/a/76107077
-    env["TIKTOKEN_CACHE_DIR"] = resources_dir("tiktoken")
+    env["TIKTOKEN_CACHE_DIR"] = dir_resources("tiktoken")
 
     run_workers(
         azure_search_api_key=azure_search_api_key,

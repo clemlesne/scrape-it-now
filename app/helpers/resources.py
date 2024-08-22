@@ -5,7 +5,7 @@ from pathlib import Path
 import click
 
 
-def resources_dir(sub: str) -> str:
+def dir_resources(sub: str) -> str:
     """
     Get the absolute path to the resources folder.
     """

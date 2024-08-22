@@ -36,7 +36,7 @@ from app.helpers.threading import run_workers
 from app.models.indexed import IndexedIngestModel
 from app.models.scraped import ScrapedUrlModel
 from app.persistence.iblob import IBlob, Provider as BlobProvider
-from app.persistence.iqueue import Provider as QueueProvider
+from app.persistence.iqueue import MessageNotFoundError, Provider as QueueProvider
 from app.persistence.isearch import (
     DocumentNotFoundError,
     ISearch,
@@ -450,7 +450,13 @@ async def _worker(
                                     openai=openai,
                                     search=search,
                                 )
-                                await queue.delete_message(message)
+
+                                try:
+                                    await queue.delete_message(message)
+                                except (
+                                    MessageNotFoundError
+                                ):  # If the message has already been deleted by another worker, pass silently to the next message, as it has already been processed
+                                    continue
 
                             except Exception:
                                 # TODO: Add a dead-letter queue

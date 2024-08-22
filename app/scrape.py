@@ -43,7 +43,11 @@ from app.persistence.iblob import (
     LeaseAlreadyExistsError,
     Provider as BlobProvider,
 )
-from app.persistence.iqueue import IQueue, Provider as QueueProvider
+from app.persistence.iqueue import (
+    IQueue,
+    MessageNotFoundError,
+    Provider as QueueProvider,
+)
 
 # State
 JOB_STATE_NAME = "job.json"
@@ -473,7 +477,13 @@ async def _worker(
                                     viewports=viewports,
                                     whitelist=whitelist,
                                 )
-                                await in_queue.delete_message(message)
+
+                                try:
+                                    await in_queue.delete_message(message)
+                                except (
+                                    MessageNotFoundError
+                                ):  # If the message has already been deleted by another worker, pass silently to the next message, as it has already been processed
+                                    continue
 
                                 # Update counters
                                 total_network_used_mb += network_used_mb

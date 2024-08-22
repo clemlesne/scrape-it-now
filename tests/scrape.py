@@ -1,57 +1,48 @@
-import random, string
-from datetime import timedelta
-from os import environ as env
+from datetime import datetime, timedelta
+from os.path import join
 
 import pytest
+from aiofiles import open
 from playwright.async_api import ViewportSize, async_playwright
 
-from app.helpers.logging import logger
-from app.helpers.persistence import blob_client, queue_client
-from app.helpers.resources import browsers_install_path, hash_url
+from app.helpers.resources import dir_tests
 from app.models.scraped import ScrapedQueuedModel
-from app.persistence.iblob import Provider as BlobProvider
-from app.persistence.iqueue import Provider as QueueProvider
-from app.scrape import SCRAPED_PREFIX, _get_broswer, _install_browser, _process_one
+from app.scrape import _get_broswer, _install_browser, _scrape_page
+
+DEFAULT_TIMEZONE = "Europe/Moscow"
+DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
+DEFAULT_VIEWPORT = ViewportSize(width=1920, height=1080)
+LOCALHOST_URL = "http://localhost:8000"
 
 
-@pytest.mark.parametrize(
-    "queue_provider",
-    [
-        QueueProvider.AZURE_QUEUE_STORAGE,
-        QueueProvider.LOCAL_DISK,
-    ],
-    ids=lambda x: x.value,
-)
-@pytest.mark.parametrize(
-    "blob_provider",
-    [
-        BlobProvider.AZURE_BLOB_STORAGE,
-        BlobProvider.LOCAL_DISK,
-    ],
-    ids=lambda x: x.value,
-)
 @pytest.mark.parametrize(
     "website",
     [
+        # 150+ links
         "azuresdkdocs.html",
+        # Common website (no kidding)
+        "google.html",
+        # React website
         "reflex.html",
+        # Simple website
+        "hackernews.html",
     ],
     ids=lambda x: x,
 )
 @pytest.mark.asyncio(scope="session")
-async def test_single_page(
-    blob_provider: BlobProvider,
-    queue_provider: QueueProvider,
+async def test_real_website_page(
     website: str,
 ) -> None:
+    """
+    Test a real website page against the expected Markdown content.
+
+    Expected Markdown content is stored in the `tests/websites` directory. Text content is generated manually a first time using this same application.
+    """
     # Init values
-    in_queue_name = _random_name()
-    out_queue_name = _random_name()
-    blob_name = _random_name()
     item = ScrapedQueuedModel(
         depth=0,
         referrer="https://google.com",
-        url=f"http://localhost:8000/{website}",
+        url=f"{LOCALHOST_URL}/{website}",
     )
 
     # Init Playwright context
@@ -64,93 +55,191 @@ async def test_single_page(
         # Launch the browser
         browser = await _get_broswer(browser_type)
 
-        async with queue_client(
-            azure_storage_connection_string=env["AZURE_STORAGE_CONNECTION_STRING"],
-            provider=queue_provider,
-            queue=in_queue_name,
-        ) as in_queue:
-            async with queue_client(
-                azure_storage_connection_string=env["AZURE_STORAGE_CONNECTION_STRING"],
-                provider=queue_provider,
-                queue=out_queue_name,
-            ) as out_queue:
-                async with blob_client(
-                    azure_storage_connection_string=env[
-                        "AZURE_STORAGE_CONNECTION_STRING"
-                    ],
-                    container=blob_name,
-                    path="scraping-test",
-                    provider=blob_provider,
-                ) as blob:
-                    try:
-                        # Process the item
-                        processed, queued, network_used_mb = await _process_one(
-                            blob=blob,
-                            browser=browser,
-                            cache_refresh=timedelta(hours=1),
-                            current_item=item,
-                            in_queue=in_queue,
-                            max_depth=1,
-                            out_queue=out_queue,
-                            timezones=["Europe/Moscow"],
-                            user_agents=[
-                                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
-                            ],
-                            viewports=[ViewportSize(width=1920, height=1080)],
-                            whitelist={},
-                        )
+        # Process the item
+        page = await _scrape_page(
+            browser=browser,
+            previous_etag=None,
+            referrer=item.referrer,
+            timezones=[DEFAULT_TIMEZONE],
+            url=item.url,
+            user_agents=[DEFAULT_USER_AGENT],
+            viewports=[DEFAULT_VIEWPORT],
+        )
 
-                        # Debug
-                        logger.info("Reported network used: %f", network_used_mb)
-                        logger.info("Reported processed: %i", processed)
-                        logger.info("Reported queued: %i", queued)
+        # Check page is not None
+        assert page is not None, "Page should not be None"
 
-                        # Check results are coherent
-                        assert network_used_mb > 0.0, "Should have used network"
-                        assert processed == 1, "Different number of processed items"
-                        assert queued > 0, "Should have queued items"
-
-                        # Check out queue (processed) items
-                        async for message in out_queue.receive_messages(
-                            max_messages=processed,
-                            visibility_timeout=5,
-                        ):
-                            blob_name = f"{SCRAPED_PREFIX}/{hash_url(item.url)}.json"
-                            assert (
-                                message.content == blob_name
-                            ), "Content should be the blob name to the processed item"
-
-                        # Check in queue (queued) items
-                        async for message in in_queue.receive_messages(
-                            max_messages=queued,
-                            visibility_timeout=5,
-                        ):
-                            child_item = ScrapedQueuedModel.model_validate_json(
-                                message.content
-                            )
-                            assert (
-                                child_item.depth == item.depth + 1
-                            ), "Depth should be the processed URL + 1"
-                            assert (
-                                child_item.referrer == item.url
-                            ), "Referer should be the processed URL"
-                            assert (
-                                child_item.url != item.url
-                            ), "URL should be different from the processed URL"
-
-                    finally:
-                        # Clean up
-                        await blob.delete_container()
-                        await in_queue.delete_queue()
-                        await out_queue.delete_queue()
+        # Check Markdown content
+        async with open(
+            encoding="utf-8",
+            file=join(dir_tests("websites"), f"{website}.md"),
+            mode="r",
+        ) as f:
+            expected = await f.read()
+            assert page.content == expected.rstrip(), "Markdown content should match"
 
 
-def _random_name() -> str:
+@pytest.mark.asyncio(scope="session")
+async def test_links() -> None:
     """
-    Generate a random name of 32 characters.
-
-    All lowercase letters and digits are used.
+    Test a page with links against the expected links and title.
     """
-    return "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(32)
+    # Init values
+    item = ScrapedQueuedModel(
+        depth=0,
+        referrer="https://google.com",
+        url=f"{LOCALHOST_URL}/links.html",
     )
+
+    # Init Playwright context
+    async with async_playwright() as p:
+        browser_type = p.chromium
+
+        # Make sure the browser is installed
+        _install_browser(browser_type)
+
+        # Launch the browser
+        browser = await _get_broswer(browser_type)
+
+        # Process the item
+        page = await _scrape_page(
+            browser=browser,
+            previous_etag=None,
+            referrer=item.referrer,
+            timezones=[DEFAULT_TIMEZONE],
+            url=item.url,
+            user_agents=[DEFAULT_USER_AGENT],
+            viewports=[DEFAULT_VIEWPORT],
+        )
+
+        # Check page is not None
+        assert page is not None, "Page should not be None"
+
+        # Check links
+        assert set(page.links) == {
+            # Link 1
+            f"{LOCALHOST_URL}/link_1",
+            # Link 2
+            LOCALHOST_URL,
+            # Link 3
+            f"{LOCALHOST_URL}/abc",
+            # Link 4
+            "http://link_4/../abc",
+            # Link 5
+            f"{item.url}/link_5",
+        }, "Links should match"
+
+        # Check title
+        assert page.title == "Test links", "Title should match"
+
+
+@pytest.mark.asyncio(scope="session")
+async def test_paragraphs() -> None:
+    """
+    Test a page with paragraphs against the expected paragraphs and title.
+    """
+    # Init values
+    item = ScrapedQueuedModel(
+        depth=0,
+        referrer="https://google.com",
+        url=f"{LOCALHOST_URL}/paragraphs.html",
+    )
+
+    # Init Playwright context
+    async with async_playwright() as p:
+        browser_type = p.chromium
+
+        # Make sure the browser is installed
+        _install_browser(browser_type)
+
+        # Launch the browser
+        browser = await _get_broswer(browser_type)
+
+        # Process the item
+        page = await _scrape_page(
+            browser=browser,
+            previous_etag=None,
+            referrer=item.referrer,
+            timezones=[DEFAULT_TIMEZONE],
+            url=item.url,
+            user_agents=[DEFAULT_USER_AGENT],
+            viewports=[DEFAULT_VIEWPORT],
+        )
+
+        # Check page is not None
+        assert page is not None, "Page should not be None"
+
+        # Check content
+        assert (
+            page.content
+            == """
+# Complex paragraph example
+The conceptualization of quantum mechanics, _particularly_ in the context of
+**entanglement** , challenges the classical notions of locality and reality.
+As Einstein famously remarked, it appears that "God does not play dice with
+the universe," yet contemporary experiments—such as those conducted by
+Aspect—have demonstrated the undeniable validity of quantum correlations,
+defying classical _interpretations_ and opening up new avenues for
+**technological** advancements, including quantum computing and secure
+communications.
+This is a hidden paragraph.
+        """.strip()
+        ), "Content should match"
+
+        # Check title
+        assert page.title == "Complex paragraph example", "Title should match"
+
+
+@pytest.mark.asyncio(scope="session")
+async def test_timeout() -> None:
+    """
+    Test a page with a timeout against the expected timeout.
+    """
+    # Init values
+    item = ScrapedQueuedModel(
+        depth=0, referrer="https://google.com", url="http://localhost:1234"
+    )
+
+    # Init Playwright context
+    async with async_playwright() as p:
+        browser_type = p.chromium
+
+        # Make sure the browser is installed
+        _install_browser(browser_type)
+
+        # Launch the browser
+        browser = await _get_broswer(browser_type)
+
+        # Process the item
+        start_time = datetime.now()
+        page = await _scrape_page(
+            browser=browser,
+            previous_etag=None,
+            referrer=item.referrer,
+            timezones=[DEFAULT_TIMEZONE],
+            url=item.url,
+            user_agents=[DEFAULT_USER_AGENT],
+            viewports=[DEFAULT_VIEWPORT],
+        )
+        end_time = datetime.now()
+        took_time = end_time - start_time
+
+        # Check timeout duration
+        assert took_time > timedelta(seconds=29) and took_time < timedelta(
+            seconds=35
+        ), "Timeout should be around 30 secs"
+
+        # Check page is not None
+        assert page is not None, "Page should not be None"
+
+        # Check status
+        assert page.status == -1, "Status should be -1"
+
+        # Check HTML
+        assert not page.raw, "HTML should be empty"
+
+        # Check content
+        assert not page.content, "Content should be empty"
+
+        # Check title
+        assert not page.title, "Title should be empty"

@@ -1,212 +1,18 @@
 <!DOCTYPE html>
-<!-- saved from url=(0149)https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobClient.acquire_lease -->
-<html class="writer-html5" lang="en" data-darkreader-mode="dynamic" data-darkreader-scheme="dark" data-lt-installed="true"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><style class="darkreader darkreader--fallback" media="screen"></style><style class="darkreader darkreader--text" media="screen"></style><style class="darkreader darkreader--invert" media="screen">.jfk-bubble.gtx-bubble, .captcheck_answer_label > input + img, span#closed_text > img[src^="https://www.gstatic.com/images/branding/googlelogo"], span[data-href^="https://www.hcaptcha.com/"] > #icon, img.Wirisformula {
-    filter: invert(100%) hue-rotate(180deg) contrast(90%) !important;
-}</style><style class="darkreader darkreader--inline" media="screen">[data-darkreader-inline-bgcolor] {
-  background-color: var(--darkreader-inline-bgcolor) !important;
-}
-[data-darkreader-inline-bgimage] {
-  background-image: var(--darkreader-inline-bgimage) !important;
-}
-[data-darkreader-inline-border] {
-  border-color: var(--darkreader-inline-border) !important;
-}
-[data-darkreader-inline-border-bottom] {
-  border-bottom-color: var(--darkreader-inline-border-bottom) !important;
-}
-[data-darkreader-inline-border-left] {
-  border-left-color: var(--darkreader-inline-border-left) !important;
-}
-[data-darkreader-inline-border-right] {
-  border-right-color: var(--darkreader-inline-border-right) !important;
-}
-[data-darkreader-inline-border-top] {
-  border-top-color: var(--darkreader-inline-border-top) !important;
-}
-[data-darkreader-inline-boxshadow] {
-  box-shadow: var(--darkreader-inline-boxshadow) !important;
-}
-[data-darkreader-inline-color] {
-  color: var(--darkreader-inline-color) !important;
-}
-[data-darkreader-inline-fill] {
-  fill: var(--darkreader-inline-fill) !important;
-}
-[data-darkreader-inline-stroke] {
-  stroke: var(--darkreader-inline-stroke) !important;
-}
-[data-darkreader-inline-outline] {
-  outline-color: var(--darkreader-inline-outline) !important;
-}
-[data-darkreader-inline-stopcolor] {
-  stop-color: var(--darkreader-inline-stopcolor) !important;
-}
-[data-darkreader-inline-bg] {
-  background: var(--darkreader-inline-bg) !important;
-}
-[data-darkreader-inline-invert] {
-    filter: invert(100%) hue-rotate(180deg);
-}</style><style class="darkreader darkreader--variables" media="screen">:root {
-   --darkreader-neutral-background: #131516;
-   --darkreader-neutral-text: #d8d4cf;
-   --darkreader-selection-background: #004daa;
-   --darkreader-selection-text: #e8e6e3;
-}</style><style class="darkreader darkreader--root-vars" media="screen"></style><style class="darkreader darkreader--user-agent" media="screen">@layer {
-html {
-    background-color: #181a1b !important;
-}
-html {
-    color-scheme: dark !important;
-}
-iframe {
-    color-scheme: initial;
-}
-html, body {
-    background-color: #181a1b;
-}
-html, body {
-    border-color: #736b5e;
-    color: #e8e6e3;
-}
-a {
-    color: #3391ff;
-}
-table {
-    border-color: #545b5e;
-}
-mark {
-    color: #e8e6e3;
-}
-::placeholder {
-    color: #b2aba1;
-}
-input:-webkit-autofill,
-textarea:-webkit-autofill,
-select:-webkit-autofill {
-    background-color: #404400 !important;
-    color: #e8e6e3 !important;
-}
-::-webkit-scrollbar {
-    background-color: #202324;
-    color: #aba499;
-}
-::-webkit-scrollbar-thumb {
-    background-color: #454a4d;
-}
-::-webkit-scrollbar-thumb:hover {
-    background-color: #575e62;
-}
-::-webkit-scrollbar-thumb:active {
-    background-color: #484e51;
-}
-::-webkit-scrollbar-corner {
-    background-color: #181a1b;
-}
-::selection {
-    background-color: #004daa !important;
-    color: #e8e6e3 !important;
-}
-::-moz-selection {
-    background-color: #004daa !important;
-    color: #e8e6e3 !important;
-}
-}</style>
+<!-- saved from url=(0014)about:internet -->
+<html class="writer-html5" lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/">
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>azure.storage.blob package — Azure SDK for Python 2.0.0 documentation</title>
-      <link rel="stylesheet" href="./azuresdkdocs/pygments.css" type="text/css"><style class="darkreader darkreader--sync" media="screen"></style>
-      <link rel="stylesheet" href="./azuresdkdocs/theme.css" type="text/css"><style class="darkreader darkreader--sync" media="screen"></style>
-      <link rel="stylesheet" href="./azuresdkdocs/default_overrides.css" type="text/css"><style class="darkreader darkreader--sync" media="screen"></style>
+      <link rel="stylesheet" href="./azuresdkdocs/pygments.css" type="text/css">
+      <link rel="stylesheet" href="./azuresdkdocs/theme.css" type="text/css">
+      <link rel="stylesheet" href="./azuresdkdocs/default_overrides.css" type="text/css">
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
 
-        <script type="text/javascript" async="" src="./azuresdkdocs/analytics.js"></script><script type="text/javascript" async="" src="./azuresdkdocs/js"></script><script src="./azuresdkdocs/jquery.js"></script><meta name="darkreader" content="4169c2d0de384641b798f9d8db73114f"><style class="darkreader darkreader--override" media="screen">.vimvixen-hint {
-    background-color: #7b5300 !important;
-    border-color: #d8b013 !important;
-    color: #f3e8c8 !important;
-}
-#vimvixen-console-frame {
-    color-scheme: light !important;
-}
-::placeholder {
-    opacity: 0.5 !important;
-}
-#edge-translate-panel-body,
-.MuiTypography-body1,
-.nfe-quote-text {
-    color: var(--darkreader-neutral-text) !important;
-}
-gr-main-header {
-    background-color: #0f3a48 !important;
-}
-.tou-z65h9k,
-.tou-mignzq,
-.tou-1b6i2ox,
-.tou-lnqlqk {
-    background-color: var(--darkreader-neutral-background) !important;
-}
-.tou-75mvi {
-    background-color: #032029 !important;
-}
-.tou-ta9e87,
-.tou-1w3fhi0,
-.tou-1b8t2us,
-.tou-py7lfi,
-.tou-1lpmd9d,
-.tou-1frrtv8,
-.tou-17ezmgn {
-    background-color: #0a0a0a !important;
-}
-.tou-uknfeu {
-    background-color: #231603 !important;
-}
-.tou-6i3zyv {
-    background-color: #19576c !important;
-}
-div.mermaid-viewer-control-panel .btn {
-    background-color: var(--darkreader-neutral-background);
-    fill: var(--darkreader-neutral-text);
-}
-svg g rect.er {
-    fill: var(--darkreader-neutral-background) !important;
-}
-svg g rect.er.entityBox {
-    fill: var(--darkreader-neutral-background) !important;
-}
-svg g rect.er.attributeBoxOdd {
-    fill: var(--darkreader-neutral-background) !important;
-}
-svg g rect.er.attributeBoxEven {
-    fill: var(--darkreader-selection-background);
-    fill-opacity: 0.8 !important;
-}
-svg rect.er.relationshipLabelBox {
-    fill: var(--darkreader-neutral-background) !important;
-}
-svg g g.nodes rect,
-svg g g.nodes polygon {
-    fill: var(--darkreader-neutral-background) !important;
-}
-svg g rect.task {
-    fill: var(--darkreader-selection-background) !important;
-}
-svg line.messageLine0,
-svg line.messageLine1 {
-    stroke: var(--darkreader-neutral-text) !important;
-}
-div.mermaid .actor {
-    fill: var(--darkreader-neutral-background) !important;
-}
-mitid-authenticators-code-app > .code-app-container {
-    background-color: white !important;
-    padding-top: 1rem;
-}
-iframe#unpaywall[src$="unpaywall.html"] {
-    color-scheme: light !important;
-}
-embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast(90%); }</style>
+        <script type="text/javascript" async="" src="./azuresdkdocs/analytics.js"></script><script type="text/javascript" async="" src="./azuresdkdocs/js"></script><script src="./azuresdkdocs/jquery.js"></script>
         <script src="./azuresdkdocs/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="./azuresdkdocs/documentation_options.js"></script>
         <script src="./azuresdkdocs/doctools.js"></script>
@@ -235,18 +41,18 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" control-id="ControlID-1">
-    <input type="hidden" name="check_keywords" value="yes" control-id="ControlID-2">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs">
+    <input type="hidden" name="check_keywords" value="yes">
     <input type="hidden" name="area" value="default">
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
 
-    <a href="https://azure.github.io/azure-sdk-for-python"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-3"></button>Return to Index</a>
+    <a href="https://azure.github.io/azure-sdk-for-python"><button class="toctree-expand" title="Open/close menu"></button>Return to Index</a>
     <p class="caption" id="versionSelectorHeader" style="">
         Package version
     <br>
-    <select value="myValue" id="versionSelector" style="" control-id="ControlID-4"><option value="12.23.0b1">12.23.0b1</option><option value="12.22.0">12.22.0</option><option value="12.21.0">12.21.0</option><option value="12.21.0b1">12.21.0b1</option><option value="12.20.0">12.20.0</option><option value="12.20.0b1">12.20.0b1</option><option value="12.19.1">12.19.1</option><option value="12.19.0">12.19.0</option><option value="12.19.0b1">12.19.0b1</option><option value="12.18.3">12.18.3</option><option value="12.18.2">12.18.2</option><option value="12.18.1">12.18.1</option><option value="12.18.0">12.18.0</option><option value="12.18.0b1">12.18.0b1</option><option value="12.17.0">12.17.0</option><option value="12.17.0b1">12.17.0b1</option><option value="12.16.0">12.16.0</option><option value="12.16.0b1">12.16.0b1</option><option value="12.15.0">12.15.0</option><option value="12.15.0b1">12.15.0b1</option><option value="12.14.1">12.14.1</option><option value="12.14.0">12.14.0</option><option value="12.14.0b2">12.14.0b2</option><option value="12.14.0b1">12.14.0b1</option><option value="12.13.1">12.13.1</option><option value="12.13.0">12.13.0</option><option value="12.13.0b1">12.13.0b1</option><option value="12.12.0">12.12.0</option><option value="12.12.0b1">12.12.0b1</option><option value="12.11.0">12.11.0</option><option value="12.10.0">12.10.0</option><option value="12.10.0b4">12.10.0b4</option><option value="12.10.0b3">12.10.0b3</option><option value="12.10.0b2">12.10.0b2</option><option value="12.10.0b1">12.10.0b1</option><option value="12.9.0">12.9.0</option><option value="12.9.0b1">12.9.0b1</option><option value="12.8.1">12.8.1</option><option value="12.8.0">12.8.0</option><option value="12.8.0b1">12.8.0b1</option><option value="12.7.1">12.7.1</option><option value="12.7.0">12.7.0</option><option value="12.7.0b1">12.7.0b1</option><option value="12.6.0">12.6.0</option><option value="12.6.0b1">12.6.0b1</option><option value="12.5.0">12.5.0</option><option value="12.4.0">12.4.0</option><option value="12.4.0b1">12.4.0b1</option><option value="12.3.2">12.3.2</option><option value="12.3.1">12.3.1</option><option value="12.3.0">12.3.0</option><option value="12.2.0">12.2.0</option><option value="12.1.0">12.1.0</option><option value="12.0.0">12.0.0</option><option value="12.0.0b5">12.0.0b5</option></select>
+    <select value="myValue" id="versionSelector" style=""><option value="12.23.0b1">12.23.0b1</option><option value="12.22.0">12.22.0</option><option value="12.21.0">12.21.0</option><option value="12.21.0b1">12.21.0b1</option><option value="12.20.0">12.20.0</option><option value="12.20.0b1">12.20.0b1</option><option value="12.19.1">12.19.1</option><option value="12.19.0">12.19.0</option><option value="12.19.0b1">12.19.0b1</option><option value="12.18.3">12.18.3</option><option value="12.18.2">12.18.2</option><option value="12.18.1">12.18.1</option><option value="12.18.0">12.18.0</option><option value="12.18.0b1">12.18.0b1</option><option value="12.17.0">12.17.0</option><option value="12.17.0b1">12.17.0b1</option><option value="12.16.0">12.16.0</option><option value="12.16.0b1">12.16.0b1</option><option value="12.15.0">12.15.0</option><option value="12.15.0b1">12.15.0b1</option><option value="12.14.1">12.14.1</option><option value="12.14.0">12.14.0</option><option value="12.14.0b2">12.14.0b2</option><option value="12.14.0b1">12.14.0b1</option><option value="12.13.1">12.13.1</option><option value="12.13.0">12.13.0</option><option value="12.13.0b1">12.13.0b1</option><option value="12.12.0">12.12.0</option><option value="12.12.0b1">12.12.0b1</option><option value="12.11.0">12.11.0</option><option value="12.10.0">12.10.0</option><option value="12.10.0b4">12.10.0b4</option><option value="12.10.0b3">12.10.0b3</option><option value="12.10.0b2">12.10.0b2</option><option value="12.10.0b1">12.10.0b1</option><option value="12.9.0">12.9.0</option><option value="12.9.0b1">12.9.0b1</option><option value="12.8.1">12.8.1</option><option value="12.8.0">12.8.0</option><option value="12.8.0b1">12.8.0b1</option><option value="12.7.1">12.7.1</option><option value="12.7.0">12.7.0</option><option value="12.7.0b1">12.7.0b1</option><option value="12.6.0">12.6.0</option><option value="12.6.0b1">12.6.0b1</option><option value="12.5.0">12.5.0</option><option value="12.4.0">12.4.0</option><option value="12.4.0b1">12.4.0b1</option><option value="12.3.2">12.3.2</option><option value="12.3.1">12.3.1</option><option value="12.3.0">12.3.0</option><option value="12.2.0">12.2.0</option><option value="12.1.0">12.1.0</option><option value="12.0.0">12.0.0</option><option value="12.0.0b5">12.0.0b5</option></select>
     <br>
     </p>
     <br>
@@ -254,15 +60,15 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 
               <p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
 <ul class="current" aria-expanded="true">
-<li class="toctree-l1 current" aria-expanded="true"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#" aria-expanded="false"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-5"></button>azure.storage.blob package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.PartialBatchErrorException"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-6"></button><code class="docutils literal notranslate"><span class="pre">PartialBatchErrorException</span></code></a><ul>
+<li class="toctree-l1 current" aria-expanded="true"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#" aria-expanded="false"><button class="toctree-expand" title="Open/close menu"></button>azure.storage.blob package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.PartialBatchErrorException"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">PartialBatchErrorException</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.PartialBatchErrorException.add_note"><code class="docutils literal notranslate"><span class="pre">PartialBatchErrorException.add_note()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.PartialBatchErrorException.raise_with_traceback"><code class="docutils literal notranslate"><span class="pre">PartialBatchErrorException.raise_with_traceback()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.PartialBatchErrorException.with_traceback"><code class="docutils literal notranslate"><span class="pre">PartialBatchErrorException.with_traceback()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.PartialBatchErrorException.args"><code class="docutils literal notranslate"><span class="pre">PartialBatchErrorException.args</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.AccessPolicy"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-7"></button><code class="docutils literal notranslate"><span class="pre">AccessPolicy</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.AccessPolicy"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">AccessPolicy</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.AccessPolicy.as_dict"><code class="docutils literal notranslate"><span class="pre">AccessPolicy.as_dict()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.AccessPolicy.deserialize"><code class="docutils literal notranslate"><span class="pre">AccessPolicy.deserialize()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.AccessPolicy.enable_additional_properties_sending"><code class="docutils literal notranslate"><span class="pre">AccessPolicy.enable_additional_properties_sending()</span></code></a></li>
@@ -274,7 +80,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.AccessPolicy.start"><code class="docutils literal notranslate"><span class="pre">AccessPolicy.start</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.AccountSasPermissions"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-8"></button><code class="docutils literal notranslate"><span class="pre">AccountSasPermissions</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.AccountSasPermissions"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">AccountSasPermissions</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.AccountSasPermissions.from_string"><code class="docutils literal notranslate"><span class="pre">AccountSasPermissions.from_string()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.AccountSasPermissions.add"><code class="docutils literal notranslate"><span class="pre">AccountSasPermissions.add</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.AccountSasPermissions.create"><code class="docutils literal notranslate"><span class="pre">AccountSasPermissions.create</span></code></a></li>
@@ -291,7 +97,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.AccountSasPermissions.write"><code class="docutils literal notranslate"><span class="pre">AccountSasPermissions.write</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ArrowDialect"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-9"></button><code class="docutils literal notranslate"><span class="pre">ArrowDialect</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ArrowDialect"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">ArrowDialect</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ArrowDialect.as_dict"><code class="docutils literal notranslate"><span class="pre">ArrowDialect.as_dict()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ArrowDialect.deserialize"><code class="docutils literal notranslate"><span class="pre">ArrowDialect.deserialize()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ArrowDialect.enable_additional_properties_sending"><code class="docutils literal notranslate"><span class="pre">ArrowDialect.enable_additional_properties_sending()</span></code></a></li>
@@ -300,7 +106,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ArrowDialect.serialize"><code class="docutils literal notranslate"><span class="pre">ArrowDialect.serialize()</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ArrowType"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-10"></button><code class="docutils literal notranslate"><span class="pre">ArrowType</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ArrowType"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">ArrowType</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ArrowType.capitalize"><code class="docutils literal notranslate"><span class="pre">ArrowType.capitalize()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ArrowType.casefold"><code class="docutils literal notranslate"><span class="pre">ArrowType.casefold()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ArrowType.center"><code class="docutils literal notranslate"><span class="pre">ArrowType.center()</span></code></a></li>
@@ -356,7 +162,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ArrowType.TIMESTAMP_MS"><code class="docutils literal notranslate"><span class="pre">ArrowType.TIMESTAMP_MS</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobAnalyticsLogging"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-11"></button><code class="docutils literal notranslate"><span class="pre">BlobAnalyticsLogging</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobAnalyticsLogging"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">BlobAnalyticsLogging</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobAnalyticsLogging.as_dict"><code class="docutils literal notranslate"><span class="pre">BlobAnalyticsLogging.as_dict()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobAnalyticsLogging.deserialize"><code class="docutils literal notranslate"><span class="pre">BlobAnalyticsLogging.deserialize()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobAnalyticsLogging.enable_additional_properties_sending"><code class="docutils literal notranslate"><span class="pre">BlobAnalyticsLogging.enable_additional_properties_sending()</span></code></a></li>
@@ -370,7 +176,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobAnalyticsLogging.write"><code class="docutils literal notranslate"><span class="pre">BlobAnalyticsLogging.write</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobBlock"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-12"></button><code class="docutils literal notranslate"><span class="pre">BlobBlock</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobBlock"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">BlobBlock</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobBlock.get"><code class="docutils literal notranslate"><span class="pre">BlobBlock.get()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobBlock.has_key"><code class="docutils literal notranslate"><span class="pre">BlobBlock.has_key()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobBlock.items"><code class="docutils literal notranslate"><span class="pre">BlobBlock.items()</span></code></a></li>
@@ -382,7 +188,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobBlock.state"><code class="docutils literal notranslate"><span class="pre">BlobBlock.state</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2 current" aria-expanded="true"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobClient"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-13"></button><code class="docutils literal notranslate"><span class="pre">BlobClient</span></code></a><ul>
+<li class="toctree-l2 current" aria-expanded="true"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobClient"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">BlobClient</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobClient.abort_copy"><code class="docutils literal notranslate"><span class="pre">BlobClient.abort_copy()</span></code></a></li>
 <li class="toctree-l3 current" aria-expanded="true"><a class="reference internal current" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobClient.acquire_lease" aria-expanded="true"><code class="docutils literal notranslate"><span class="pre">BlobClient.acquire_lease()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobClient.append_block"><code class="docutils literal notranslate"><span class="pre">BlobClient.append_block()</span></code></a></li>
@@ -434,7 +240,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobClient.url"><code class="docutils literal notranslate"><span class="pre">BlobClient.url</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobImmutabilityPolicyMode"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-14"></button><code class="docutils literal notranslate"><span class="pre">BlobImmutabilityPolicyMode</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobImmutabilityPolicyMode"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">BlobImmutabilityPolicyMode</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobImmutabilityPolicyMode.capitalize"><code class="docutils literal notranslate"><span class="pre">BlobImmutabilityPolicyMode.capitalize()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobImmutabilityPolicyMode.casefold"><code class="docutils literal notranslate"><span class="pre">BlobImmutabilityPolicyMode.casefold()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobImmutabilityPolicyMode.center"><code class="docutils literal notranslate"><span class="pre">BlobImmutabilityPolicyMode.center()</span></code></a></li>
@@ -487,7 +293,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobImmutabilityPolicyMode.UNLOCKED"><code class="docutils literal notranslate"><span class="pre">BlobImmutabilityPolicyMode.UNLOCKED</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobLeaseClient"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-15"></button><code class="docutils literal notranslate"><span class="pre">BlobLeaseClient</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobLeaseClient"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">BlobLeaseClient</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobLeaseClient.acquire"><code class="docutils literal notranslate"><span class="pre">BlobLeaseClient.acquire()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobLeaseClient.break_lease"><code class="docutils literal notranslate"><span class="pre">BlobLeaseClient.break_lease()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobLeaseClient.change"><code class="docutils literal notranslate"><span class="pre">BlobLeaseClient.change()</span></code></a></li>
@@ -498,7 +304,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobLeaseClient.last_modified"><code class="docutils literal notranslate"><span class="pre">BlobLeaseClient.last_modified</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobPrefix"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-16"></button><code class="docutils literal notranslate"><span class="pre">BlobPrefix</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobPrefix"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">BlobPrefix</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobPrefix.by_page"><code class="docutils literal notranslate"><span class="pre">BlobPrefix.by_page()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobPrefix.get"><code class="docutils literal notranslate"><span class="pre">BlobPrefix.get()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobPrefix.has_key"><code class="docutils literal notranslate"><span class="pre">BlobPrefix.has_key()</span></code></a></li>
@@ -520,7 +326,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobPrefix.service_endpoint"><code class="docutils literal notranslate"><span class="pre">BlobPrefix.service_endpoint</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobProperties"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-17"></button><code class="docutils literal notranslate"><span class="pre">BlobProperties</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobProperties"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">BlobProperties</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobProperties.get"><code class="docutils literal notranslate"><span class="pre">BlobProperties.get()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobProperties.has_key"><code class="docutils literal notranslate"><span class="pre">BlobProperties.has_key()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobProperties.items"><code class="docutils literal notranslate"><span class="pre">BlobProperties.items()</span></code></a></li>
@@ -565,14 +371,14 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobProperties.tags"><code class="docutils literal notranslate"><span class="pre">BlobProperties.tags</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobQueryError"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-18"></button><code class="docutils literal notranslate"><span class="pre">BlobQueryError</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobQueryError"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">BlobQueryError</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobQueryError.description"><code class="docutils literal notranslate"><span class="pre">BlobQueryError.description</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobQueryError.error"><code class="docutils literal notranslate"><span class="pre">BlobQueryError.error</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobQueryError.is_fatal"><code class="docutils literal notranslate"><span class="pre">BlobQueryError.is_fatal</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobQueryError.position"><code class="docutils literal notranslate"><span class="pre">BlobQueryError.position</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobQueryReader"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-19"></button><code class="docutils literal notranslate"><span class="pre">BlobQueryReader</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobQueryReader"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">BlobQueryReader</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobQueryReader.readall"><code class="docutils literal notranslate"><span class="pre">BlobQueryReader.readall()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobQueryReader.readinto"><code class="docutils literal notranslate"><span class="pre">BlobQueryReader.readinto()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobQueryReader.records"><code class="docutils literal notranslate"><span class="pre">BlobQueryReader.records()</span></code></a></li>
@@ -582,7 +388,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobQueryReader.response_headers"><code class="docutils literal notranslate"><span class="pre">BlobQueryReader.response_headers</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobSasPermissions"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-20"></button><code class="docutils literal notranslate"><span class="pre">BlobSasPermissions</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobSasPermissions"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">BlobSasPermissions</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobSasPermissions.from_string"><code class="docutils literal notranslate"><span class="pre">BlobSasPermissions.from_string()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobSasPermissions.add"><code class="docutils literal notranslate"><span class="pre">BlobSasPermissions.add</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobSasPermissions.create"><code class="docutils literal notranslate"><span class="pre">BlobSasPermissions.create</span></code></a></li>
@@ -597,7 +403,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobSasPermissions.write"><code class="docutils literal notranslate"><span class="pre">BlobSasPermissions.write</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobServiceClient"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-21"></button><code class="docutils literal notranslate"><span class="pre">BlobServiceClient</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobServiceClient"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">BlobServiceClient</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobServiceClient.close"><code class="docutils literal notranslate"><span class="pre">BlobServiceClient.close()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobServiceClient.create_container"><code class="docutils literal notranslate"><span class="pre">BlobServiceClient.create_container()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobServiceClient.delete_container"><code class="docutils literal notranslate"><span class="pre">BlobServiceClient.delete_container()</span></code></a></li>
@@ -621,7 +427,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobServiceClient.url"><code class="docutils literal notranslate"><span class="pre">BlobServiceClient.url</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobType"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-22"></button><code class="docutils literal notranslate"><span class="pre">BlobType</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobType"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">BlobType</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobType.capitalize"><code class="docutils literal notranslate"><span class="pre">BlobType.capitalize()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobType.casefold"><code class="docutils literal notranslate"><span class="pre">BlobType.casefold()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobType.center"><code class="docutils literal notranslate"><span class="pre">BlobType.center()</span></code></a></li>
@@ -674,7 +480,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlobType.PAGEBLOB"><code class="docutils literal notranslate"><span class="pre">BlobType.PAGEBLOB</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlockState"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-23"></button><code class="docutils literal notranslate"><span class="pre">BlockState</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlockState"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">BlockState</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlockState.capitalize"><code class="docutils literal notranslate"><span class="pre">BlockState.capitalize()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlockState.casefold"><code class="docutils literal notranslate"><span class="pre">BlockState.casefold()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlockState.center"><code class="docutils literal notranslate"><span class="pre">BlockState.center()</span></code></a></li>
@@ -727,7 +533,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.BlockState.UNCOMMITTED"><code class="docutils literal notranslate"><span class="pre">BlockState.UNCOMMITTED</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ContainerClient"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-24"></button><code class="docutils literal notranslate"><span class="pre">ContainerClient</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ContainerClient"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">ContainerClient</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ContainerClient.acquire_lease"><code class="docutils literal notranslate"><span class="pre">ContainerClient.acquire_lease()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ContainerClient.close"><code class="docutils literal notranslate"><span class="pre">ContainerClient.close()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ContainerClient.create_container"><code class="docutils literal notranslate"><span class="pre">ContainerClient.create_container()</span></code></a></li>
@@ -760,12 +566,12 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ContainerClient.url"><code class="docutils literal notranslate"><span class="pre">ContainerClient.url</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ContainerEncryptionScope"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-25"></button><code class="docutils literal notranslate"><span class="pre">ContainerEncryptionScope</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ContainerEncryptionScope"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">ContainerEncryptionScope</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ContainerEncryptionScope.default_encryption_scope"><code class="docutils literal notranslate"><span class="pre">ContainerEncryptionScope.default_encryption_scope</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ContainerEncryptionScope.prevent_encryption_scope_override"><code class="docutils literal notranslate"><span class="pre">ContainerEncryptionScope.prevent_encryption_scope_override</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ContainerProperties"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-26"></button><code class="docutils literal notranslate"><span class="pre">ContainerProperties</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ContainerProperties"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">ContainerProperties</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ContainerProperties.get"><code class="docutils literal notranslate"><span class="pre">ContainerProperties.get()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ContainerProperties.has_key"><code class="docutils literal notranslate"><span class="pre">ContainerProperties.has_key()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ContainerProperties.items"><code class="docutils literal notranslate"><span class="pre">ContainerProperties.items()</span></code></a></li>
@@ -786,7 +592,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ContainerProperties.version"><code class="docutils literal notranslate"><span class="pre">ContainerProperties.version</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ContainerSasPermissions"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-27"></button><code class="docutils literal notranslate"><span class="pre">ContainerSasPermissions</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ContainerSasPermissions"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">ContainerSasPermissions</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ContainerSasPermissions.from_string"><code class="docutils literal notranslate"><span class="pre">ContainerSasPermissions.from_string()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ContainerSasPermissions.add"><code class="docutils literal notranslate"><span class="pre">ContainerSasPermissions.add</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ContainerSasPermissions.create"><code class="docutils literal notranslate"><span class="pre">ContainerSasPermissions.create</span></code></a></li>
@@ -802,7 +608,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ContainerSasPermissions.write"><code class="docutils literal notranslate"><span class="pre">ContainerSasPermissions.write</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ContentSettings"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-28"></button><code class="docutils literal notranslate"><span class="pre">ContentSettings</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ContentSettings"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">ContentSettings</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ContentSettings.get"><code class="docutils literal notranslate"><span class="pre">ContentSettings.get()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ContentSettings.has_key"><code class="docutils literal notranslate"><span class="pre">ContentSettings.has_key()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ContentSettings.items"><code class="docutils literal notranslate"><span class="pre">ContentSettings.items()</span></code></a></li>
@@ -817,7 +623,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ContentSettings.content_type"><code class="docutils literal notranslate"><span class="pre">ContentSettings.content_type</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.CopyProperties"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-29"></button><code class="docutils literal notranslate"><span class="pre">CopyProperties</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.CopyProperties"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">CopyProperties</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.CopyProperties.get"><code class="docutils literal notranslate"><span class="pre">CopyProperties.get()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.CopyProperties.has_key"><code class="docutils literal notranslate"><span class="pre">CopyProperties.has_key()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.CopyProperties.items"><code class="docutils literal notranslate"><span class="pre">CopyProperties.items()</span></code></a></li>
@@ -834,7 +640,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.CopyProperties.status_description"><code class="docutils literal notranslate"><span class="pre">CopyProperties.status_description</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.CorsRule"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-30"></button><code class="docutils literal notranslate"><span class="pre">CorsRule</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.CorsRule"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">CorsRule</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.CorsRule.as_dict"><code class="docutils literal notranslate"><span class="pre">CorsRule.as_dict()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.CorsRule.deserialize"><code class="docutils literal notranslate"><span class="pre">CorsRule.deserialize()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.CorsRule.enable_additional_properties_sending"><code class="docutils literal notranslate"><span class="pre">CorsRule.enable_additional_properties_sending()</span></code></a></li>
@@ -848,13 +654,13 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.CorsRule.max_age_in_seconds"><code class="docutils literal notranslate"><span class="pre">CorsRule.max_age_in_seconds</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.CustomerProvidedEncryptionKey"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-31"></button><code class="docutils literal notranslate"><span class="pre">CustomerProvidedEncryptionKey</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.CustomerProvidedEncryptionKey"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">CustomerProvidedEncryptionKey</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.CustomerProvidedEncryptionKey.algorithm"><code class="docutils literal notranslate"><span class="pre">CustomerProvidedEncryptionKey.algorithm</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.CustomerProvidedEncryptionKey.key_hash"><code class="docutils literal notranslate"><span class="pre">CustomerProvidedEncryptionKey.key_hash</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.CustomerProvidedEncryptionKey.key_value"><code class="docutils literal notranslate"><span class="pre">CustomerProvidedEncryptionKey.key_value</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.DelimitedJsonDialect"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-32"></button><code class="docutils literal notranslate"><span class="pre">DelimitedJsonDialect</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.DelimitedJsonDialect"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">DelimitedJsonDialect</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.DelimitedJsonDialect.get"><code class="docutils literal notranslate"><span class="pre">DelimitedJsonDialect.get()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.DelimitedJsonDialect.has_key"><code class="docutils literal notranslate"><span class="pre">DelimitedJsonDialect.has_key()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.DelimitedJsonDialect.items"><code class="docutils literal notranslate"><span class="pre">DelimitedJsonDialect.items()</span></code></a></li>
@@ -863,7 +669,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.DelimitedJsonDialect.values"><code class="docutils literal notranslate"><span class="pre">DelimitedJsonDialect.values()</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.DelimitedTextDialect"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-33"></button><code class="docutils literal notranslate"><span class="pre">DelimitedTextDialect</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.DelimitedTextDialect"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">DelimitedTextDialect</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.DelimitedTextDialect.get"><code class="docutils literal notranslate"><span class="pre">DelimitedTextDialect.get()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.DelimitedTextDialect.has_key"><code class="docutils literal notranslate"><span class="pre">DelimitedTextDialect.has_key()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.DelimitedTextDialect.items"><code class="docutils literal notranslate"><span class="pre">DelimitedTextDialect.items()</span></code></a></li>
@@ -872,7 +678,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.DelimitedTextDialect.values"><code class="docutils literal notranslate"><span class="pre">DelimitedTextDialect.values()</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ExponentialRetry"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-34"></button><code class="docutils literal notranslate"><span class="pre">ExponentialRetry</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ExponentialRetry"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">ExponentialRetry</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ExponentialRetry.configure_retries"><code class="docutils literal notranslate"><span class="pre">ExponentialRetry.configure_retries()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ExponentialRetry.get_backoff_time"><code class="docutils literal notranslate"><span class="pre">ExponentialRetry.get_backoff_time()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ExponentialRetry.increment"><code class="docutils literal notranslate"><span class="pre">ExponentialRetry.increment()</span></code></a></li>
@@ -889,7 +695,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ExponentialRetry.total_retries"><code class="docutils literal notranslate"><span class="pre">ExponentialRetry.total_retries</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.FilteredBlob"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-35"></button><code class="docutils literal notranslate"><span class="pre">FilteredBlob</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.FilteredBlob"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">FilteredBlob</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.FilteredBlob.get"><code class="docutils literal notranslate"><span class="pre">FilteredBlob.get()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.FilteredBlob.has_key"><code class="docutils literal notranslate"><span class="pre">FilteredBlob.has_key()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.FilteredBlob.items"><code class="docutils literal notranslate"><span class="pre">FilteredBlob.items()</span></code></a></li>
@@ -901,7 +707,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.FilteredBlob.tags"><code class="docutils literal notranslate"><span class="pre">FilteredBlob.tags</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ImmutabilityPolicy"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-36"></button><code class="docutils literal notranslate"><span class="pre">ImmutabilityPolicy</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ImmutabilityPolicy"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">ImmutabilityPolicy</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ImmutabilityPolicy.get"><code class="docutils literal notranslate"><span class="pre">ImmutabilityPolicy.get()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ImmutabilityPolicy.has_key"><code class="docutils literal notranslate"><span class="pre">ImmutabilityPolicy.has_key()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ImmutabilityPolicy.items"><code class="docutils literal notranslate"><span class="pre">ImmutabilityPolicy.items()</span></code></a></li>
@@ -912,7 +718,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ImmutabilityPolicy.policy_mode"><code class="docutils literal notranslate"><span class="pre">ImmutabilityPolicy.policy_mode</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.LeaseProperties"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-37"></button><code class="docutils literal notranslate"><span class="pre">LeaseProperties</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.LeaseProperties"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">LeaseProperties</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.LeaseProperties.get"><code class="docutils literal notranslate"><span class="pre">LeaseProperties.get()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.LeaseProperties.has_key"><code class="docutils literal notranslate"><span class="pre">LeaseProperties.has_key()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.LeaseProperties.items"><code class="docutils literal notranslate"><span class="pre">LeaseProperties.items()</span></code></a></li>
@@ -924,7 +730,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.LeaseProperties.status"><code class="docutils literal notranslate"><span class="pre">LeaseProperties.status</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.LinearRetry"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-38"></button><code class="docutils literal notranslate"><span class="pre">LinearRetry</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.LinearRetry"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">LinearRetry</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.LinearRetry.configure_retries"><code class="docutils literal notranslate"><span class="pre">LinearRetry.configure_retries()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.LinearRetry.get_backoff_time"><code class="docutils literal notranslate"><span class="pre">LinearRetry.get_backoff_time()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.LinearRetry.increment"><code class="docutils literal notranslate"><span class="pre">LinearRetry.increment()</span></code></a></li>
@@ -940,12 +746,12 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.LinearRetry.total_retries"><code class="docutils literal notranslate"><span class="pre">LinearRetry.total_retries</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.LocationMode"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-39"></button><code class="docutils literal notranslate"><span class="pre">LocationMode</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.LocationMode"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">LocationMode</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.LocationMode.PRIMARY"><code class="docutils literal notranslate"><span class="pre">LocationMode.PRIMARY</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.LocationMode.SECONDARY"><code class="docutils literal notranslate"><span class="pre">LocationMode.SECONDARY</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.Metrics"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-40"></button><code class="docutils literal notranslate"><span class="pre">Metrics</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.Metrics"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">Metrics</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.Metrics.as_dict"><code class="docutils literal notranslate"><span class="pre">Metrics.as_dict()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.Metrics.deserialize"><code class="docutils literal notranslate"><span class="pre">Metrics.deserialize()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.Metrics.enable_additional_properties_sending"><code class="docutils literal notranslate"><span class="pre">Metrics.enable_additional_properties_sending()</span></code></a></li>
@@ -958,7 +764,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.Metrics.version"><code class="docutils literal notranslate"><span class="pre">Metrics.version</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ObjectReplicationPolicy"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-41"></button><code class="docutils literal notranslate"><span class="pre">ObjectReplicationPolicy</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ObjectReplicationPolicy"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">ObjectReplicationPolicy</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ObjectReplicationPolicy.get"><code class="docutils literal notranslate"><span class="pre">ObjectReplicationPolicy.get()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ObjectReplicationPolicy.has_key"><code class="docutils literal notranslate"><span class="pre">ObjectReplicationPolicy.has_key()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ObjectReplicationPolicy.items"><code class="docutils literal notranslate"><span class="pre">ObjectReplicationPolicy.items()</span></code></a></li>
@@ -969,7 +775,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ObjectReplicationPolicy.rules"><code class="docutils literal notranslate"><span class="pre">ObjectReplicationPolicy.rules</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ObjectReplicationRule"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-42"></button><code class="docutils literal notranslate"><span class="pre">ObjectReplicationRule</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ObjectReplicationRule"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">ObjectReplicationRule</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ObjectReplicationRule.get"><code class="docutils literal notranslate"><span class="pre">ObjectReplicationRule.get()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ObjectReplicationRule.has_key"><code class="docutils literal notranslate"><span class="pre">ObjectReplicationRule.has_key()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ObjectReplicationRule.items"><code class="docutils literal notranslate"><span class="pre">ObjectReplicationRule.items()</span></code></a></li>
@@ -980,7 +786,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ObjectReplicationRule.status"><code class="docutils literal notranslate"><span class="pre">ObjectReplicationRule.status</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.PageRange"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-43"></button><code class="docutils literal notranslate"><span class="pre">PageRange</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.PageRange"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">PageRange</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.PageRange.get"><code class="docutils literal notranslate"><span class="pre">PageRange.get()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.PageRange.has_key"><code class="docutils literal notranslate"><span class="pre">PageRange.has_key()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.PageRange.items"><code class="docutils literal notranslate"><span class="pre">PageRange.items()</span></code></a></li>
@@ -992,7 +798,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.PageRange.start"><code class="docutils literal notranslate"><span class="pre">PageRange.start</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.PremiumPageBlobTier"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-44"></button><code class="docutils literal notranslate"><span class="pre">PremiumPageBlobTier</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.PremiumPageBlobTier"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">PremiumPageBlobTier</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.PremiumPageBlobTier.capitalize"><code class="docutils literal notranslate"><span class="pre">PremiumPageBlobTier.capitalize()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.PremiumPageBlobTier.casefold"><code class="docutils literal notranslate"><span class="pre">PremiumPageBlobTier.casefold()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.PremiumPageBlobTier.center"><code class="docutils literal notranslate"><span class="pre">PremiumPageBlobTier.center()</span></code></a></li>
@@ -1051,7 +857,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.PremiumPageBlobTier.P60"><code class="docutils literal notranslate"><span class="pre">PremiumPageBlobTier.P60</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.PublicAccess"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-45"></button><code class="docutils literal notranslate"><span class="pre">PublicAccess</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.PublicAccess"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">PublicAccess</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.PublicAccess.capitalize"><code class="docutils literal notranslate"><span class="pre">PublicAccess.capitalize()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.PublicAccess.casefold"><code class="docutils literal notranslate"><span class="pre">PublicAccess.casefold()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.PublicAccess.center"><code class="docutils literal notranslate"><span class="pre">PublicAccess.center()</span></code></a></li>
@@ -1104,7 +910,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.PublicAccess.OFF"><code class="docutils literal notranslate"><span class="pre">PublicAccess.OFF</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.QuickQueryDialect"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-46"></button><code class="docutils literal notranslate"><span class="pre">QuickQueryDialect</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.QuickQueryDialect"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">QuickQueryDialect</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.QuickQueryDialect.capitalize"><code class="docutils literal notranslate"><span class="pre">QuickQueryDialect.capitalize()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.QuickQueryDialect.casefold"><code class="docutils literal notranslate"><span class="pre">QuickQueryDialect.casefold()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.QuickQueryDialect.center"><code class="docutils literal notranslate"><span class="pre">QuickQueryDialect.center()</span></code></a></li>
@@ -1157,7 +963,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.QuickQueryDialect.PARQUET"><code class="docutils literal notranslate"><span class="pre">QuickQueryDialect.PARQUET</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.RehydratePriority"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-47"></button><code class="docutils literal notranslate"><span class="pre">RehydratePriority</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.RehydratePriority"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">RehydratePriority</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.RehydratePriority.capitalize"><code class="docutils literal notranslate"><span class="pre">RehydratePriority.capitalize()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.RehydratePriority.casefold"><code class="docutils literal notranslate"><span class="pre">RehydratePriority.casefold()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.RehydratePriority.center"><code class="docutils literal notranslate"><span class="pre">RehydratePriority.center()</span></code></a></li>
@@ -1209,14 +1015,14 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.RehydratePriority.STANDARD"><code class="docutils literal notranslate"><span class="pre">RehydratePriority.STANDARD</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ResourceTypes"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-48"></button><code class="docutils literal notranslate"><span class="pre">ResourceTypes</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ResourceTypes"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">ResourceTypes</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ResourceTypes.from_string"><code class="docutils literal notranslate"><span class="pre">ResourceTypes.from_string()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ResourceTypes.container"><code class="docutils literal notranslate"><span class="pre">ResourceTypes.container</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ResourceTypes.object"><code class="docutils literal notranslate"><span class="pre">ResourceTypes.object</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.ResourceTypes.service"><code class="docutils literal notranslate"><span class="pre">ResourceTypes.service</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.RetentionPolicy"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-49"></button><code class="docutils literal notranslate"><span class="pre">RetentionPolicy</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.RetentionPolicy"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">RetentionPolicy</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.RetentionPolicy.as_dict"><code class="docutils literal notranslate"><span class="pre">RetentionPolicy.as_dict()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.RetentionPolicy.deserialize"><code class="docutils literal notranslate"><span class="pre">RetentionPolicy.deserialize()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.RetentionPolicy.enable_additional_properties_sending"><code class="docutils literal notranslate"><span class="pre">RetentionPolicy.enable_additional_properties_sending()</span></code></a></li>
@@ -1227,7 +1033,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.RetentionPolicy.enabled"><code class="docutils literal notranslate"><span class="pre">RetentionPolicy.enabled</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.SequenceNumberAction"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-50"></button><code class="docutils literal notranslate"><span class="pre">SequenceNumberAction</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.SequenceNumberAction"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">SequenceNumberAction</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.SequenceNumberAction.capitalize"><code class="docutils literal notranslate"><span class="pre">SequenceNumberAction.capitalize()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.SequenceNumberAction.casefold"><code class="docutils literal notranslate"><span class="pre">SequenceNumberAction.casefold()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.SequenceNumberAction.center"><code class="docutils literal notranslate"><span class="pre">SequenceNumberAction.center()</span></code></a></li>
@@ -1280,11 +1086,11 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.SequenceNumberAction.UPDATE"><code class="docutils literal notranslate"><span class="pre">SequenceNumberAction.UPDATE</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.Services"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-51"></button><code class="docutils literal notranslate"><span class="pre">Services</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.Services"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">Services</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.Services.from_string"><code class="docutils literal notranslate"><span class="pre">Services.from_string()</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.StandardBlobTier"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-52"></button><code class="docutils literal notranslate"><span class="pre">StandardBlobTier</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.StandardBlobTier"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">StandardBlobTier</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.StandardBlobTier.capitalize"><code class="docutils literal notranslate"><span class="pre">StandardBlobTier.capitalize()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.StandardBlobTier.casefold"><code class="docutils literal notranslate"><span class="pre">StandardBlobTier.casefold()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.StandardBlobTier.center"><code class="docutils literal notranslate"><span class="pre">StandardBlobTier.center()</span></code></a></li>
@@ -1338,7 +1144,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.StandardBlobTier.HOT"><code class="docutils literal notranslate"><span class="pre">StandardBlobTier.HOT</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.StaticWebsite"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-53"></button><code class="docutils literal notranslate"><span class="pre">StaticWebsite</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.StaticWebsite"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">StaticWebsite</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.StaticWebsite.as_dict"><code class="docutils literal notranslate"><span class="pre">StaticWebsite.as_dict()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.StaticWebsite.deserialize"><code class="docutils literal notranslate"><span class="pre">StaticWebsite.deserialize()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.StaticWebsite.enable_additional_properties_sending"><code class="docutils literal notranslate"><span class="pre">StaticWebsite.enable_additional_properties_sending()</span></code></a></li>
@@ -1351,7 +1157,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.StaticWebsite.index_document"><code class="docutils literal notranslate"><span class="pre">StaticWebsite.index_document</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.StorageErrorCode"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-54"></button><code class="docutils literal notranslate"><span class="pre">StorageErrorCode</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.StorageErrorCode"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">StorageErrorCode</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.StorageErrorCode.capitalize"><code class="docutils literal notranslate"><span class="pre">StorageErrorCode.capitalize()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.StorageErrorCode.casefold"><code class="docutils literal notranslate"><span class="pre">StorageErrorCode.casefold()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.StorageErrorCode.center"><code class="docutils literal notranslate"><span class="pre">StorageErrorCode.center()</span></code></a></li>
@@ -1556,7 +1362,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.StorageErrorCode.UNSUPPORTED_XML_NODE"><code class="docutils literal notranslate"><span class="pre">StorageErrorCode.UNSUPPORTED_XML_NODE</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.StorageStreamDownloader"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-55"></button><code class="docutils literal notranslate"><span class="pre">StorageStreamDownloader</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.StorageStreamDownloader"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">StorageStreamDownloader</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.StorageStreamDownloader.chunks"><code class="docutils literal notranslate"><span class="pre">StorageStreamDownloader.chunks()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.StorageStreamDownloader.content_as_bytes"><code class="docutils literal notranslate"><span class="pre">StorageStreamDownloader.content_as_bytes()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.StorageStreamDownloader.content_as_text"><code class="docutils literal notranslate"><span class="pre">StorageStreamDownloader.content_as_text()</span></code></a></li>
@@ -1570,7 +1376,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.StorageStreamDownloader.size"><code class="docutils literal notranslate"><span class="pre">StorageStreamDownloader.size</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.UserDelegationKey"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-56"></button><code class="docutils literal notranslate"><span class="pre">UserDelegationKey</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.UserDelegationKey"><button class="toctree-expand" title="Open/close menu"></button><code class="docutils literal notranslate"><span class="pre">UserDelegationKey</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.UserDelegationKey.signed_expiry"><code class="docutils literal notranslate"><span class="pre">UserDelegationKey.signed_expiry</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.UserDelegationKey.signed_oid"><code class="docutils literal notranslate"><span class="pre">UserDelegationKey.signed_oid</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.UserDelegationKey.signed_service"><code class="docutils literal notranslate"><span class="pre">UserDelegationKey.signed_service</span></code></a></li>
@@ -1585,7 +1391,7 @@ embed[type="application/pdf"][src="about:blank"] { filter: invert(100%) contrast
 <li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.generate_blob_sas"><code class="docutils literal notranslate"><span class="pre">generate_blob_sas()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.generate_container_sas"><code class="docutils literal notranslate"><span class="pre">generate_container_sas()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#azure.storage.blob.upload_blob_to_url"><code class="docutils literal notranslate"><span class="pre">upload_blob_to_url()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#subpackages"><button class="toctree-expand" title="Open/close menu" control-id="ControlID-57"></button>Subpackages</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.html#subpackages"><button class="toctree-expand" title="Open/close menu"></button>Subpackages</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="https://azuresdkdocs.blob.core.windows.net/$web/python/azure-storage-blob/12.22.0/azure.storage.blob.aio.html">azure.storage.blob.aio package</a></li>
 </ul>
 </li>

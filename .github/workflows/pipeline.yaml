@@ -98,13 +98,12 @@ jobs:
           - windows-2019
           - windows-2022
     steps:
+      - name: Configure Git (Windows)
+        if: runner.os == 'Windows'
+        run: git config --system core.longpaths true
+
       - name: Checkout
         uses: actions/checkout@v4.1.2
-
-      - name: Configure Git
-        run: |
-          git config user.name "${{ github.actor }}"
-          git config user.email "${{ github.actor }}@users.noreply.github.com"
 
       - name: Set up Python
         uses: actions/setup-python@v5.1.1

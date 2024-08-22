@@ -1042,9 +1042,9 @@ async def _get_broswer(
     """
     browser = await browser_type.launch(
         downloads_path=browsers_install_path(),  # Using the application path not the default one from the SDK
+        # See: https://github.com/microsoft/playwright/blob/99a36310570617222290c09b96a2026beb8b00f9/packages/playwright-core/src/server/chromium/chromium.ts
         args=[
-            "--disable-gl-drawing-for-tests",  # Disable totally UI rendering, lowering CPU usage
-            "--mute-audio",  # Mutes audio sent to the audio device so it is not audible
+            "--disable-gl-drawing-for-tests",  # Disable UI rendering, lower CPU usage
         ],
     )
     return browser

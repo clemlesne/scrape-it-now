@@ -111,24 +111,25 @@ class AzureSearch(ISearch):
                 searchable=True,
                 type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
                 vector_search_dimensions=self._config.azure_openai_embedding_dimensions,
-                vector_search_profile_name="default",
+                vector_search_profile_name="profile-default",
             ),
         ]
         vector_search = VectorSearch(
             profiles=[
                 VectorSearchProfile(
-                    algorithm_configuration_name="default",
-                    name="default",
+                    algorithm_configuration_name="algorithm-default",
+                    name="profile-default",
+                    vectorizer="vectorizer-default",
                 ),
             ],
             algorithms=[
                 HnswAlgorithmConfiguration(
-                    name="default",
+                    name="algorithm-default",
                 ),
             ],
             vectorizers=[
                 AzureOpenAIVectorizer(
-                    name="default",
+                    name="vectorizer-default",
                     azure_open_ai_parameters=AzureOpenAIParameters(
                         api_key=self._config.azure_openai_api_key,
                         deployment_id=self._config.azure_openai_embedding_deployment,

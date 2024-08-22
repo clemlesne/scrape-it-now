@@ -26,17 +26,17 @@ from app.helpers.persistence import (
     search_client,
 )
 from app.helpers.resources import (
+    dir_resources,
     hash_url,
     index_index_name,
     index_queue_name,
-    resources_dir,
     scrape_container_name,
 )
 from app.helpers.threading import run_workers
 from app.models.indexed import IndexedIngestModel
 from app.models.scraped import ScrapedUrlModel
 from app.persistence.iblob import IBlob, Provider as BlobProvider
-from app.persistence.iqueue import Provider as QueueProvider
+from app.persistence.iqueue import MessageNotFoundError, Provider as QueueProvider
 from app.persistence.isearch import (
     DocumentNotFoundError,
     ISearch,
@@ -119,7 +119,7 @@ async def _process_one(
     models = [
         IndexedIngestModel(
             content=content,
-            id=doc_id,
+            indexed_id=doc_id,
             url=result.url,
             vectors=embedding.embedding,
         )
@@ -364,7 +364,7 @@ async def run(
 
     # Patch Tiktoken
     # See: https://stackoverflow.com/a/76107077
-    env["TIKTOKEN_CACHE_DIR"] = resources_dir("tiktoken")
+    env["TIKTOKEN_CACHE_DIR"] = dir_resources("tiktoken")
 
     run_workers(
         azure_search_api_key=azure_search_api_key,
@@ -437,10 +437,11 @@ async def _worker(
                         max_messages=32,
                         visibility_timeout=32 * 10,  # 10 secs per message
                     ):
-                        logger.info("Processing new messages")
+                        logger.debug("Processing new messages")
                         async for message in messages:
                             blob_name = message.content
                             logger.info('Processing "%s"', blob_name)
+
                             try:
                                 await _process_one(
                                     blob=blob,
@@ -450,7 +451,13 @@ async def _worker(
                                     openai=openai,
                                     search=search,
                                 )
-                                await queue.delete_message(message)
+
+                                try:
+                                    await queue.delete_message(message)
+                                except (
+                                    MessageNotFoundError
+                                ):  # Race condition, message has already been deleted by another worker, pass silently to the next message, as it has already been processed
+                                    continue
 
                             except Exception:
                                 # TODO: Add a dead-letter queue

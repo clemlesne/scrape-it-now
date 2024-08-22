@@ -735,3 +735,7 @@ FodyWeavers.xsd
 
 # Scraping cache
 scraping-results/
+
+# Tests
+scraping-test/
+test-reports/

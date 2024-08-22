@@ -1,12 +1,15 @@
 import asyncio, random, string
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
-from json import JSONDecodeError, load
-from os import makedirs, path, remove
+from json import JSONDecodeError, loads
+from os import walk
+from os.path import abspath, dirname, join
 from typing import Any, AsyncGenerator
 from uuid import uuid4
 
 import aiosqlite
+from aiofiles import open
+from aiofiles.os import makedirs, path, remove, rmdir
 from pydantic import BaseModel, Field
 
 from app.helpers.logging import logger
@@ -17,6 +20,7 @@ from app.persistence.iblob import (
     BlobNotFoundError,
     IBlob,
     LeaseAlreadyExistsError,
+    LeaseNotFoundError,
 )
 from app.persistence.iqueue import IQueue, MessageNotFoundError
 
@@ -24,13 +28,12 @@ BLOB_DEFAULT_PATH = "scraping-results"
 
 
 class BlobConfig(BaseModel):
-    encoding: str = "utf-8"
     name: str
     path: str
 
     @property
     def working_path(self) -> str:
-        return path.abspath(path.join(self.path, self.name))
+        return abspath(join(self.path, self.name))
 
 
 class LeaseModel(BaseModel):
@@ -56,58 +59,61 @@ class LocalDiskBlob(IBlob):
         self._config = config
 
     @asynccontextmanager
-    async def lease(
+    async def lease_blob(
         self,
         blob: str,
         lease_duration: int,
     ) -> AsyncGenerator[str, None]:
         # Skip if the blob doesn't exist
-        if not path.isfile(path.join(self._config.working_path, blob)):
+        if not await path.exists(join(self._config.working_path, blob)):
             raise BlobNotFoundError(f'Blob "{blob}" not found')
 
-        lease_file = path.join(self._config.working_path, f"{blob}.lease")
+        lease_file = self._lease_path(blob)
+
+        # Ensure only this worker accesses the lease
+        async with self._file_lock(lease_file):
+            # Skip if the lease file already exists and is not expired
+            if await path.exists(lease_file):
+                try:
+                    async with open(
+                        file=lease_file,
+                        mode="rb",
+                    ) as f:
+                        previous = LeaseModel.model_validate(
+                            loads((await f.read()).decode(self.encoding))
+                        )
+                    if previous.until > datetime.now():
+                        raise LeaseAlreadyExistsError(
+                            f'Lease for blob "{blob}" already exists'
+                        )
+                except (
+                    FileNotFoundError,
+                    JSONDecodeError,
+                ):  # Race condition, file has been removed by another worker, retry
+                    async with self.lease_blob(
+                        blob=blob,
+                        lease_duration=lease_duration,
+                    ) as retry_id:
+                        yield retry_id
+                    return
+
+            # Create the lease file
+            lease = LeaseModel(until=datetime.now() + timedelta(seconds=lease_duration))
+            async with open(
+                file=lease_file,
+                mode="wb",
+            ) as f:
+                await f.write(lease.model_dump_json().encode(self.encoding))
 
         try:
-            # Ensure only this worker accesses the lease
-            async with self._file_lock(lease_file):
-                # Skip if the lease file already exists and is not expired
-                if path.isfile(lease_file):
-                    try:
-                        previous = LeaseModel.model_validate(
-                            load(
-                                open(
-                                    file=lease_file,
-                                    mode="rb",
-                                )
-                            )
-                        )
-                        if previous.until > datetime.now():
-                            raise LeaseAlreadyExistsError(
-                                f'Lease for blob "{blob}" already exists'
-                            )
-                    except (JSONDecodeError, FileNotFoundError):
-                        pass
-
-                # Create the lease file
-                lease = LeaseModel(
-                    until=datetime.now() + timedelta(seconds=lease_duration)
-                )
-                with open(
-                    encoding=self.encoding,
-                    file=lease_file,
-                    mode="w",
-                ) as f:
-                    f.write(lease.model_dump_json())
-
             # Return the lease ID
             yield lease.lease_id
 
         finally:
             try:
                 # Remove the lease file
-                remove(lease_file)
+                await remove(lease_file)
             except FileNotFoundError:
-                # Multiple workers might try to remove the lease file and the lock didn't prevent it -- we are on best effort
                 pass
 
     async def upload_blob(
@@ -118,87 +124,123 @@ class LocalDiskBlob(IBlob):
         overwrite: bool,
         lease_id: str | None = None,
     ) -> None:
+        blob_path = join(self._config.working_path, blob)
+
         # Skip if the blob exists and overwrite is not set
-        if path.isfile(path.join(self._config.working_path, blob)) and not overwrite:
+        if await path.exists(blob_path) and not overwrite:
             raise BlobAlreadyExistsError(f'Blob "{blob}" already exists')
 
-        # If a lease is provided, check if it exists
-        if lease_id:
-            lease_file = path.join(self._config.working_path, f"{blob}.lease")
-            if path.isfile(lease_file):
+        lease_file = self._lease_path(blob)
+
+        # If the blob is not locked
+        if not await path.exists(lease_file):
+            if lease_id:  # But the lease ID is provided
+                raise LeaseNotFoundError(f'Lease for blob "{blob}" not found')
+
+        else:  # If the blob is locked
+            # Confirm the lease ID
+            async with open(
+                file=lease_file,
+                mode="rb",
+            ) as f:
+                lease = LeaseModel.model_validate(
+                    loads((await f.read()).decode(self.encoding))
+                )
+
+            # Lease is expired
+            if lease.until <= datetime.now():
                 try:
-                    lease = LeaseModel.model_validate(
-                        load(
-                            open(
-                                file=lease_file,
-                                mode="rb",
-                            )
-                        )
-                    )
-                    if lease.lease_id != lease_id:
-                        raise LeaseAlreadyExistsError(
-                            "Provided lease ID does not match the existing"
-                        )
-                except JSONDecodeError:
+                    # Remove the lease file
+                    await remove(lease_file)
+                except FileNotFoundError:
                     pass
 
+            # Lease is not expired
+            elif lease.until > datetime.now():
+                # Check if the lease ID is provided
+                if not lease_id:
+                    raise LeaseAlreadyExistsError(
+                        "Lease ID is required to overwrite a blob with an existing lease"
+                    )
+                # Check the lease ID
+                elif lease.lease_id != lease_id:
+                    raise LeaseAlreadyExistsError(
+                        "Provided lease ID does not match the existing"
+                    )
+
         # Create the directory if it doesn't exist
-        blob_path = path.abspath(path.join(self._config.working_path, blob))
-        makedirs(path.dirname(blob_path), exist_ok=True)
+        await makedirs(dirname(blob_path), exist_ok=True)
 
         # Write the data to the file
-        with open(
+        async with open(
             file=blob_path,
             mode="wb",
         ) as f:
-            f.write(data)
+            await f.write(data)
 
     async def download_blob(
         self,
         blob: str,
     ) -> str:
-        blob_path = path.join(self._config.working_path, blob)
+        blob_path = join(self._config.working_path, blob)
         # Skip if the blob doesn't exist
-        if not path.isfile(blob_path):
+        if not await path.exists(blob_path):
             raise BlobNotFoundError(f'Blob "{blob}" not found')
         # Read the data from the file
-        with open(
-            encoding=self.encoding,
+        async with open(
             file=blob_path,
-            mode="r",
+            mode="rb",
         ) as f:
-            return f.read()
+            return (await f.read()).decode(self.encoding)
+
+    async def delete_container(
+        self,
+    ) -> None:
+        # Delete iteratively all files in the working path
+        for root, dirs, files in walk(
+            top=self._config.working_path,
+            topdown=False,
+        ):
+            for file in files:
+                await remove(join(root, file))
+            for dir in dirs:
+                await rmdir(join(root, dir))
+        logger.info('Deleted Local Disk Blob "%s"', self._config.name)
 
     @asynccontextmanager
     async def _file_lock(self, file_path: str) -> AsyncGenerator[None, None]:
-        # Create the directory if it doesn't exist
-        makedirs(path.dirname(path.abspath(file_path)), exist_ok=True)
-        # Test if the file is locked
-        lock_file = f"{file_path}.lock"
-        while path.isfile(lock_file):
-            await asyncio.sleep(0.1)
-        try:
-            # Create the empty lock file
-            open(
-                encoding=self.encoding,
-                file=lock_file,
-                mode="w",
-            ).close()
+        full_path = abspath(file_path)
+        lock_file = f"{full_path}.lock"
 
+        # Create the directory if it doesn't exist
+        await makedirs(dirname(full_path), exist_ok=True)
+
+        # Wait until the lock file is removed
+        while await path.exists(lock_file):
+            await asyncio.sleep(0.1)
+
+        # Create the empty lock file
+        async with open(
+            file=lock_file,
+            mode="wb",
+        ) as _:
+            pass
+
+        try:
             # Return to the caller
             yield
 
         finally:
             try:
                 # Remove the lock file
-                remove(lock_file)
+                await remove(lock_file)
             except FileNotFoundError:
-                # Multiple workers might try to remove the lock file and the wait loop didn't prevent it -- we are on best effort
                 pass
 
+    def _lease_path(self, blob: str) -> str:
+        return abspath(join(self._config.working_path, f"{blob}.lease"))
+
     async def __aenter__(self) -> "LocalDiskBlob":
-        # Create the directory if it doesn't exist
-        makedirs(path.dirname(self._config.working_path), exist_ok=True)
         return self
 
     async def __aexit__(self, *exc: Any) -> None:
@@ -212,13 +254,10 @@ class QueueConfig(BaseModel):
 
     @property
     def db_path(self) -> str:
-        return path.abspath(
-            path.join(local_disk_cache_path(), "queues", f"{self.name}.db")
-        )
+        return abspath(join(local_disk_cache_path(), "queues", f"{self.name}.db"))
 
 
 class LocalDiskQueue(IQueue):
-    _connection: aiosqlite.Connection
     _config: QueueConfig
 
     def __init__(
@@ -302,7 +341,7 @@ class LocalDiskQueue(IQueue):
                     ),
                 ) as cursor:
                     await connection.commit()
-                    # If the message was not found, skip, it should has been deleted or picked by another worker
+                    # If message not updated, race condition, skip, it should has been deleted or picked by another worker
                     if cursor.rowcount == 0:
                         continue
             # Return the message
@@ -331,6 +370,12 @@ class LocalDiskQueue(IQueue):
                         f'Message with id "{message.message_id}" not found'
                     )
 
+    async def delete_queue(
+        self,
+    ) -> None:
+        await remove(self._config.db_path)
+        logger.info('Deleted Local Disk Queue "%s"', self._config.name)
+
     @asynccontextmanager
     async def _use_connection(self) -> AsyncGenerator[aiosqlite.Connection, None]:
         # Connect and return the connection
@@ -342,24 +387,28 @@ class LocalDiskQueue(IQueue):
 
     async def __aenter__(self) -> "LocalDiskQueue":
         file_path = self._config.db_path
-        first_run = not path.isfile(file_path)
+        first_run = not await path.exists(file_path)
 
         # Skip if the database is already initialized
         if not first_run:
             return self
 
         # Create the directory if it doesn't exist
-        makedirs(path.dirname(file_path), exist_ok=True)
+        await makedirs(dirname(file_path), exist_ok=True)
+
         # Initialize the database
         async with aiosqlite.connect(
             database=file_path,
             timeout=self._config.timeout,  # Wait for 30 secs before giving up
         ) as connection:
+
+            # Enable WAL mode to allow multiple readers and one writer
             await connection.execute(
                 """
                     PRAGMA journal_mode = WAL2
                     """
             )
+
             # Create the table
             await connection.execute(
                 f"""
@@ -373,8 +422,10 @@ class LocalDiskQueue(IQueue):
                     """
             )
             logger.info('Created Local Disk Queue "%s"', self._config.table)
+
             # Commit as other workers might be waiting for the table to be created
             await connection.commit()
+
         return self
 
     async def __aexit__(self, *exc: Any) -> None:

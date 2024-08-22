@@ -16,6 +16,8 @@ class Provider(str, Enum):
 
 
 class IQueue:
+    encoding = "utf-8"
+
     @abstractmethod
     async def send_message(
         self,
@@ -35,6 +37,12 @@ class IQueue:
     async def delete_message(
         self,
         message: Message,
+    ) -> None:
+        pass
+
+    @abstractmethod
+    async def delete_queue(
+        self,
     ) -> None:
         pass
 

@@ -43,6 +43,12 @@ jobs:
     runs-on: ubuntu-22.04
     needs:
       - init
+    strategy:
+      fail-fast: false
+      matrix:
+        step:
+          - test-static
+          - test-unit
     steps:
       - name: Checkout
         uses: actions/checkout@v4.1.7
@@ -56,11 +62,20 @@ jobs:
       - name: Install dependencies
         run: make install-deps
 
+      - name: Configure environment variables
+        run: echo "${{ secrets.DOTENV_UNIT_TESTS }}" > .env
+
       - name: Run tests
-        run: make test
+        run: make ${{ matrix.step }} version_full=${{ needs.init.outputs.VERSION_FULL }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: test-results
+          path: test-reports/*
 
   build-app:
-    name: Build & publish app
+    name: Build & archive app
     permissions:
       contents: write
       packages: write
@@ -83,13 +98,12 @@ jobs:
           - windows-2019
           - windows-2022
     steps:
+      - name: Configure Git (Windows)
+        if: runner.os == 'Windows'
+        run: git config --system core.longpaths true
+
       - name: Checkout
         uses: actions/checkout@v4.1.2
-
-      - name: Configure Git
-        run: |
-          git config user.name "${{ github.actor }}"
-          git config user.email "${{ github.actor }}@users.noreply.github.com"
 
       - name: Set up Python
         uses: actions/setup-python@v5.1.1
@@ -130,7 +144,7 @@ jobs:
         if: runner.os == 'Windows'
         run: mv dist\scrape-it-now.exe dist\scrape-it-now-${{ needs.init.outputs.VERSION }}-${{ matrix.os }}.exe
 
-      - name: Upload artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4.3.6
         with:
           name: binary-${{ matrix.os }}
@@ -175,7 +189,7 @@ jobs:
           path: sbom-reports/*
 
   publish-release:
-    name: Release
+    name: Publish release
     permissions:
       contents: write
     runs-on: ubuntu-22.04

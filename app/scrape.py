@@ -10,6 +10,7 @@ from playwright.async_api import (
     Browser,
     BrowserType,
     Error as PlaywrightError,
+    Locator,
     Route,
     TimeoutError,
     ViewportSize,
@@ -18,7 +19,6 @@ from playwright.async_api import (
 from pydantic import ValidationError
 from tenacity import (
     retry,
-    retry_any,
     retry_if_exception_type,
     stop_after_attempt,
     wait_random_exponential,
@@ -28,9 +28,9 @@ from app.helpers.logging import logger
 from app.helpers.persistence import blob_client, queue_client
 from app.helpers.resources import (
     browsers_install_path,
+    dir_resources,
     hash_url,
     index_queue_name,
-    resources_dir,
     scrape_container_name,
     scrape_queue_name,
 )
@@ -42,9 +42,14 @@ from app.persistence.iblob import (
     BlobNotFoundError,
     IBlob,
     LeaseAlreadyExistsError,
+    LeaseNotFoundError,
     Provider as BlobProvider,
 )
-from app.persistence.iqueue import IQueue, Provider as QueueProvider
+from app.persistence.iqueue import (
+    IQueue,
+    MessageNotFoundError,
+    Provider as QueueProvider,
+)
 
 # State
 JOB_STATE_NAME = "job.json"
@@ -324,7 +329,7 @@ async def _update_job_state(
     logger.debug("Acquiring lease for job state")
 
     try:
-        async with blob.lease(
+        async with blob.lease_blob(
             blob=JOB_STATE_NAME,
             lease_duration=15,  # 15 secs
         ) as lease_id:
@@ -350,8 +355,11 @@ async def _update_job_state(
                 overwrite=True,
             )
 
-    except LeaseAlreadyExistsError:  # Wait for the lease to expire
-        logger.debug("Lease already exists, waiting and retry")
+    except (
+        LeaseAlreadyExistsError,  # Wait for the lease to expire
+        LeaseNotFoundError,  # Race condition, retry
+    ):
+        logger.debug("Lease error, waiting and retry")
         await asyncio.sleep(1)
         return await _update_job_state(
             blob=blob,
@@ -375,7 +383,7 @@ async def _update_job_state(
             queued=queued,
         )
 
-    logger.info(
+    logger.debug(
         "Updated job state to %i processed and %i queued",
         model.processed,
         model.queued,
@@ -430,7 +438,7 @@ async def _worker(
                         total_queued = 0
 
                         # Iterate over the messages
-                        logger.info("Processing new messages")
+                        logger.debug("Processing new messages")
                         async for message in messages:
                             # Parse the message
                             current_item = ScrapedQueuedModel.model_validate_json(
@@ -445,14 +453,14 @@ async def _worker(
                             # Get a browser instance
                             # Limit the usage of the browser to 100 scrapings, to avoid memory leaks. Restart the browser after that. Memory leaks have been observed in both macOS and Ubuntu, with over 150 GB of memory used after an hour.
                             # TODO: Create an issue in the Playwright repository to investigate the memory leak
-                            if browser and browser_usage < 100:
+                            if not browser:  # First start
+                                browser = await _get_broswer(browser_type)
+                                logger.debug("Started browser %s", browser_type.name)
+                            elif browser_usage < 100:  # Reuse
                                 browser_usage += 1
-                            else:
-                                if browser:
-                                    await browser.close()
-                                browser = await browser_type.launch(
-                                    downloads_path=browsers_install_path(),
-                                )
+                            else:  # Restart
+                                await browser.close()
+                                browser = await _get_broswer(browser_type)
                                 logger.info(
                                     "Restarted browser %s after %i iterations",
                                     browser_type.name,
@@ -474,7 +482,13 @@ async def _worker(
                                     viewports=viewports,
                                     whitelist=whitelist,
                                 )
-                                await in_queue.delete_message(message)
+
+                                try:
+                                    await in_queue.delete_message(message)
+                                except (
+                                    MessageNotFoundError
+                                ):  # Race condition, message has already been deleted by another worker, pass silently to the next message, as it has already been processed
+                                    continue
 
                                 # Update counters
                                 total_network_used_mb += network_used_mb
@@ -522,7 +536,7 @@ def _ads_pattern() -> re.Pattern | None:
 
         with open(
             encoding="utf-8",
-            file=resources_dir("ads-nl.txt"),
+            file=dir_resources("ads-nl.txt"),
             mode="r",
         ) as f:
             # Parse the list of domains
@@ -621,24 +635,26 @@ async def _scrape_page(
     """
 
     def _generic_error(
+        message: str,
         status: int = -1,
         etag: str | None = None,
         valid_until: datetime | None = None,
     ) -> ScrapedUrlModel:
+        logger.info("Cannot scrape: %s (%s)", message, url)
         # Return an empty result if Playwright fails
         return ScrapedUrlModel(
             etag=etag,
-            network_used_mb=total_size_bytes / 1024 / 1024,
+            network_used_mb=network_used_bytes / 1024 / 1024,
             status=status,
             url=url_clean.geturl(),
             valid_until=valid_until,
         )
 
-    total_size_bytes = 0
+    network_used_bytes = 0
 
-    def _size_callback(size_bytes: int) -> None:
-        nonlocal total_size_bytes
-        total_size_bytes += size_bytes
+    def _network_used_callback(size_bytes: int) -> None:
+        nonlocal network_used_bytes
+        network_used_bytes += size_bytes
 
     # Parse URL
     url_clean = urlparse(url)._replace(
@@ -649,7 +665,7 @@ async def _scrape_page(
     # Load page
     async with await browser.new_context(
         color_scheme=random.choice(["dark", "light", "no-preference"]),
-        device_scale_factor=round(random.uniform(1, 3), 1),
+        device_scale_factor=random.randint(1, 3),
         has_touch=random.choice([True, False]),
         locale="en-US",
         timezone_id=random.choice(list(timezones)),
@@ -659,7 +675,7 @@ async def _scrape_page(
         page = await context.new_page()
 
         # Apply filtering to reduce traffic and CPU usage
-        await page.route("**/*", _filter_routes(_size_callback))
+        await page.route("**/*", _filter_routes(_network_used_callback))
 
         # Caching of unchanged resources
         if previous_etag:
@@ -672,13 +688,15 @@ async def _scrape_page(
                 timeout=30000,  # 30 seconds
             )
         except TimeoutError:  # TODO: Retry maybe a few times for timeout errors?
-            logger.debug("Timeout for loading %s", url_clean.geturl())
-            return _generic_error(etag=previous_etag)
-        except PlaywrightError:
-            logger.error(
-                "Unknown error for loading %s", url_clean.geturl(), exc_info=True
+            return _generic_error(
+                etag=previous_etag,
+                message="Timeout while loading",
             )
-            return _generic_error(etag=previous_etag)
+        except PlaywrightError as e:
+            return _generic_error(
+                etag=previous_etag,
+                message=f"Unknown error: {e}",
+            )
 
         # Remove all routes, as our filter manipulates all requests, we don't need it anymore
         # See: https://github.com/microsoft/playwright/issues/30667#issuecomment-2095788164
@@ -686,23 +704,22 @@ async def _scrape_page(
 
         # Skip if no response from Playwright
         if not res:
-            logger.warning(
-                "No response from Playwright for loading %s", url_clean.geturl()
+            return _generic_error(
+                etag=previous_etag,
+                message="No HTML response from Playwright browser",
             )
-            return _generic_error(etag=previous_etag)
 
         # Skip if the content is not HTML
         content_type = res.headers.get("content-type", "")
         if "text/html" not in content_type:
-            logger.info("Content type is not HTML, skipping")
-            return _generic_error(etag=previous_etag)
+            return _generic_error(
+                etag=previous_etag,
+                message=f"Content type is {content_type}, not HTML",
+            )
 
         # Check for cache control
         cache_control = res.headers.get("cache-control", "")
         # TODO: Should "private" value be excluded? (see: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#private)
-        # if "private" in cache_control:
-        #     logger.info("Page is marked as private, skipping")
-        #     return _generic_error(etag=previous_etag)
         valid_until = None
         # The "s-maxage" directive is ignored by private caches, and overrides the value specified by the max-age directive or the Expires header for shared caches, if they are present.
         # See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#s-maxage
@@ -729,102 +746,112 @@ async def _scrape_page(
         if status != 200:
             return _generic_error(
                 etag=etag,
+                message=f"Status code {status}, not 200",
                 status=status,
                 valid_until=valid_until,
             )
 
-        # Get title
-        title = await page.title()
+        # Get title value, HTML selector, full page content, and all links
+        title, body_selector, full_html, links_selector = await asyncio.gather(
+            # Page title specified in the metadata
+            page.title(),
+            # HTML tag element (= body)
+            page.query_selector("html"),
+            # Entire DOM (= all HTML)
+            page.content(),
+            # All elements treated as links
+            page.get_by_role(
+                "link",
+                include_hidden=True,  # Gather links in navigation menus, those are usually hidden
+            ).all(),
+        )
 
-        # Get HTML
-        html = None
-        try:
-            html_selector = await page.wait_for_selector("html")
-            if html_selector:
-                html = (
-                    await html_selector.inner_html()
-                )  # Get HTML content of the visible page
-        except TimeoutError:  # TODO: Is those timeouts normal? They happen quite often.
-            logger.debug("Timeout for selecting HTML content")
-            return _generic_error(
-                etag=etag,
-                valid_until=valid_until,
-            )
+        # Extract body
+        body_html = None
+        if body_selector:
+            body_html = await body_selector.inner_html()
 
         # Skip if no HTML content
-        if not html:
-            logger.warning(
-                "No HTML content returned from Playwright for %s", url_clean.geturl()
-            )
+        if not body_html:
             return _generic_error(
                 etag=etag,
+                message="No HTML content returned",
                 valid_until=valid_until,
             )
 
         # Check for Cloudflare blocking
-        if "Why have I been blocked?" in html:
-            logger.warning("Blocked by Cloudflare")
+        if "Why have I been blocked?" in body_html:
             return _generic_error(
                 etag=etag,
+                message="Blocked by Cloudflare",
                 status=403,
                 valid_until=valid_until,
             )
 
         # Extract text content
-        redirect = res.url  # Get final URL after redirects
         try:
             # Convert HTML to Markdown
-            content = html2text.handle(
-                data=await page.content()  # Get text content of the full page (including HTML head and hidden elements)
-            )
+            full_markdown = html2text.handle(full_html)
             # Remove empty lines and leading/trailing whitespace
-            content = "\n".join(
-                clean for line in content.splitlines() if (clean := line.strip())
+            full_markdown = "\n".join(
+                clean for line in full_markdown.splitlines() if (clean := line.strip())
             )
         except (
             AssertionError
-        ):  # When HTML2Text fails to parse the content, it raises an assertion error
-            logger.debug(
-                "Generic error for parsing HTML content to markdown", exc_info=True
-            )
+        ) as e:  # When HTML2Text fails to parse the content, it raises an assertion error
             return _generic_error(
                 etag=etag,
+                message=f"HTML to text conversion failed: {e}",
                 valid_until=valid_until,
             )
 
         # Extract links
-        links: set[str] = set()
-        # Iterate over all links on the page, even those that are not visible
-        for a_selector in await page.get_by_role(
-            "link",
-            include_hidden=True,  # Gather links in navigation menus, those are usually hidden
-        ).all():
+        async def _extract_link(selector: Locator) -> str | None:
             try:
-                a_href = await a_selector.get_attribute(
-                    "href",
+                href = await selector.get_attribute(
+                    name="href",
                     timeout=1000,  # 1 second
                 )
-            except TimeoutError:
+            except (
+                TimeoutError
+            ):  # TODO: Is those timeouts normal? They happen quite often
                 logger.debug("Timeout for selecting href attribute", exc_info=True)
-                continue
-            if not a_href:
-                continue
-            elif a_href.startswith("http"):
-                a_url = urlparse(a_href)
-            elif a_href.startswith("/"):
-                path = format_path(urlparse(a_href).path)
-                a_url = url_clean._replace(path=path)
-            else:
-                path = format_path(f"{url_clean.path}/{urlparse(a_href).path}")
-                a_url = url_clean._replace(path=path)
-            links.add(a_url.geturl())
+                return
+            # Skip if no href attribute
+            if not href:
+                return
+            # href is a full URL
+            if href.startswith("http"):
+                return urlparse(href).geturl()
+            # href is a relative URL
+            if href.startswith("/"):
+                path = _format_path(urlparse(href).path)
+                return url_clean._replace(path=path).geturl()
+            # href is a relative URL with a path
+            path = _format_path(f"{url_clean.path}/{urlparse(href).path}")
+            return url_clean._replace(path=path).geturl()
+
+        # Extract links
+        links = set(
+            [
+                link
+                for link in await asyncio.gather(
+                    *[_extract_link(selector) for selector in links_selector]
+                )
+                if link
+            ]
+        )
+
+        # Get final URL after redirects
+        redirect = res.url
 
         # Return result
         return ScrapedUrlModel(
-            content=content,
+            content=full_markdown,
             etag=etag,
             links=list(links),
-            raw=html,
+            network_used_mb=network_used_bytes / 1024 / 1024,
+            raw=body_html,
             redirect=redirect,
             status=status,
             title=title,
@@ -833,7 +860,7 @@ async def _scrape_page(
         )
 
 
-def format_path(path: str) -> str:
+def _format_path(path: str) -> str:
     """
     Solve relative URL paths and return its absolute form.
     """
@@ -1005,3 +1032,20 @@ def _install_browser(
 
     if proc.returncode != 0:
         raise RuntimeError("Failed to install browser")
+
+
+async def _get_broswer(
+    browser_type: BrowserType,
+) -> Browser:
+    """
+    Launch a browser instance.
+    """
+    browser = await browser_type.launch(
+        downloads_path=browsers_install_path(),  # Using the application path not the default one from the SDK
+        chromium_sandbox=True,  # Enable the sandbox for security, we don't know what we are scraping
+        # See: https://github.com/microsoft/playwright/blob/99a36310570617222290c09b96a2026beb8b00f9/packages/playwright-core/src/server/chromium/chromium.ts
+        args=[
+            "--disable-gl-drawing-for-tests",  # Disable UI rendering, lower CPU usage
+        ],
+    )
+    return browser

@@ -5,7 +5,14 @@ from pathlib import Path
 import click
 
 
-def resources_dir(sub: str) -> str:
+def dir_tests(sub: str) -> str:
+    """
+    Get the absolute path to the tests folder.
+    """
+    return str(Path(__file__).parent.parent.parent.joinpath("tests", sub).absolute())
+
+
+def dir_resources(sub: str) -> str:
     """
     Get the absolute path to the resources folder.
     """
@@ -47,7 +54,7 @@ def hash_url(url: str) -> str:
     Hash a URL to a unique identifier.
     """
     return hashlib.sha256(
-        url.encode(),
+        url.encode("utf-8"),
         usedforsecurity=False,
     ).hexdigest()
 

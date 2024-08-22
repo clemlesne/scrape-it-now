@@ -63,6 +63,10 @@ upgrade:
 	curl -sSfL https://blocklistproject.github.io/Lists/alt-version/ads-nl.txt > resources/ads-nl.txt
 
 test:
+	$(MAKE) test-static
+	$(MAKE) test-unit
+
+test-static:
 	@echo "➡️ Test generic formatter (Black)..."
 	python3 -m black --check .
 
@@ -77,6 +81,21 @@ test:
 
 	@echo "➡️ Test types (Pyright)..."
 	python3 -m pyright .
+
+test-unit:
+	bash cicd/test-unit-ci.sh
+
+test-static-server:
+	@echo "➡️ Starting local static server..."
+	python3 -m http.server -d ./tests/websites 8000
+
+test-unit-run:
+	@echo "➡️ Unit tests (Pytest)..."
+	pytest \
+		--junit-xml=test-reports/$(version_full).xml \
+		--maxprocesses=4 \
+		-n logical \
+		tests/*.py
 
 dev:
 	python3 -m pip install --editable .

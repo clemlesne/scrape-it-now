@@ -1,3 +1,5 @@
+from base64 import b64decode, b64encode
+from binascii import Error as BinasciiError
 from typing import Any, AsyncGenerator
 
 from azure.core.exceptions import (
@@ -46,7 +48,7 @@ class AzureQueueStorage(IQueue):
         self,
         message: str,
     ) -> None:
-        await self._client.send_message(message)
+        await self._client.send_message(self._escape(message))
 
     @retry(
         reraise=True,
@@ -65,7 +67,7 @@ class AzureQueueStorage(IQueue):
         )
         async for message in messages:
             yield Message(
-                content=message.content,
+                content=self._unescape(message.content),
                 delete_token=message.pop_receipt,
                 dequeue_count=message.dequeue_count,
                 message_id=message.id,
@@ -86,11 +88,42 @@ class AzureQueueStorage(IQueue):
                 f'Message "{message.message_id}" not found'
             ) from e
 
+    @retry(
+        reraise=True,
+        retry=retry_if_exception_type(ServiceRequestError),  # Catch for network errors
+        stop=stop_after_attempt(8),
+        wait=wait_random_exponential(multiplier=0.8, max=60),
+    )
+    async def delete_queue(
+        self,
+    ) -> None:
+        await self._client.delete_queue()
+        logger.info('Deleted Queue Storage "%s"', self._config.name)
+
+    def _escape(self, value: str) -> str:
+        """
+        Escape value to base64 encoding.
+        """
+        return b64encode(value.encode(self.encoding)).decode(self.encoding)
+
+    def _unescape(self, value: str) -> str:
+        """
+        Unescape value from base64 encoding.
+
+        If the value is not base64 encoded, return the original value as string. This will handle retro-compatibility with old messages.
+        """
+        try:
+            return b64decode(value.encode(self.encoding)).decode(self.encoding)
+        except (UnicodeDecodeError, BinasciiError):
+            return value
+
     async def __aenter__(self) -> "AzureQueueStorage":
         self._service = QueueServiceClient.from_connection_string(
             self._config.connection_string
         )
-        self._client = self._service.get_queue_client(self._config.name)
+        self._client = self._service.get_queue_client(
+            queue=self._config.name,
+        )
         # Create if it does not exist
         try:
             await self._client.create_queue()

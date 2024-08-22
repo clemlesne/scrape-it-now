@@ -11,7 +11,7 @@ from app.helpers.resources import browsers_install_path, hash_url
 from app.models.scraped import ScrapedQueuedModel
 from app.persistence.iblob import Provider as BlobProvider
 from app.persistence.iqueue import Provider as QueueProvider
-from app.scrape import SCRAPED_PREFIX, _install_browser, _process_one
+from app.scrape import SCRAPED_PREFIX, _get_broswer, _install_browser, _process_one
 
 
 @pytest.mark.parametrize(
@@ -62,13 +62,7 @@ async def test_single_page(
         _install_browser(browser_type)
 
         # Launch the browser
-        browser = await browser_type.launch(
-            downloads_path=browsers_install_path(),  # Using the application path not the default one from the SDK
-            args=[
-                "--disable-gpu",  # Disable GPU acceleration, able to run in computers without GPU
-                "--mute-audio",  # Mute audio to avoid annoying sounds
-            ],
-        )
+        browser = await _get_broswer(browser_type)
 
         async with queue_client(
             azure_storage_connection_string=env["AZURE_STORAGE_CONNECTION_STRING"],

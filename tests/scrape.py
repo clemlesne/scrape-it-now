@@ -1,3 +1,13 @@
+from uuid import uuid4
+from os import environ as env
+import random
+import string
+from app.helpers.persistence import queue_client
+from app.persistence.iqueue import Provider as QueueProvider
+from app.helpers.persistence import blob_client
+from app.persistence.iblob import (
+    Provider as BlobProvider,
+)
 from datetime import datetime, timedelta
 from os.path import join
 
@@ -11,6 +21,7 @@ from app.scrape import (
     _get_broswer,
     _install_browser,
     _scrape_page,
+    _queue,
     _install_pandoc,
 )
 
@@ -35,7 +46,7 @@ LOCALHOST_URL = "http://localhost:8000"
     ids=lambda x: x,
 )
 @pytest.mark.asyncio(scope="session")
-async def test_real_website_page(
+async def test_scrape_page_website(
     website: str,
 ) -> None:
     """
@@ -86,7 +97,7 @@ async def test_real_website_page(
 
 
 @pytest.mark.asyncio(scope="session")
-async def test_links() -> None:
+async def test_scrape_page_links() -> None:
     """
     Test a page with links against the expected links and title.
     """
@@ -141,7 +152,7 @@ async def test_links() -> None:
 
 
 @pytest.mark.asyncio(scope="session")
-async def test_paragraphs() -> None:
+async def test_scrape_page_paragraphs() -> None:
     """
     Test a page with paragraphs against the expected paragraphs and title.
     """
@@ -191,7 +202,7 @@ async def test_paragraphs() -> None:
 
 
 @pytest.mark.asyncio(scope="session")
-async def test_timeout() -> None:
+async def test_scrape_page_timeout() -> None:
     """
     Test a page with a timeout against the expected timeout.
     """
@@ -244,3 +255,105 @@ async def test_timeout() -> None:
 
         # Check title
         assert not page.title, "Title should be empty"
+
+
+@pytest.mark.parametrize(
+    "queue_provider",
+    [
+        QueueProvider.AZURE_QUEUE_STORAGE,
+        QueueProvider.LOCAL_DISK,
+    ],
+    ids=lambda x: x.value,
+)
+@pytest.mark.parametrize(
+    "blob_provider",
+    [
+        BlobProvider.AZURE_BLOB_STORAGE,
+        BlobProvider.LOCAL_DISK,
+    ],
+    ids=lambda x: x.value,
+)
+@pytest.mark.asyncio(scope="session")
+async def test_queue_simple(
+    blob_provider: BlobProvider,
+    queue_provider: QueueProvider,
+) -> None:
+    """
+    Test a queue operation.
+
+    A single URL is queued and checked, without any custom options.
+    """
+    # Init values
+    container_name = _random_name()
+    in_queue_name = _random_name()
+
+    test_depth = 0
+    test_id = str(uuid4())
+    test_referrer = "https://google.com"
+    test_url = "http://loremipsum.com"
+
+    # Init clients
+    async with (
+        blob_client(
+            azure_storage_connection_string=env["AZURE_STORAGE_CONNECTION_STRING"],
+            container=container_name,
+            path="scraping-test",
+            provider=blob_provider,
+        ) as blob,
+        queue_client(
+            azure_storage_connection_string=env["AZURE_STORAGE_CONNECTION_STRING"],
+            provider=queue_provider,
+            queue=in_queue_name,
+        ) as in_queue,
+    ):
+        queued_urls = await _queue(
+            blob=blob,
+            cache_refresh=timedelta(days=1),
+            deph=test_depth,
+            id=test_id,
+            in_queue=in_queue,
+            max_depth=0,
+            referrer=test_referrer,
+            urls={test_url},
+            whitelist={},
+        )
+
+        # Check an item has been queued
+        assert queued_urls == 1, "A queued item should have been reported"
+
+        # Check if messages are invisible for the rest of the clients
+        async for message in in_queue.receive_messages(
+            max_messages=1,
+            visibility_timeout=5,
+        ):
+            model = ScrapedQueuedModel.model_validate_json(message.content)
+            # Check depth
+            assert model.depth == test_depth, "Depth should be the same"
+            # Check referrer
+            assert model.referrer == test_referrer, "Referer should be the same"
+            # Check URL
+            assert model.url == test_url, "URL should be the same"
+
+        # Clean up
+        await blob.delete_container()
+        await in_queue.delete_queue()
+
+
+def _random_name() -> str:
+    """
+    Generate a random name with 32 characters.
+
+    All lowercase letters and digits are used.
+    """
+    return "".join(
+        random.choice(string.ascii_lowercase + string.digits) for _ in range(32)
+    )
+
+
+def _random_content() -> str:
+    """
+    Generate a random content with a length of 512 characters.
+
+    All printable ASCII characters are used.
+    """
+    return "".join(random.choice(string.printable) for _ in range(512))

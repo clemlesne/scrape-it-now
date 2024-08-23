@@ -71,5 +71,8 @@ target-version = "py312"
 [tool.ruff.lint.isort]
 combine-as-imports = true
 
+[tool.ruff.format]
+docstring-code-format = true
+
 [tool.pyright]
 pythonVersion = "3.12"

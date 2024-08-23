@@ -1,28 +1,27 @@
-from uuid import uuid4
-from os import environ as env
 import random
 import string
-from app.helpers.persistence import queue_client
-from app.persistence.iqueue import Provider as QueueProvider
-from app.helpers.persistence import blob_client
-from app.persistence.iblob import (
-    Provider as BlobProvider,
-)
 from datetime import datetime, timedelta
+from os import environ as env
 from os.path import join
+from uuid import uuid4
 
 import pytest
 from aiofiles import open
 from playwright.async_api import ViewportSize, async_playwright
 
+from app.helpers.persistence import blob_client, queue_client
 from app.helpers.resources import dir_tests
 from app.models.scraped import ScrapedQueuedModel
+from app.persistence.iblob import (
+    Provider as BlobProvider,
+)
+from app.persistence.iqueue import Provider as QueueProvider
 from app.scrape import (
     _get_broswer,
     _install_browser,
-    _scrape_page,
-    _queue,
     _install_pandoc,
+    _queue,
+    _scrape_page,
 )
 
 DEFAULT_TIMEZONE = "Europe/Moscow"

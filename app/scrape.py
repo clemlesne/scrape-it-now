@@ -1,4 +1,3 @@
-from pypandoc import convert_text, ensure_pandoc_installed
 import asyncio
 import random
 import re
@@ -20,6 +19,7 @@ from playwright.async_api import (
     async_playwright,
 )
 from pydantic import ValidationError
+from pypandoc import convert_text, ensure_pandoc_installed
 from tenacity import (
     retry,
     retry_if_exception_type,

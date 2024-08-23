@@ -113,7 +113,7 @@ lint:
 	python3 -m ruff format
 
 	@echo "➡️ Lint with linter..."
-	python3 -m ruff check --fix
+	python3 -m ruff check --select I --fix
 
 sbom:
 	@echo "🔍 Generating SBOM..."

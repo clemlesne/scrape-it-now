@@ -603,6 +603,7 @@ def _filter_routes(
         try:
             res = await route.fetch(
                 headers=headers,  # Send the modified headers
+                max_retries=3,  # Retry 3 times on network errors
             )
         except PlaywrightError:
             logger.debug("Failed to fetch resource %s", route.request.url)

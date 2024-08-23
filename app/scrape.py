@@ -358,8 +358,9 @@ async def _update_job_state(
         LeaseAlreadyExistsError,  # Wait for the lease to expire
         LeaseNotFoundError,  # Race condition, retry
     ):
-        logger.debug("Lease error, waiting and retry")
-        await asyncio.sleep(1)
+        # Wait for a bit
+        await asyncio.sleep(0.1)
+        # Retry
         return await _update_job_state(
             blob=blob,
             network_used_mb=network_used_mb,

@@ -92,6 +92,9 @@ class LocalDiskBlob(IBlob):
                     FileNotFoundError,
                     JSONDecodeError,
                 ):  # Race condition, file has been removed by another worker, retry
+                    # Wait for a bit
+                    await asyncio.sleep(0.1)
+                    # Retry
                     async with self.lease_blob(
                         blob=blob,
                         lease_duration=lease_duration,
@@ -140,13 +143,27 @@ class LocalDiskBlob(IBlob):
                 raise LeaseNotFoundError(f'Lease for blob "{blob}" not found')
 
         else:  # If the blob is locked
-            # Confirm the lease ID
-            async with open(
-                file=lease_file,
-                mode="rb",
-            ) as f:
-                lease = LeaseModel.model_validate(
-                    loads((await f.read()).decode(self.encoding))
+            try:
+                # Confirm the lease ID
+                async with open(
+                    file=lease_file,
+                    mode="rb",
+                ) as f:
+                    lease = LeaseModel.model_validate(
+                        loads((await f.read()).decode(self.encoding))
+                    )
+            except (
+                FileNotFoundError
+            ):  # Race condition, file has been removed by another worker, retry
+                # Wait for a bit
+                await asyncio.sleep(0.1)
+                # Retry
+                return await self.upload_blob(
+                    blob=blob,
+                    data=data,
+                    lease_id=lease_id,
+                    length=length,
+                    overwrite=overwrite,
                 )
 
             # Lease is expired

@@ -1,4 +1,9 @@
-import asyncio, functools, random, re, string, sys
+import asyncio
+import functools
+import random
+import re
+import string
+import sys
 from os import cpu_count, environ as env
 from platform import python_version
 
@@ -188,7 +193,7 @@ def scrape() -> None:
 )
 @scrape.command("run")
 @run_in_async
-async def scrape_run(
+async def scrape_run(  # noqa: PLR0913
     azure_storage_connection_string: str | None,
     blob_path: str,
     blob_provider: BlobProvider,
@@ -230,9 +235,9 @@ async def scrape_run(
         if domain not in whitelist_parsed:
             whitelist_parsed[domain] = []
         # Parse paths
-        for path in w.split(",")[1:]:
-            path = re.compile(path.strip())
-            whitelist_parsed[domain].append(path)
+        for path_str in w.split(",")[1:]:
+            path_re = re.compile(path_str.strip())
+            whitelist_parsed[domain].append(path_re)
     if whitelist_parsed:
         logger.info("Whitelist: %s", whitelist_parsed)
 
@@ -438,7 +443,7 @@ def index() -> None:
 )
 @index.command("run")
 @run_in_async
-async def index_run(
+async def index_run(  # noqa: PLR0913
     azure_openai_api_key: str,
     azure_openai_embedding_deployment_name: str,
     azure_openai_embedding_dimensions: int,

@@ -1,10 +1,13 @@
-import asyncio, random, string
+import asyncio
+import random
+import string
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from json import JSONDecodeError, loads
 from os import walk
 from os.path import abspath, dirname, join
-from typing import Any, AsyncGenerator
+from typing import Any
 from uuid import uuid4
 
 import aiosqlite
@@ -82,7 +85,7 @@ class LocalDiskBlob(IBlob):
                         previous = LeaseModel.model_validate(
                             loads((await f.read()).decode(self.encoding))
                         )
-                    if previous.until > datetime.now():
+                    if previous.until > datetime.now(UTC):
                         raise LeaseAlreadyExistsError(
                             f'Lease for blob "{blob}" already exists'
                         )
@@ -90,6 +93,9 @@ class LocalDiskBlob(IBlob):
                     FileNotFoundError,
                     JSONDecodeError,
                 ):  # Race condition, file has been removed by another worker, retry
+                    # Wait for a bit
+                    await asyncio.sleep(0.1)
+                    # Retry
                     async with self.lease_blob(
                         blob=blob,
                         lease_duration=lease_duration,
@@ -98,7 +104,9 @@ class LocalDiskBlob(IBlob):
                     return
 
             # Create the lease file
-            lease = LeaseModel(until=datetime.now() + timedelta(seconds=lease_duration))
+            lease = LeaseModel(
+                until=datetime.now(UTC) + timedelta(seconds=lease_duration)
+            )
             async with open(
                 file=lease_file,
                 mode="wb",
@@ -138,17 +146,31 @@ class LocalDiskBlob(IBlob):
                 raise LeaseNotFoundError(f'Lease for blob "{blob}" not found')
 
         else:  # If the blob is locked
-            # Confirm the lease ID
-            async with open(
-                file=lease_file,
-                mode="rb",
-            ) as f:
-                lease = LeaseModel.model_validate(
-                    loads((await f.read()).decode(self.encoding))
+            try:
+                # Confirm the lease ID
+                async with open(
+                    file=lease_file,
+                    mode="rb",
+                ) as f:
+                    lease = LeaseModel.model_validate(
+                        loads((await f.read()).decode(self.encoding))
+                    )
+            except (
+                FileNotFoundError
+            ):  # Race condition, file has been removed by another worker, retry
+                # Wait for a bit
+                await asyncio.sleep(0.1)
+                # Retry
+                return await self.upload_blob(
+                    blob=blob,
+                    data=data,
+                    lease_id=lease_id,
+                    length=length,
+                    overwrite=overwrite,
                 )
 
             # Lease is expired
-            if lease.until <= datetime.now():
+            if lease.until <= datetime.now(UTC):
                 try:
                     # Remove the lease file
                     await remove(lease_file)
@@ -156,7 +178,7 @@ class LocalDiskBlob(IBlob):
                     pass
 
             # Lease is not expired
-            elif lease.until > datetime.now():
+            elif lease.until > datetime.now(UTC):
                 # Check if the lease ID is provided
                 if not lease_id:
                     raise LeaseAlreadyExistsError(
@@ -197,14 +219,14 @@ class LocalDiskBlob(IBlob):
         self,
     ) -> None:
         # Delete iteratively all files in the working path
-        for root, dirs, files in walk(
+        for root_name, dir_names, file_names in walk(
             top=self._config.working_path,
             topdown=False,
         ):
-            for file in files:
-                await remove(join(root, file))
-            for dir in dirs:
-                await rmdir(join(root, dir))
+            for file_name in file_names:
+                await remove(join(root_name, file_name))
+            for dir_name in dir_names:
+                await rmdir(join(root_name, dir_name))
         logger.info('Deleted Local Disk Blob "%s"', self._config.name)
 
     @asynccontextmanager
@@ -216,7 +238,7 @@ class LocalDiskBlob(IBlob):
         await makedirs(dirname(full_path), exist_ok=True)
 
         # Wait until the lock file is removed
-        while await path.exists(lock_file):
+        while await path.exists(lock_file):  # noqa: ASYNC110
             await asyncio.sleep(0.1)
 
         # Create the empty lock file
@@ -293,9 +315,9 @@ class LocalDiskQueue(IQueue):
         # Load messages
         messages: list[Message] = []
 
-        async with self._use_connection() as connection:
-            # Get messages that are visible
-            async with connection.execute(
+        async with (
+            self._use_connection() as connection,
+            connection.execute(
                 f"""
                 SELECT id, message, visibility_timeout, dequeue_count
                 FROM {self._config.table}
@@ -303,29 +325,30 @@ class LocalDiskQueue(IQueue):
                 LIMIT ?
                 """,
                 (
-                    datetime.now().isoformat(),
+                    datetime.now(UTC).isoformat(),
                     max_messages,
                 ),
-            ) as cursor:
-                async for row in cursor:
-                    delete_token = "".join(
-                        random.choices(string.ascii_lowercase + string.digits, k=12)
+            ) as cursor,
+        ):
+            async for row in cursor:
+                delete_token = "".join(
+                    random.choices(string.ascii_lowercase + string.digits, k=12)
+                )
+                messages.append(
+                    Message(
+                        content=row[1],
+                        delete_token=delete_token,
+                        message_id=str(row[0]),
+                        visibility_timeout=row[2],
+                        dequeue_count=row[3],
                     )
-                    messages.append(
-                        Message(
-                            content=row[1],
-                            delete_token=delete_token,
-                            message_id=str(row[0]),
-                            visibility_timeout=row[2],
-                            dequeue_count=row[3],
-                        )
-                    )
+                )
 
         # Yield messages
         for message in messages:
-            async with self._use_connection() as connection:
-                # Update visibility timeout and delete token
-                async with connection.execute(
+            async with (
+                self._use_connection() as connection,
+                connection.execute(
                     f"""
                     UPDATE {self._config.table}
                     SET visibility_timeout = ?, delete_token = ?, dequeue_count = dequeue_count + 1
@@ -333,17 +356,18 @@ class LocalDiskQueue(IQueue):
                     """,
                     (
                         (
-                            datetime.now() + timedelta(seconds=visibility_timeout)
+                            datetime.now(UTC) + timedelta(seconds=visibility_timeout)
                         ).isoformat(),
                         message.delete_token,
                         int(message.message_id),
                         message.dequeue_count,
                     ),
-                ) as cursor:
-                    await connection.commit()
-                    # If message not updated, race condition, skip, it should has been deleted or picked by another worker
-                    if cursor.rowcount == 0:
-                        continue
+                ) as cursor,
+            ):
+                await connection.commit()
+                # If message not updated, race condition, skip, it should has been deleted or picked by another worker
+                if cursor.rowcount == 0:
+                    continue
             # Return the message
             yield message
 
@@ -351,9 +375,9 @@ class LocalDiskQueue(IQueue):
         self,
         message: Message,
     ) -> None:
-        async with self._use_connection() as connection:
-            # Delete message from the table
-            async with connection.execute(
+        async with (
+            self._use_connection() as connection,
+            connection.execute(
                 f"""
                 DELETE FROM {self._config.table}
                 WHERE id = ? AND delete_token = ?
@@ -362,13 +386,14 @@ class LocalDiskQueue(IQueue):
                     int(message.message_id),
                     message.delete_token,
                 ),
-            ) as cursor:
-                await connection.commit()
-                # If the message was not found, raise an error
-                if cursor.rowcount == 0:
-                    raise MessageNotFoundError(
-                        f'Message with id "{message.message_id}" not found'
-                    )
+            ) as cursor,
+        ):
+            await connection.commit()
+            # If the message was not found, raise an error
+            if cursor.rowcount == 0:
+                raise MessageNotFoundError(
+                    f'Message with id "{message.message_id}" not found'
+                )
 
     async def delete_queue(
         self,
@@ -401,7 +426,6 @@ class LocalDiskQueue(IQueue):
             database=file_path,
             timeout=self._config.timeout,  # Wait for 30 secs before giving up
         ) as connection:
-
             # Enable WAL mode to allow multiple readers and one writer
             await connection.execute(
                 """

@@ -14,7 +14,6 @@ dependencies = [
   "azure-storage-blob==12.22.0",
   "azure-storage-queue==12.11.0",
   "click==8.1.7",
-  "html2text==2024.2.26",
   "openai==1.42.0",
   "opentelemetry-instrumentation-aiohttp-client==0.47b0",
   "opentelemetry-instrumentation-httpx==0.47b0",
@@ -23,6 +22,7 @@ dependencies = [
   "opentelemetry-instrumentation-sqlite3==0.47b0",
   "playwright==1.46.0",
   "pydantic==2.8.2",
+  "pypandoc==1.13",
   "python-dotenv==1.0.1",
   "tenacity==9.0.0",
   "tiktoken==0.7.0",
@@ -30,17 +30,15 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-  "black==24.8.0",  # Code formatter
   "deptry==0.19.1",  # Dependency tree testing
-  "isort==5.13.2",  # Import sorter
   "pip-tools==7.4.1",  # Compile requirements.txt from pyproject.toml
   "pyinstaller==6.10.0",
-  "pylint==3.2.6",  # Linter
   "pyright==1.1.377",  # Static type checker
   "pytest-asyncio==0.23.7",  # Pytest plugin for async tests
   "pytest-repeat==0.9.3",  # Pytest plugin for repeating tests
   "pytest-xdist[psutil]==3.6.1",  # Pytest plugin for parallel testing
   "pytest==8.3.2",  # Testing framework
+  "ruff==0.6.2",  # Linter
 ]
 
 [project.scripts]
@@ -67,28 +65,14 @@ DEP003 = [
   "certifi",  # Patch for CA certificates when built with PyInstaller
 ]
 
-[tool.black]
-target-version = ["py312"]
+[tool.ruff]
+target-version = "py312"
 
-[tool.isort]
-combine_as_imports = true
-combine_straight_imports = true
-profile = "black"
-py_version = "312"
-skip_gitignore = true
+[tool.ruff.lint.isort]
+combine-as-imports = true
 
-[tool.pylint.MAIN]
-fail-under = 8.0
-ignore-paths = [
-  ".venv/.+",  # Python virtual environment
-]
-init-hook='import sys; sys.path.append(".")'
-jobs = 0
-py-version = "3.12"
-recursive = true
-
-[tool.pylint.format]
-max-line-length = "88"
+[tool.ruff.format]
+docstring-code-format = true
 
 [tool.pyright]
 pythonVersion = "3.12"

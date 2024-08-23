@@ -14,7 +14,9 @@ class ClickHandler(logging.Handler):
             color = (
                 "red"
                 if is_error
-                else "yellow" if record.levelno >= logging.WARNING else None
+                else "yellow"
+                if record.levelno >= logging.WARNING
+                else None
             )
             click.secho(
                 err=is_error,

@@ -67,17 +67,11 @@ test:
 	$(MAKE) test-unit
 
 test-static:
-	@echo "➡️ Test generic formatter (Black)..."
-	python3 -m black --check .
-
-	@echo "➡️ Test import formatter (isort)..."
-	python3 -m isort --jobs -1 --check .
-
 	@echo "➡️ Test dependencies issues (deptry)..."
 	python3 -m deptry .
 
 	@echo "➡️ Test code smells (Pylint)..."
-	python3 -m pylint .
+	python3 -m ruff check --select I,PL,RUF,UP,ASYNC,A,DTZ,T20,ARG,PERF
 
 	@echo "➡️ Test types (Pyright)..."
 	python3 -m pyright .
@@ -115,11 +109,11 @@ build:
 		app/app.py
 
 lint:
-	@echo "➡️ Fix with generic formatter (Black)..."
-	python3 -m black .
+	@echo "➡️ Fix with formatter..."
+	python3 -m ruff format
 
-	@echo "➡️ Fix with import formatter (isort)..."
-	python3 -m isort --jobs -1 .
+	@echo "➡️ Lint with linter..."
+	python3 -m ruff check --select I,PL,RUF,UP,ASYNC,A,DTZ,T20,ARG,PERF --fix
 
 sbom:
 	@echo "🔍 Generating SBOM..."

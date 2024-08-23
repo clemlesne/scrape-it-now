@@ -1,10 +1,13 @@
-import asyncio, random, re, subprocess
+import asyncio
+import random
+import re
+import subprocess
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
+from http import HTTPStatus
 from os import environ as env
-from typing import Awaitable, Callable
 from urllib.parse import urlparse
 
-from html2text import HTML2Text
 from playwright._impl._driver import compute_driver_executable, get_driver_env
 from playwright.async_api import (
     Browser,
@@ -17,6 +20,7 @@ from playwright.async_api import (
     async_playwright,
 )
 from pydantic import ValidationError
+from pypandoc import convert_text, ensure_pandoc_installed
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -31,6 +35,7 @@ from app.helpers.resources import (
     dir_resources,
     hash_url,
     index_queue_name,
+    pandoc_install_path,
     scrape_container_name,
     scrape_queue_name,
 )
@@ -58,21 +63,16 @@ JOB_STATE_NAME = "job.json"
 SCRAPED_PREFIX = "scraped"
 STATE_PREFIX = "state"
 
-# HTML to Markdown converter
-html2text = HTML2Text()
-html2text.ignore_images = True
-html2text.ignore_links = True
-
 # Ads pattern
 _ads_pattern_cache: re.Pattern | None = None
 
 
-async def _queue(
+async def _queue(  # noqa: PLR0913
     blob: IBlob,
     cache_refresh: timedelta,
     deph: int,
-    id: str,
     in_queue: IQueue,
+    item_id: str,
     max_depth: int,
     referrer: str,
     urls: set[str],
@@ -95,7 +95,7 @@ async def _queue(
     # Add the referrer to the set of scraped URLs
     state_bytes = StateScrapedModel().model_dump_json().encode(blob.encoding)
     await blob.upload_blob(
-        blob=f"{STATE_PREFIX}/{id}",
+        blob=f"{STATE_PREFIX}/{item_id}",
         data=state_bytes,
         length=len(state_bytes),
         overwrite=True,
@@ -174,7 +174,7 @@ async def _queue(
     return sum(res)
 
 
-async def _process_one(
+async def _process_one(  # noqa: PLR0913
     blob: IBlob,
     browser: Browser,
     cache_refresh: timedelta,
@@ -204,7 +204,7 @@ async def _process_one(
         cache_item = ScrapedUrlModel.model_validate_json(cache_raw)
 
         # Skip if previous attempt encountered a server error
-        if cache_item.status >= 500:
+        if cache_item.status >= HTTPStatus.INTERNAL_SERVER_ERROR:
             logger.info(
                 "Loaded %s (%i) from cache, but server error",
                 cache_item.url,
@@ -235,7 +235,7 @@ async def _process_one(
             blob=blob,
             cache_refresh=cache_refresh,
             deph=current_item.depth,
-            id=current_id,
+            item_id=current_id,
             in_queue=in_queue,
             max_depth=max_depth,
             referrer=cache_item.url,
@@ -273,7 +273,7 @@ async def _process_one(
             blob=blob,
             cache_refresh=cache_refresh,
             deph=current_item.depth,
-            id=current_id,
+            item_id=current_id,
             in_queue=in_queue,
             max_depth=max_depth,
             referrer=cache_item.url,
@@ -305,7 +305,7 @@ async def _process_one(
         blob=blob,
         cache_refresh=cache_refresh,
         deph=current_item.depth,
-        id=current_id,
+        item_id=current_id,
         in_queue=in_queue,
         max_depth=max_depth,
         referrer=new_result.url,
@@ -359,8 +359,9 @@ async def _update_job_state(
         LeaseAlreadyExistsError,  # Wait for the lease to expire
         LeaseNotFoundError,  # Race condition, retry
     ):
-        logger.debug("Lease error, waiting and retry")
-        await asyncio.sleep(1)
+        # Wait for a bit
+        await asyncio.sleep(0.1)
+        # Retry
         return await _update_job_state(
             blob=blob,
             network_used_mb=network_used_mb,
@@ -390,7 +391,7 @@ async def _update_job_state(
     )
 
 
-async def _worker(
+async def _worker(  # noqa: PLR0913
     azure_storage_connection_string: str,
     blob_path: str,
     blob_provider: BlobProvider,
@@ -405,130 +406,129 @@ async def _worker(
     whitelist: dict[re.Pattern, list[re.Pattern]],
 ) -> None:
     # Init clients
-    async with blob_client(
-        azure_storage_connection_string=azure_storage_connection_string,
-        container=scrape_container_name(job),
-        path=blob_path,
-        provider=blob_provider,
-    ) as blob:
-        async with queue_client(
+    async with (
+        blob_client(
+            azure_storage_connection_string=azure_storage_connection_string,
+            container=scrape_container_name(job),
+            path=blob_path,
+            provider=blob_provider,
+        ) as blob,
+        queue_client(
             azure_storage_connection_string=azure_storage_connection_string,
             provider=queue_provider,
             queue=scrape_queue_name(job),
-        ) as in_queue:
-            async with queue_client(
-                azure_storage_connection_string=azure_storage_connection_string,
-                provider=queue_provider,
-                queue=index_queue_name(job),
-            ) as out_queue:
+        ) as in_queue,
+        queue_client(
+            azure_storage_connection_string=azure_storage_connection_string,
+            provider=queue_provider,
+            queue=index_queue_name(job),
+        ) as out_queue,
+    ):
+        # Init Playwright context
+        async with async_playwright() as p:
+            browser_type: BrowserType = getattr(p, browser_name)
+            browser_usage = 0
+            browser: Browser | None = None
 
-                # Init Playwright context
-                async with async_playwright() as p:
-                    browser_type: BrowserType = getattr(p, browser_name)
-                    browser_usage = 0
-                    browser: Browser | None = None
+            # Process the queue
+            while messages := in_queue.receive_messages(
+                max_messages=32,
+                visibility_timeout=32 * 5,  # 5 secs per message
+            ):
+                total_network_used_mb = 0.0
+                total_processed = 0
+                total_queued = 0
 
-                    # Process the queue
-                    while messages := in_queue.receive_messages(
-                        max_messages=32,
-                        visibility_timeout=32 * 5,  # 5 secs per message
-                    ):
-                        total_network_used_mb = 0.0
-                        total_processed = 0
-                        total_queued = 0
+                # Iterate over the messages
+                logger.debug("Processing new messages")
+                async for message in messages:
+                    # Parse the message
+                    current_item = ScrapedQueuedModel.model_validate_json(
+                        message.content
+                    )
+                    logger.info(
+                        'Processing "%s" (%i)',
+                        current_item.url,
+                        current_item.depth,
+                    )
 
-                        # Iterate over the messages
-                        logger.debug("Processing new messages")
-                        async for message in messages:
-                            # Parse the message
-                            current_item = ScrapedQueuedModel.model_validate_json(
-                                message.content
-                            )
-                            logger.info(
-                                'Processing "%s" (%i)',
-                                current_item.url,
-                                current_item.depth,
-                            )
+                    # Get a browser instance
+                    # Limit the usage of the browser to 100 scrapings, to avoid memory leaks. Restart the browser after that. Memory leaks have been observed in both macOS and Ubuntu, with over 150 GB of memory used after an hour.
+                    # TODO: Create an issue in the Playwright repository to investigate the memory leak
+                    if not browser:  # First start
+                        browser = await _get_broswer(browser_type)
+                        logger.debug("Started browser %s", browser_type.name)
+                    elif browser_usage < 100:  # noqa: PLR2004
+                        browser_usage += 1
+                    else:  # Restart
+                        await browser.close()
+                        browser = await _get_broswer(browser_type)
+                        logger.info(
+                            "Restarted browser %s after %i iterations",
+                            browser_type.name,
+                            browser_usage,
+                        )
+                        browser_usage = 0
 
-                            # Get a browser instance
-                            # Limit the usage of the browser to 100 scrapings, to avoid memory leaks. Restart the browser after that. Memory leaks have been observed in both macOS and Ubuntu, with over 150 GB of memory used after an hour.
-                            # TODO: Create an issue in the Playwright repository to investigate the memory leak
-                            if not browser:  # First start
-                                browser = await _get_broswer(browser_type)
-                                logger.debug("Started browser %s", browser_type.name)
-                            elif browser_usage < 100:  # Reuse
-                                browser_usage += 1
-                            else:  # Restart
-                                await browser.close()
-                                browser = await _get_broswer(browser_type)
-                                logger.info(
-                                    "Restarted browser %s after %i iterations",
-                                    browser_type.name,
-                                    browser_usage,
-                                )
-                                browser_usage = 0
-
-                            try:
-                                processed, queued, network_used_mb = await _process_one(
-                                    blob=blob,
-                                    browser=browser,
-                                    cache_refresh=cache_refresh,
-                                    current_item=current_item,
-                                    in_queue=in_queue,
-                                    max_depth=max_depth,
-                                    out_queue=out_queue,
-                                    timezones=timezones,
-                                    user_agents=user_agents,
-                                    viewports=viewports,
-                                    whitelist=whitelist,
-                                )
-
-                                try:
-                                    await in_queue.delete_message(message)
-                                except (
-                                    MessageNotFoundError
-                                ):  # Race condition, message has already been deleted by another worker, pass silently to the next message, as it has already been processed
-                                    continue
-
-                                # Update counters
-                                total_network_used_mb += network_used_mb
-                                total_processed += processed
-                                total_queued += queued
-
-                            except Exception:
-                                # TODO: Add a dead-letter queue
-                                # TODO: Add a retry mechanism
-                                # TODO: Narrow the exception type
-                                logger.error(
-                                    "Error processing %s (%i)",
-                                    current_item.url,
-                                    current_item.depth,
-                                    exc_info=True,
-                                )
-
-                        # Update job state
-                        await _update_job_state(
+                    try:
+                        processed, queued, network_used_mb = await _process_one(
                             blob=blob,
-                            network_used_mb=total_network_used_mb,
-                            processed=total_processed,
-                            queued=total_queued,
+                            browser=browser,
+                            cache_refresh=cache_refresh,
+                            current_item=current_item,
+                            in_queue=in_queue,
+                            max_depth=max_depth,
+                            out_queue=out_queue,
+                            timezones=timezones,
+                            user_agents=user_agents,
+                            viewports=viewports,
+                            whitelist=whitelist,
                         )
 
-                        # Wait 3 sec to avoid spamming the queue if it is empty
-                        await asyncio.sleep(3)
+                        try:
+                            await in_queue.delete_message(message)
+                        except MessageNotFoundError:  # Race condition, message has already been deleted by another worker, pass silently to the next message, as it has already been processed
+                            continue
 
-                    logger.info("No more queued messages, exiting")
+                        # Update counters
+                        total_network_used_mb += network_used_mb
+                        total_processed += processed
+                        total_queued += queued
 
-                    # Close the browser
-                    if browser:
-                        await browser.close()
+                    except Exception:
+                        # TODO: Add a dead-letter queue
+                        # TODO: Add a retry mechanism
+                        # TODO: Narrow the exception type
+                        logger.error(
+                            "Error processing %s (%i)",
+                            current_item.url,
+                            current_item.depth,
+                            exc_info=True,
+                        )
+
+                # Update job state
+                await _update_job_state(
+                    blob=blob,
+                    network_used_mb=total_network_used_mb,
+                    processed=total_processed,
+                    queued=total_queued,
+                )
+
+                # Wait 3 sec to avoid spamming the queue if it is empty
+                await asyncio.sleep(3)
+
+            logger.info("No more queued messages, exiting")
+
+            # Close the browser
+            if browser:
+                await browser.close()
 
 
 def _ads_pattern() -> re.Pattern | None:
     """
     Return a regex pattern to match ads and trackers.
     """
-    global _ads_pattern_cache
+    global _ads_pattern_cache  # noqa: PLW0603
 
     if not _ads_pattern_cache:
         counter = 0
@@ -537,14 +537,13 @@ def _ads_pattern() -> re.Pattern | None:
         with open(
             encoding="utf-8",
             file=dir_resources("ads-nl.txt"),
-            mode="r",
         ) as f:
             # Parse the list of domains
-            for domain in f.readlines():
-                domain = domain.strip()
-                if not domain or domain.startswith("#"):
+            for domain_raw in f.readlines():
+                domain_clean = domain_raw.strip()
+                if not domain_clean or domain_clean.startswith("#"):
                     continue
-                trie.add(domain)
+                trie.add(domain_clean)
                 counter += 1
 
             # Build regex
@@ -601,9 +600,14 @@ def _filter_routes(
                 del headers[header]
 
         # Continue the request
-        res = await route.fetch(
-            headers=headers,
-        )
+        try:
+            res = await route.fetch(
+                headers=headers,  # Send the modified headers
+                max_retries=3,  # Retry 3 times on network errors
+            )
+        except PlaywrightError:
+            logger.debug("Failed to fetch resource %s", route.request.url)
+            return
 
         # Store content size
         size_bytes = (
@@ -619,7 +623,7 @@ def _filter_routes(
     return _wrapper
 
 
-async def _scrape_page(
+async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
     browser: Browser,
     previous_etag: str | None,
     referrer: str,
@@ -663,15 +667,22 @@ async def _scrape_page(
     )
 
     # Load page
-    async with await browser.new_context(
-        color_scheme=random.choice(["dark", "light", "no-preference"]),
-        device_scale_factor=random.randint(1, 3),
-        has_touch=random.choice([True, False]),
-        locale="en-US",
-        timezone_id=random.choice(list(timezones)),
-        user_agent=random.choice(list(user_agents)),
-        viewport=random.choice(viewports),
-    ) as context:
+    async with (
+        await browser.new_context(
+            # Performance
+            accept_downloads=False,  # Disable downloads, we won't use them
+            # Ease of use
+            ignore_https_errors=True,  # Could be a security risk, but we are scraping, not browsing or testing
+            # Privacy (random user context)
+            color_scheme=random.choice(["dark", "light", "no-preference"]),
+            device_scale_factor=random.randint(1, 3),
+            has_touch=random.choice([True, False]),
+            locale="en-US",
+            timezone_id=random.choice(list(timezones)),
+            user_agent=random.choice(list(user_agents)),
+            viewport=random.choice(viewports),
+        ) as context
+    ):
         page = await context.new_page()
 
         # Apply filtering to reduce traffic and CPU usage
@@ -735,7 +746,7 @@ async def _scrape_page(
                 valid_until = datetime.now(UTC) + timedelta(seconds=max_age)
 
         # Skip if etag is the same
-        if previous_etag and res.status == 304:
+        if previous_etag and res.status == HTTPStatus.NOT_MODIFIED:
             logger.info("Resource not modified, skipping")
             return
         # Save etag for future requests
@@ -743,7 +754,7 @@ async def _scrape_page(
 
         # Check for status code
         status = res.status
-        if status != 200:
+        if status != HTTPStatus.OK:
             return _generic_error(
                 etag=etag,
                 message=f"Status code {status}, not 200",
@@ -791,14 +802,36 @@ async def _scrape_page(
         # Extract text content
         try:
             # Convert HTML to Markdown
-            full_markdown = html2text.handle(full_html)
-            # Remove empty lines and leading/trailing whitespace
-            full_markdown = "\n".join(
-                clean for line in full_markdown.splitlines() if (clean := line.strip())
+            full_markdown = convert_text(
+                format="html",  # Input is HTML
+                sandbox=True,  # Enable sandbox mode, we don't know what we are scraping
+                source=full_html,
+                to="markdown-fenced_divs-native_divs-raw_html-bracketed_spans-native_spans-link_attributes-header_attributes-inline_code_attributes",
+                extra_args=[
+                    "--embed-resources=false",
+                    "--wrap=none",
+                ],
             )
+            # Filter out icons
+            full_markdown = "\n".join(
+                [
+                    line
+                    for line in full_markdown.splitlines()
+                    if "![](data:image/" not in line
+                ]
+            )
+            # Filter out embedded images but keep the alt text
+            full_markdown = re.sub(
+                r"!\[(.*)]\(data:image/.*\)",
+                r"![\1]()",
+                full_markdown,
+            )
+            # Clean up by removing double newlines
+            full_markdown = re.sub(r"\n\n+", "\n\n", full_markdown)
+
         except (
-            AssertionError
-        ) as e:  # When HTML2Text fails to parse the content, it raises an assertion error
+            RuntimeError
+        ) as e:  # pypandoc raises a RuntimeError if Pandoc returns one
             return _generic_error(
                 etag=etag,
                 message=f"HTML to text conversion failed: {e}",
@@ -878,7 +911,7 @@ def _format_path(path: str) -> str:
     return "/".join(reversed(res))
 
 
-async def run(
+async def run(  # noqa: PLR0913
     azure_storage_connection_string: str | None,
     blob_path: str,
     blob_provider: BlobProvider,
@@ -893,17 +926,16 @@ async def run(
     viewports: list[tuple[int, int]],
     whitelist: dict[re.Pattern, list[re.Pattern]],
 ) -> None:
-    logger.info("Starting scraping job %s", job)
+    logger.info("Start scraping job %s", job)
 
-    # Patch Playwright
-    # See: https://playwright.dev/docs/browsers#hermetic-install
-    env["PLAYWRIGHT_BROWSERS_PATH"] = browsers_install_path()
-
-    # Install Playwright dependencies
+    # Install Playwright
     browser_name = "chromium"
     async with async_playwright() as p:
         browser_type = getattr(p, browser_name)
         _install_browser(browser_type)
+
+    # Install Pandoc
+    _install_pandoc()
 
     # Parse cache_refresh
     cache_refresh_parsed = timedelta(hours=cache_refresh)
@@ -914,42 +946,44 @@ async def run(
         viewports_parsed.append(ViewportSize(width=width, height=height))
 
     # Init clients
-    async with blob_client(
-        azure_storage_connection_string=azure_storage_connection_string,
-        container=scrape_container_name(job),
-        path=blob_path,
-        provider=blob_provider,
-    ) as blob:
-        async with queue_client(
+    async with (
+        blob_client(
+            azure_storage_connection_string=azure_storage_connection_string,
+            container=scrape_container_name(job),
+            path=blob_path,
+            provider=blob_provider,
+        ) as blob,
+        queue_client(
             azure_storage_connection_string=azure_storage_connection_string,
             provider=queue_provider,
             queue=scrape_queue_name(job),
-        ) as in_queue:
-            # Add initial URL to the queue
-            model = ScrapedQueuedModel(
-                depth=0,
-                referrer="https://www.google.com/search",
-                url=url,
-            )
-            queued_urls = await _queue(
-                blob=blob,
-                cache_refresh=cache_refresh_parsed,
-                deph=model.depth,
-                id=hash_url(model.referrer),
-                in_queue=in_queue,
-                max_depth=max_depth,
-                referrer=model.referrer,
-                urls={model.url},
-                whitelist=whitelist,
-            )
+        ) as in_queue,
+    ):
+        # Add initial URL to the queue
+        model = ScrapedQueuedModel(
+            depth=0,
+            referrer="https://www.google.com/search",
+            url=url,
+        )
+        queued_urls = await _queue(
+            blob=blob,
+            cache_refresh=cache_refresh_parsed,
+            deph=model.depth,
+            item_id=hash_url(model.referrer),
+            in_queue=in_queue,
+            max_depth=max_depth,
+            referrer=model.referrer,
+            urls={model.url},
+            whitelist=whitelist,
+        )
 
-            # Initialize the job state as user can execute the "status" command right after
-            await _update_job_state(
-                blob=blob,
-                network_used_mb=0.0,
-                processed=0,
-                queued=queued_urls,
-            )
+        # Initialize the job state as user can execute the "status" command right after
+        await _update_job_state(
+            blob=blob,
+            network_used_mb=0.0,
+            processed=0,
+            queued=queued_urls,
+        )
 
     run_workers(
         azure_storage_connection_string=azure_storage_connection_string,
@@ -999,10 +1033,14 @@ def _install_browser(
     with_deps: bool = False,
 ) -> None:
     """
-    Install playwright and its dependencies if needed.
+    Install Playwright selected browser.
 
-    Return True if the installation was successful.
+    Download is persisted in the application cache directory. If requested, also install system dependencies requested by the framework. Those requires root permissions on Linux systems as the system package manager will be called.
     """
+    # Add installation path to the environment
+    # See: https://playwright.dev/docs/browsers#hermetic-install
+    env["PLAYWRIGHT_BROWSERS_PATH"] = browsers_install_path()
+
     # Get location of Playwright driver
     driver_executable, driver_cli = compute_driver_executable()
 
@@ -1049,3 +1087,27 @@ async def _get_broswer(
         ],
     )
     return browser
+
+
+def _install_pandoc() -> None:
+    """
+    Install Pandoc.
+
+    Download is persisted in the application cache directory.
+    """
+    # Fix version is necesssary to have reproducible builds
+    # See: https://github.com/jgm/pandoc/releases
+    version = "3.2.1"
+
+    install_path = pandoc_install_path(version)
+
+    # Download Pandoc if not installed
+    ensure_pandoc_installed(
+        delete_installer=True,
+        targetfolder=install_path,
+        version=version,
+    )
+
+    # Add installation path to the environment
+    # See: https://github.com/JessicaTegner/pypandoc?tab=readme-ov-file#specifying-the-location-of-pandoc-binaries
+    env["PYPANDOC_PANDOC"] = install_path

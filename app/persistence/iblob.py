@@ -1,6 +1,7 @@
 from abc import abstractmethod
+from contextlib import AbstractAsyncContextManager
 from enum import Enum, unique
-from typing import Any, AsyncContextManager
+from typing import Any
 
 
 class BlobNotFoundError(Exception):
@@ -33,7 +34,7 @@ class IBlob:
         self,
         blob: str,
         lease_duration: int,
-    ) -> AsyncContextManager[str]:
+    ) -> AbstractAsyncContextManager[str]:
         pass
 
     @abstractmethod

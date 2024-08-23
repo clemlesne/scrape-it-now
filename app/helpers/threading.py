@@ -1,6 +1,6 @@
 import asyncio
+from collections.abc import Awaitable, Callable
 from threading import Thread
-from typing import Awaitable, Callable
 
 from app.helpers.logging import logger
 

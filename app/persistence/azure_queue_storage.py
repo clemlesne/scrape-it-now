@@ -1,6 +1,7 @@
 from base64 import b64decode, b64encode
 from binascii import Error as BinasciiError
-from typing import Any, AsyncGenerator
+from collections.abc import AsyncGenerator
+from typing import Any
 
 from azure.core.exceptions import (
     ResourceExistsError,

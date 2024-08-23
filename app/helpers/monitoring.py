@@ -11,7 +11,7 @@ APPINSIGHTS_CONNECTION_STRING = env.get("APPLICATIONINSIGHTS_CONNECTION_STRING",
 if (
     not APPINSIGHTS_CONNECTION_STRING
 ):  # We don't raise an error, that feature must be optional
-    print(
+    print(  # noqa: T201
         "Azure Application Insights monitoring is disabled, set APPLICATIONINSIGHTS_CONNECTION_STRING to enable."
     )
 

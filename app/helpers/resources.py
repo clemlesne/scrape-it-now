@@ -79,6 +79,15 @@ def browsers_install_path() -> str:
     return path.join(cache_dir(), "browsers")
 
 
+def pandoc_install_path(
+    version: str,
+) -> str:
+    """
+    Get the path to the pandoc executable.
+    """
+    return path.join(cache_dir(), "pandoc", version)
+
+
 def local_disk_cache_path() -> str:
     """
     Get the path to the local disk persistance.

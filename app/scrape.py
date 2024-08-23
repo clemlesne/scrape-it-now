@@ -667,18 +667,22 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
     )
 
     # Load page
-    async with await browser.new_context(
-        # Performance
-        accept_downloads=False,  # Disable downloads, we won't use them
-        # Privacy (random user context)
-        color_scheme=random.choice(["dark", "light", "no-preference"]),
-        device_scale_factor=random.randint(1, 3),
-        has_touch=random.choice([True, False]),
-        locale="en-US",
-        timezone_id=random.choice(list(timezones)),
-        user_agent=random.choice(list(user_agents)),
-        viewport=random.choice(viewports),
-    ) as context:
+    async with (
+        await browser.new_context(
+            # Performance
+            accept_downloads=False,  # Disable downloads, we won't use them
+            # Ease of use
+            ignore_https_errors=True,  # Could be a security risk, but we are scraping, not browsing or testing
+            # Privacy (random user context)
+            color_scheme=random.choice(["dark", "light", "no-preference"]),
+            device_scale_factor=random.randint(1, 3),
+            has_touch=random.choice([True, False]),
+            locale="en-US",
+            timezone_id=random.choice(list(timezones)),
+            user_agent=random.choice(list(user_agents)),
+            viewport=random.choice(viewports),
+        ) as context
+    ):
         page = await context.new_page()
 
         # Apply filtering to reduce traffic and CPU usage

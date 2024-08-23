@@ -195,7 +195,7 @@ scrape-it-now index run [job_name]
 Example output:
 
 ```bash
-❯ Starting indexing job 7yz91ma
+❯ Start indexing job 7yz91ma
 5 workers started
 ...
 434b227 chunked into 6 parts

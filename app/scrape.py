@@ -912,7 +912,7 @@ async def run(
     viewports: list[tuple[int, int]],
     whitelist: dict[re.Pattern, list[re.Pattern]],
 ) -> None:
-    logger.info("Starting scraping job %s", job)
+    logger.info("Start scraping job %s", job)
 
     # Patch Playwright
     # See: https://playwright.dev/docs/browsers#hermetic-install

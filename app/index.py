@@ -359,7 +359,7 @@ async def run(
     queue_provider: QueueProvider,
     search_provider: SearchProvider,
 ) -> None:
-    logger.info("Starting indexing job %s", job)
+    logger.info("Start indexing job %s", job)
 
     # Patch Tiktoken
     # See: https://stackoverflow.com/a/76107077

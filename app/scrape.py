@@ -914,11 +914,7 @@ async def run(
 ) -> None:
     logger.info("Start scraping job %s", job)
 
-    # Patch Playwright
-    # See: https://playwright.dev/docs/browsers#hermetic-install
-    env["PLAYWRIGHT_BROWSERS_PATH"] = browsers_install_path()
-
-    # Install Playwright dependencies
+    # Install Playwright
     browser_name = "chromium"
     async with async_playwright() as p:
         browser_type = getattr(p, browser_name)
@@ -1021,10 +1017,14 @@ def _install_browser(
     with_deps: bool = False,
 ) -> None:
     """
-    Install playwright and its dependencies if needed.
+    Install Playwright selected browser.
 
-    Return True if the installation was successful.
+    Download is persisted in the application cache directory. If requested, also install system dependencies requested by the framework. Those requires root permissions on Linux systems as the system package manager will be called.
     """
+    # Add installation path to the environment
+    # See: https://playwright.dev/docs/browsers#hermetic-install
+    env["PLAYWRIGHT_BROWSERS_PATH"] = browsers_install_path()
+
     # Get location of Playwright driver
     driver_executable, driver_cli = compute_driver_executable()
 

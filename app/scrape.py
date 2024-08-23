@@ -1,3 +1,4 @@
+from pypandoc import convert_text, ensure_pandoc_installed
 import asyncio
 import random
 import re
@@ -7,7 +8,6 @@ from os import environ as env
 from typing import Awaitable, Callable
 from urllib.parse import urlparse
 
-from html2text import HTML2Text
 from playwright._impl._driver import compute_driver_executable, get_driver_env
 from playwright.async_api import (
     Browser,
@@ -34,6 +34,7 @@ from app.helpers.resources import (
     dir_resources,
     hash_url,
     index_queue_name,
+    pandoc_install_path,
     scrape_container_name,
     scrape_queue_name,
 )
@@ -60,11 +61,6 @@ JOB_STATE_NAME = "job.json"
 # Storage
 SCRAPED_PREFIX = "scraped"
 STATE_PREFIX = "state"
-
-# HTML to Markdown converter
-html2text = HTML2Text()
-html2text.ignore_images = True
-html2text.ignore_links = True
 
 # Ads pattern
 _ads_pattern_cache: re.Pattern | None = None
@@ -791,12 +787,36 @@ async def _scrape_page(
         # Extract text content
         try:
             # Convert HTML to Markdown
-            full_markdown = html2text.handle(full_html)
-            # Remove empty lines and leading/trailing whitespace
-            full_markdown = "\n".join(
-                clean for line in full_markdown.splitlines() if (clean := line.strip())
+            full_markdown = convert_text(
+                format="html",  # Input is HTML
+                sandbox=True,  # Enable sandbox mode, we don't know what we are scraping
+                source=full_html,
+                to="markdown-fenced_divs-native_divs-raw_html-bracketed_spans-native_spans-link_attributes-header_attributes-inline_code_attributes",
+                extra_args=[
+                    "--embed-resources=false",
+                    "--wrap=none",
+                ],
             )
-        except AssertionError as e:  # When HTML2Text fails to parse the content, it raises an assertion error
+            # Filter out icons
+            full_markdown = "\n".join(
+                [
+                    line
+                    for line in full_markdown.splitlines()
+                    if "![](data:image/" not in line
+                ]
+            )
+            # Filter out embedded images but keep the alt text
+            full_markdown = re.sub(
+                r"!\[(.*)]\(data:image/.*\)",
+                r"![\1]()",
+                full_markdown,
+            )
+            # Clean up by removing double newlines
+            full_markdown = re.sub(r"\n\n+", "\n\n", full_markdown)
+
+        except (
+            RuntimeError
+        ) as e:  # pypandoc raises a RuntimeError if Pandoc returns one
             return _generic_error(
                 etag=etag,
                 message=f"HTML to text conversion failed: {e}",
@@ -902,6 +922,9 @@ async def run(
     async with async_playwright() as p:
         browser_type = getattr(p, browser_name)
         _install_browser(browser_type)
+
+    # Install Pandoc
+    _install_pandoc()
 
     # Parse cache_refresh
     cache_refresh_parsed = timedelta(hours=cache_refresh)
@@ -1047,3 +1070,27 @@ async def _get_broswer(
         ],
     )
     return browser
+
+
+def _install_pandoc() -> None:
+    """
+    Install Pandoc.
+
+    Download is persisted in the application cache directory.
+    """
+    # Fix version is necesssary to have reproducible builds
+    # See: https://github.com/jgm/pandoc/releases
+    version = "3.2.1"
+
+    install_path = pandoc_install_path(version)
+
+    # Download Pandoc if not installed
+    ensure_pandoc_installed(
+        delete_installer=True,
+        targetfolder=install_path,
+        version=version,
+    )
+
+    # Add installation path to the environment
+    # See: https://github.com/JessicaTegner/pypandoc?tab=readme-ov-file#specifying-the-location-of-pandoc-binaries
+    env["PYPANDOC_PANDOC"] = install_path

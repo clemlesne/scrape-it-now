@@ -7,7 +7,12 @@ from playwright.async_api import ViewportSize, async_playwright
 
 from app.helpers.resources import dir_tests
 from app.models.scraped import ScrapedQueuedModel
-from app.scrape import _get_broswer, _install_browser, _scrape_page
+from app.scrape import (
+    _get_broswer,
+    _install_browser,
+    _scrape_page,
+    _install_pandoc,
+)
 
 DEFAULT_TIMEZONE = "Europe/Moscow"
 DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
@@ -49,8 +54,9 @@ async def test_real_website_page(
     async with async_playwright() as p:
         browser_type = p.chromium
 
-        # Make sure the browser is installed
+        # Make sure the browser and pandoc are installed
         _install_browser(browser_type)
+        _install_pandoc()
 
         # Launch the browser
         browser = await _get_broswer(browser_type)
@@ -95,8 +101,9 @@ async def test_links() -> None:
     async with async_playwright() as p:
         browser_type = p.chromium
 
-        # Make sure the browser is installed
+        # Make sure the browser and pandoc are installed
         _install_browser(browser_type)
+        _install_pandoc()
 
         # Launch the browser
         browser = await _get_broswer(browser_type)
@@ -149,8 +156,9 @@ async def test_paragraphs() -> None:
     async with async_playwright() as p:
         browser_type = p.chromium
 
-        # Make sure the browser is installed
+        # Make sure the browser and pandoc are installed
         _install_browser(browser_type)
+        _install_pandoc()
 
         # Launch the browser
         browser = await _get_broswer(browser_type)
@@ -170,21 +178,13 @@ async def test_paragraphs() -> None:
         assert page is not None, "Page should not be None"
 
         # Check content
-        assert (
-            page.content
-            == """
-# Complex paragraph example
-The conceptualization of quantum mechanics, _particularly_ in the context of
-**entanglement** , challenges the classical notions of locality and reality.
-As Einstein famously remarked, it appears that "God does not play dice with
-the universe," yet contemporary experiments—such as those conducted by
-Aspect—have demonstrated the undeniable validity of quantum correlations,
-defying classical _interpretations_ and opening up new avenues for
-**technological** advancements, including quantum computing and secure
-communications.
-This is a hidden paragraph.
-        """.strip()
-        ), "Content should match"
+        async with open(
+            encoding="utf-8",
+            file=join(dir_tests("websites"), "paragraphs.html.md"),
+            mode="r",
+        ) as f:
+            expected = await f.read()
+            assert page.content == expected.rstrip(), "Content should match"
 
         # Check title
         assert page.title == "Complex paragraph example", "Title should match"
@@ -204,8 +204,9 @@ async def test_timeout() -> None:
     async with async_playwright() as p:
         browser_type = p.chromium
 
-        # Make sure the browser is installed
+        # Make sure the browser and pandoc are installed
         _install_browser(browser_type)
+        _install_pandoc()
 
         # Launch the browser
         browser = await _get_broswer(browser_type)

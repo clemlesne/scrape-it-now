@@ -20,7 +20,7 @@ Scraper:
 - [x] Avoid re-scrape a page if it hasn't changed
 - [x] Block ads to lower network costs with [The Block List Project](https://github.com/blocklistproject/Lists)
 - [x] Explore pages in depth by detecting links and de-duplicating them
-- [x] Extract markdown content from a page with [html2text](https://github.com/aaronsw/html2text)
+- [x] Extract markdown content from a page with [Pandoc](https://github.com/jgm/pandoc)
 - [x] Load dynamic JavaScript content with [Playwright](https://github.com/microsoft/playwright-python)
 - [x] Preserve anonymity with a random user agent, random viewport size and no client hints headers
 - [x] Show progress with a status command
@@ -86,7 +86,7 @@ scrape-it-now scrape run https://nytimes.com
 Example output:
 
 ```bash
-❯ Starting scraping job 7yz91ma
+❯ Start scraping job 7yz91ma
 Queued 71/71 links for referrer https://www.google.com/search (1)
 3 workers started
 Browser chromium launched

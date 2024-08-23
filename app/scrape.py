@@ -600,9 +600,13 @@ def _filter_routes(
                 del headers[header]
 
         # Continue the request
-        res = await route.fetch(
-            headers=headers,
-        )
+        try:
+            res = await route.fetch(
+                headers=headers,  # Send the modified headers
+            )
+        except PlaywrightError:
+            logger.debug("Failed to fetch resource %s", route.request.url)
+            return
 
         # Store content size
         size_bytes = (

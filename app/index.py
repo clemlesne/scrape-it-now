@@ -37,7 +37,7 @@ from app.helpers.resources import (
 from app.helpers.threading import run_workers
 from app.models.indexed import IndexedIngestModel
 from app.models.scraped import ScrapedUrlModel
-from app.persistence.iblob import IBlob, Provider as BlobProvider
+from app.persistence.iblob import BlobNotFoundError, IBlob, Provider as BlobProvider
 from app.persistence.iqueue import MessageNotFoundError, Provider as QueueProvider
 from app.persistence.isearch import (
     DocumentNotFoundError,
@@ -59,8 +59,13 @@ async def _process_one(  # noqa: PLR0913
 
     The file is split into smaller chunks, and each chunk is indexed separately. If the document is already indexed, it is skipped.
     """
-    # Read scraped content
-    result_raw = await blob.download_blob(file_name)
+    try:
+        # Read scraped content
+        result_raw = await blob.download_blob(file_name)
+    except BlobNotFoundError:
+        logger.warning("%s not found in the blob storage", file_name)
+        return
+
     # Extract the short name for logging
     short_name = file_name.split("/")[-1].split(".")[0][:7]
 

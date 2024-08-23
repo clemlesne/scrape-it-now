@@ -1,4 +1,6 @@
-import asyncio, random, string
+import asyncio
+import random
+import string
 from os import environ as env
 
 import pytest

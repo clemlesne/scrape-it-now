@@ -1,4 +1,9 @@
-import asyncio, functools, random, re, string, sys
+import asyncio
+import functools
+import random
+import re
+import string
+import sys
 from os import cpu_count, environ as env
 from platform import python_version
 

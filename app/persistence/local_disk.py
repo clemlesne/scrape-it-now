@@ -1,4 +1,6 @@
-import asyncio, random, string
+import asyncio
+import random
+import string
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from json import JSONDecodeError, loads
@@ -401,7 +403,6 @@ class LocalDiskQueue(IQueue):
             database=file_path,
             timeout=self._config.timeout,  # Wait for 30 secs before giving up
         ) as connection:
-
             # Enable WAL mode to allow multiple readers and one writer
             await connection.execute(
                 """

@@ -1,4 +1,7 @@
-import asyncio, random, re, subprocess
+import asyncio
+import random
+import re
+import subprocess
 from datetime import UTC, datetime, timedelta
 from os import environ as env
 from typing import Awaitable, Callable
@@ -421,7 +424,6 @@ async def _worker(
                 provider=queue_provider,
                 queue=index_queue_name(job),
             ) as out_queue:
-
                 # Init Playwright context
                 async with async_playwright() as p:
                     browser_type: BrowserType = getattr(p, browser_name)
@@ -485,9 +487,7 @@ async def _worker(
 
                                 try:
                                     await in_queue.delete_message(message)
-                                except (
-                                    MessageNotFoundError
-                                ):  # Race condition, message has already been deleted by another worker, pass silently to the next message, as it has already been processed
+                                except MessageNotFoundError:  # Race condition, message has already been deleted by another worker, pass silently to the next message, as it has already been processed
                                     continue
 
                                 # Update counters
@@ -796,9 +796,7 @@ async def _scrape_page(
             full_markdown = "\n".join(
                 clean for line in full_markdown.splitlines() if (clean := line.strip())
             )
-        except (
-            AssertionError
-        ) as e:  # When HTML2Text fails to parse the content, it raises an assertion error
+        except AssertionError as e:  # When HTML2Text fails to parse the content, it raises an assertion error
             return _generic_error(
                 etag=etag,
                 message=f"HTML to text conversion failed: {e}",

@@ -1,4 +1,5 @@
-import asyncio, math
+import asyncio
+import math
 from os import environ as env
 
 import tiktoken
@@ -97,9 +98,7 @@ async def _process_one(
         )
         logger.info("%s is already indexed", short_name)
         return
-    except (
-        DocumentNotFoundError
-    ):  # If a chunk is not found, it is not indexed, thus we can re-process the document
+    except DocumentNotFoundError:  # If a chunk is not found, it is not indexed, thus we can re-process the document
         pass
 
     # Generate the embeddings by block (mitigate API throughput limits)
@@ -431,7 +430,6 @@ async def _worker(
                     index=index_index_name(job),
                     provider=search_provider,
                 ) as search:
-
                     # Process the queue
                     while messages := queue.receive_messages(
                         max_messages=32,
@@ -454,9 +452,7 @@ async def _worker(
 
                                 try:
                                     await queue.delete_message(message)
-                                except (
-                                    MessageNotFoundError
-                                ):  # Race condition, message has already been deleted by another worker, pass silently to the next message, as it has already been processed
+                                except MessageNotFoundError:  # Race condition, message has already been deleted by another worker, pass silently to the next message, as it has already been processed
                                     continue
 
                             except Exception:

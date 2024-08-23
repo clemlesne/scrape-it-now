@@ -1,4 +1,6 @@
-import asyncio, random, string
+import asyncio
+import random
+import string
 from os import environ as env
 from uuid import uuid4
 
@@ -149,7 +151,6 @@ async def test_lease(provider: BlobProvider) -> None:
                 blob=blob_name,
                 lease_duration=15,  # 15 secs
             ) as lease_id:
-
                 # Check raise error on double lease with the first non expired
                 with pytest.raises(LeaseAlreadyExistsError):
                     async with client.lease_blob(

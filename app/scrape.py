@@ -668,6 +668,9 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
 
     # Load page
     async with await browser.new_context(
+        # Performance
+        accept_downloads=False,  # Disable downloads, we won't use them
+        # Privacy (random user context)
         color_scheme=random.choice(["dark", "light", "no-preference"]),
         device_scale_factor=random.randint(1, 3),
         has_touch=random.choice([True, False]),

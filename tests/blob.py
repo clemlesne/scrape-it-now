@@ -156,7 +156,7 @@ async def test_lease(provider: BlobProvider) -> None:
                     async with client.lease_blob(
                         blob=blob_name,
                         lease_duration=15,  # 15 secs
-                    ) as lease_id:
+                    ):
                         raise AssertionError(
                             "Should raise error on double lease with the first non expired"
                         )

@@ -71,7 +71,7 @@ test-static:
 	python3 -m deptry .
 
 	@echo "➡️ Test code smells (Pylint)..."
-	python3 -m ruff check
+	python3 -m ruff check --select I,PL,RUF,UP,ASYNC,A,DTZ,T20,ARG,PERF
 
 	@echo "➡️ Test types (Pyright)..."
 	python3 -m pyright .
@@ -113,7 +113,7 @@ lint:
 	python3 -m ruff format
 
 	@echo "➡️ Lint with linter..."
-	python3 -m ruff check --select I --fix
+	python3 -m ruff check --select I,PL,RUF,UP,ASYNC,A,DTZ,T20,ARG,PERF --fix
 
 sbom:
 	@echo "🔍 Generating SBOM..."

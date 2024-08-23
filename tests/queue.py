@@ -23,8 +23,10 @@ from app.persistence.iqueue import MessageNotFoundError, Provider as QueueProvid
 async def test_acid(provider: QueueProvider) -> None:
     # Init values
     queue_name = _random_name()
-    first_content = _random_content()
-    second_content = _random_content()
+    contents = [
+        _random_content(),
+        _random_content(),
+    ]
 
     # Debug
     logger.info("Queue name: %s", queue_name)
@@ -44,8 +46,8 @@ async def test_acid(provider: QueueProvider) -> None:
                 raise AssertionError("Queue should be empty")
 
             # Send test messages
-            await client.send_message(first_content)
-            await client.send_message(second_content)
+            for content in contents:
+                await client.send_message(content)
 
             # Receive test message
             i = 0
@@ -55,17 +57,11 @@ async def test_acid(provider: QueueProvider) -> None:
                 visibility_timeout=5,
             ):
                 # Check message content
-                if i == 0:
-                    assert message.content == first_content, "Message content mismatch"
-                    received_message = message
-                elif i == 1:
-                    assert message.content == second_content, "Message content mismatch"
-                else:
-                    raise AssertionError("Too many messages received")
+                assert message.content == contents[i], "Message content mismatch"
                 i += 1
 
             # Check if messages count is correct
-            if i != 2 or not received_message:
+            if i != len(contents) or not received_message:
                 raise AssertionError("Not enough messages received")
 
             # Check if messages are invisible for the rest of the clients

@@ -7,6 +7,7 @@ from uuid import uuid4
 
 import pytest
 from aiofiles import open
+from isodate import UTC
 from playwright.async_api import ViewportSize, async_playwright
 
 from app.helpers.persistence import blob_client, queue_client
@@ -222,7 +223,7 @@ async def test_scrape_page_timeout() -> None:
         browser = await _get_broswer(browser_type)
 
         # Process the item
-        start_time = datetime.now()
+        start_time = datetime.now(UTC)
         page = await _scrape_page(
             browser=browser,
             previous_etag=None,
@@ -232,7 +233,7 @@ async def test_scrape_page_timeout() -> None:
             user_agents=[DEFAULT_USER_AGENT],
             viewports=[DEFAULT_VIEWPORT],
         )
-        end_time = datetime.now()
+        end_time = datetime.now(UTC)
         took_time = end_time - start_time
 
         # Check timeout duration
@@ -309,7 +310,7 @@ async def test_queue_simple(
             blob=blob,
             cache_refresh=timedelta(days=1),
             deph=test_depth,
-            id=test_id,
+            item_id=test_id,
             in_queue=in_queue,
             max_depth=0,
             referrer=test_referrer,

@@ -1,6 +1,7 @@
 from abc import abstractmethod
+from collections.abc import AsyncGenerator
 from enum import Enum, unique
-from typing import Any, AsyncGenerator
+from typing import Any
 
 from app.models.message import Message
 

@@ -1,5 +1,5 @@
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from openai import AsyncAzureOpenAI
 
@@ -43,7 +43,7 @@ async def openai_client(
 
 
 @asynccontextmanager
-async def search_client(
+async def search_client(  # noqa: PLR0913
     azure_search_api_key: str | None,
     azure_search_endpoint: str | None,
     azure_openai_api_key: str | None,

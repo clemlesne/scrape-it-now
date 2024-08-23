@@ -1,5 +1,6 @@
 import asyncio
 import math
+from http import HTTPStatus
 from os import environ as env
 
 import tiktoken
@@ -45,7 +46,7 @@ from app.persistence.isearch import (
 )
 
 
-async def _process_one(
+async def _process_one(  # noqa: PLR0913
     blob: IBlob,
     file_name: str,
     embedding_deployment: str,
@@ -76,7 +77,7 @@ async def _process_one(
         return
 
     # Skip if an error occured
-    if result.status >= 300:
+    if result.status >= HTTPStatus.MULTIPLE_CHOICES:
         logger.info("%s data is invalid (code %i)", short_name, result.status)
         return
 
@@ -177,7 +178,7 @@ async def _embeddings(
     )
 
 
-def _markdown_chunk(
+def _markdown_chunk(  # noqa: PLR0915, PLR0912
     max_tokens: int,
     text: str,
 ) -> list[str]:
@@ -342,7 +343,7 @@ def _count_tokens(content: str) -> int:
     )
 
 
-async def run(
+async def run(  # noqa: PLR0913
     azure_search_api_key: str | None,
     azure_search_endpoint: str | None,
     azure_openai_api_key: str,
@@ -386,7 +387,7 @@ async def run(
     )
 
 
-async def _worker(
+async def _worker(  # noqa: PLR0913
     azure_search_api_key: str | None,
     azure_search_endpoint: str | None,
     azure_openai_api_key: str,
@@ -403,67 +404,67 @@ async def _worker(
     search_provider: SearchProvider,
 ) -> None:
     # Init clients
-    async with blob_client(
-        azure_storage_connection_string=azure_storage_connection_string,
-        container=scrape_container_name(job),
-        path=blob_path,
-        provider=blob_provider,
-    ) as blob:
-        async with openai_client(
+    async with (
+        blob_client(
+            azure_storage_connection_string=azure_storage_connection_string,
+            container=scrape_container_name(job),
+            path=blob_path,
+            provider=blob_provider,
+        ) as blob,
+        openai_client(
             azure_openai_api_key=azure_openai_api_key,
             azure_openai_endpoint=azure_openai_endpoint,
             openai_api_version=openai_api_version,
-        ) as openai:
-            async with queue_client(
-                azure_storage_connection_string=azure_storage_connection_string,
-                provider=queue_provider,
-                queue=index_queue_name(job),
-            ) as queue:
-                async with search_client(
-                    azure_search_api_key=azure_search_api_key,
-                    azure_search_endpoint=azure_search_endpoint,
-                    azure_openai_api_key=azure_openai_api_key,
-                    azure_openai_embedding_deployment=azure_openai_embedding_deployment,
-                    azure_openai_embedding_dimensions=azure_openai_embedding_dimensions,
-                    azure_openai_embedding_model=azure_openai_embedding_model,
-                    azure_openai_endpoint=azure_openai_endpoint,
-                    index=index_index_name(job),
-                    provider=search_provider,
-                ) as search:
-                    # Process the queue
-                    while messages := queue.receive_messages(
-                        max_messages=32,
-                        visibility_timeout=32 * 10,  # 10 secs per message
-                    ):
-                        logger.debug("Processing new messages")
-                        async for message in messages:
-                            blob_name = message.content
-                            logger.info('Processing "%s"', blob_name)
+        ) as openai,
+        queue_client(
+            azure_storage_connection_string=azure_storage_connection_string,
+            provider=queue_provider,
+            queue=index_queue_name(job),
+        ) as queue,
+    ):
+        async with search_client(
+            azure_search_api_key=azure_search_api_key,
+            azure_search_endpoint=azure_search_endpoint,
+            azure_openai_api_key=azure_openai_api_key,
+            azure_openai_embedding_deployment=azure_openai_embedding_deployment,
+            azure_openai_embedding_dimensions=azure_openai_embedding_dimensions,
+            azure_openai_embedding_model=azure_openai_embedding_model,
+            azure_openai_endpoint=azure_openai_endpoint,
+            index=index_index_name(job),
+            provider=search_provider,
+        ) as search:
+            # Process the queue
+            while messages := queue.receive_messages(
+                max_messages=32,
+                visibility_timeout=32 * 10,  # 10 secs per message
+            ):
+                logger.debug("Processing new messages")
+                async for message in messages:
+                    blob_name = message.content
+                    logger.info('Processing "%s"', blob_name)
 
-                            try:
-                                await _process_one(
-                                    blob=blob,
-                                    embedding_deployment=azure_openai_embedding_deployment,
-                                    embedding_dimensions=azure_openai_embedding_dimensions,
-                                    file_name=blob_name,
-                                    openai=openai,
-                                    search=search,
-                                )
+                    try:
+                        await _process_one(
+                            blob=blob,
+                            embedding_deployment=azure_openai_embedding_deployment,
+                            embedding_dimensions=azure_openai_embedding_dimensions,
+                            file_name=blob_name,
+                            openai=openai,
+                            search=search,
+                        )
 
-                                try:
-                                    await queue.delete_message(message)
-                                except MessageNotFoundError:  # Race condition, message has already been deleted by another worker, pass silently to the next message, as it has already been processed
-                                    continue
+                        try:
+                            await queue.delete_message(message)
+                        except MessageNotFoundError:  # Race condition, message has already been deleted by another worker, pass silently to the next message, as it has already been processed
+                            continue
 
-                            except Exception:
-                                # TODO: Add a dead-letter queue
-                                # TODO: Add a retry mechanism
-                                # TODO: Narrow the exception type
-                                logger.error(
-                                    "Error processing %s", blob_name, exc_info=True
-                                )
+                    except Exception:
+                        # TODO: Add a dead-letter queue
+                        # TODO: Add a retry mechanism
+                        # TODO: Narrow the exception type
+                        logger.error("Error processing %s", blob_name, exc_info=True)
 
-                        # Wait 3 sec to avoid spamming the queue if it is empty
-                        await asyncio.sleep(3)
+                # Wait 3 sec to avoid spamming the queue if it is empty
+                await asyncio.sleep(3)
 
-                    logger.info("No more queued messages, exiting")
+            logger.info("No more queued messages, exiting")

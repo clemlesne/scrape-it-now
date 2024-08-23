@@ -147,7 +147,13 @@ async def _index_to_store(
     Index a list of documents in the Azure Cognitive Search service.
     """
     await search.merge_or_upload_documents(
-        documents=[model.model_dump() for model in models]
+        documents=[
+            {
+                **model.model_dump(exclude={"indexed_id"}),
+                "id": model.indexed_id,  # Use the indexed_id as the document ID
+            }
+            for model in models
+        ]
     )
 
 

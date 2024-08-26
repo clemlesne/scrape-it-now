@@ -10,7 +10,7 @@ from app.models.proxy import Proxy
 @unique
 class Provider(str, Enum):
     NO_PROXY = "no_proxy"
-    THESPEEDX_PROXY_LIST = "thespeedx_proxy_list"
+    MONOSANS_PROXY_LIST = "monosans_proxy_list"
 
 
 class IProxy:

@@ -722,7 +722,7 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
             res = await page.goto(
                 url_clean.geturl(),
                 referer=referrer,
-                timeout=30000,  # 30 seconds
+                timeout=30000,  # 30 secs
             )
         except TimeoutError:  # TODO: Retry maybe a few times for timeout errors?
             return _generic_error(

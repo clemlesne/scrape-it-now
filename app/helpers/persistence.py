@@ -22,11 +22,11 @@ from app.persistence.local_disk import (
     LocalDiskQueue,
     QueueConfig as LocalDiskQueueConfig,
 )
-from app.persistence.no_proxy import NoProxy
-from app.persistence.thespeedx_proxy_list import (
+from app.persistence.monosans_proxy_list import (
     Config as ThespeedxProxyListConfig,
-    ThespeedxProxyList,
+    MonosansProxyList,
 )
+from app.persistence.no_proxy import NoProxy
 
 
 @asynccontextmanager
@@ -157,9 +157,9 @@ async def proxy_client(provider: ProxyProvider) -> AsyncGenerator[IProxy, None]:
             yield client
 
     # TheSpeedX PROXY-LIST
-    elif provider == ProxyProvider.THESPEEDX_PROXY_LIST:
+    elif provider == ProxyProvider.MONOSANS_PROXY_LIST:
         # Validate arguments
         config = ThespeedxProxyListConfig()
         # Init client
-        async with ThespeedxProxyList(config) as client:
+        async with MonosansProxyList(config) as client:
             yield client

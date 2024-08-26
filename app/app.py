@@ -13,6 +13,7 @@ from app.helpers.logging import logger
 from app.helpers.monitoring import VERSION
 from app.index import run as index_backend_run
 from app.persistence.iblob import Provider as BlobProvider
+from app.persistence.iproxy import Provider as ProxyProvider
 from app.persistence.iqueue import Provider as QueueProvider
 from app.persistence.isearch import Provider as SearchProvider
 from app.persistence.local_disk import BLOB_DEFAULT_PATH
@@ -157,6 +158,15 @@ def scrape() -> None:
     type=click.Choice([x.value for x in QueueProvider]),
 )
 @click.option(
+    "--proxy-provider",
+    "-pp",
+    default=ProxyProvider.NO_PROXY,
+    envvar="PROXY_PROVIDER",
+    help="Proxy provider to use.",
+    required=True,
+    type=click.Choice([x.value for x in ProxyProvider]),
+)
+@click.option(
     "--blob-path",
     "-bpa",
     default=BLOB_DEFAULT_PATH,
@@ -201,6 +211,7 @@ async def scrape_run(  # noqa: PLR0913
     job_name: str | None,
     max_depth: int,
     processes: int,
+    proxy_provider: ProxyProvider,
     queue_provider: QueueProvider,
     timezone: list[str],
     url: str,
@@ -249,6 +260,7 @@ async def scrape_run(  # noqa: PLR0913
         job=job_name_parsed,
         max_depth=max_depth,
         processes=processes,
+        proxy_provider=proxy_provider,
         queue_provider=queue_provider,
         timezones=timezone,
         url=url,

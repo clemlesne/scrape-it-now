@@ -24,6 +24,9 @@ class IQueue:
         self,
         message: str,
     ) -> None:
+        """
+        Send a message to the queue.
+        """
         pass
 
     @abstractmethod
@@ -32,6 +35,9 @@ class IQueue:
         max_messages: int,
         visibility_timeout: int,
     ) -> AsyncGenerator[Message, None]:
+        """
+        Receive messages from the queue.
+        """
         pass
 
     @abstractmethod
@@ -39,12 +45,20 @@ class IQueue:
         self,
         message: Message,
     ) -> None:
+        """
+        Delete a message from the queue.
+        """
         pass
 
     @abstractmethod
     async def delete_queue(
         self,
     ) -> None:
+        """
+        Delete the queue.
+
+        Warning: This operation is irreversible, all data will be lost.
+        """
         pass
 
     @abstractmethod

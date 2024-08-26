@@ -35,6 +35,11 @@ class IBlob:
         blob: str,
         lease_duration: int,
     ) -> AbstractAsyncContextManager[str]:
+        """
+        Lease a blob for a given duration.
+
+        The lease ID will be returned, it must be used to upload, download or delete the blob. After the lease expires, the blob will be unlocked and any use of the lease ID will raise an error.
+        """
         pass
 
     @abstractmethod
@@ -46,6 +51,9 @@ class IBlob:
         overwrite: bool,
         lease_id: str | None = None,
     ) -> None:
+        """
+        Upload a blob to the container.
+        """
         pass
 
     @abstractmethod
@@ -53,12 +61,18 @@ class IBlob:
         self,
         blob: str,
     ) -> str:
+        """
+        Download a blob from the container.
+        """
         pass
 
     @abstractmethod
     async def delete_container(
         self,
     ) -> None:
+        """
+        Delete the container.
+        """
         pass
 
     @abstractmethod

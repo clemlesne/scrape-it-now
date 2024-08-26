@@ -19,13 +19,13 @@ Scraper:
 
 - [x] Avoid re-scrape a page if it hasn't changed
 - [x] Block ads to lower network costs with [The Block List Project](https://github.com/blocklistproject/Lists)
+- [x] Enhance anonymity with proxies with [TheSpeedX PROXY-LIST](https://github.com/TheSpeedX/PROXY-List)
 - [x] Explore pages in depth by detecting links and de-duplicating them
 - [x] Extract markdown content from a page with [Pandoc](https://github.com/jgm/pandoc)
 - [x] Load dynamic JavaScript content with [Playwright](https://github.com/microsoft/playwright-python)
 - [x] Preserve anonymity with a random user agent, random viewport size and no client hints headers
 - [x] Show progress with a status command
 - [x] Track progress of total network usage
-- [ ] Enhance anonymity with proxies
 - [ ] Respect [`robots.txt`](https://en.wikipedia.org/wiki/Robots.txt)
 
 Indexer:

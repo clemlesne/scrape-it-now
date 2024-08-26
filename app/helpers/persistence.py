@@ -13,6 +13,7 @@ from app.persistence.azure_queue_storage import (
 )
 from app.persistence.azure_search import AzureSearch, Config as AzureSearchConfig
 from app.persistence.iblob import IBlob, Provider as BlobProvider
+from app.persistence.iproxy import IProxy, Provider as ProxyProvider
 from app.persistence.iqueue import IQueue, Provider as QueueProvider
 from app.persistence.isearch import ISearch, Provider as SearchProvider
 from app.persistence.local_disk import (
@@ -20,6 +21,11 @@ from app.persistence.local_disk import (
     LocalDiskBlob,
     LocalDiskQueue,
     QueueConfig as LocalDiskQueueConfig,
+)
+from app.persistence.no_proxy import NoProxy
+from app.persistence.thespeedx_proxy_list import (
+    Config as ThespeedxProxyListConfig,
+    ThespeedxProxyList,
 )
 
 
@@ -130,9 +136,30 @@ async def queue_client(
 
     # Local Disk Queue
     elif provider == QueueProvider.LOCAL_DISK:
+        # Validate arguments
         config = LocalDiskQueueConfig(
             name=queue,
         )  # pyright: ignore [reportArgumentType]
         # Init client
         async with LocalDiskQueue(config) as client:
+            yield client
+
+
+@asynccontextmanager
+async def proxy_client(provider: ProxyProvider) -> AsyncGenerator[IProxy, None]:
+    """
+    Get the proxy client.
+    """
+    # No Proxy
+    if provider == ProxyProvider.NO_PROXY:
+        # Init client
+        async with NoProxy() as client:
+            yield client
+
+    # TheSpeedX PROXY-LIST
+    elif provider == ProxyProvider.THESPEEDX_PROXY_LIST:
+        # Validate arguments
+        config = ThespeedxProxyListConfig()
+        # Init client
+        async with ThespeedxProxyList(config) as client:
             yield client

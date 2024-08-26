@@ -14,6 +14,7 @@ from playwright.async_api import (
     BrowserType,
     Error as PlaywrightError,
     Locator,
+    ProxySettings,
     Route,
     TimeoutError,
     ViewportSize,
@@ -29,7 +30,7 @@ from tenacity import (
 )
 
 from app.helpers.logging import logger
-from app.helpers.persistence import blob_client, queue_client
+from app.helpers.persistence import blob_client, proxy_client, queue_client
 from app.helpers.resources import (
     browsers_install_path,
     dir_resources,
@@ -50,6 +51,7 @@ from app.persistence.iblob import (
     LeaseNotFoundError,
     Provider as BlobProvider,
 )
+from app.persistence.iproxy import IProxy, Provider as ProxyProvider
 from app.persistence.iqueue import (
     IQueue,
     MessageNotFoundError,
@@ -182,6 +184,7 @@ async def _process_one(  # noqa: PLR0913
     in_queue: IQueue,
     max_depth: int,
     out_queue: IQueue,
+    proxy: IProxy,
     timezones: list[str],
     user_agents: list[str],
     viewports: list[ViewportSize],
@@ -259,6 +262,7 @@ async def _process_one(  # noqa: PLR0913
     new_result = await _scrape_page(
         browser=browser,
         previous_etag=cache_item.etag if cache_item else None,
+        proxy=proxy,
         referrer=current_item.referrer,
         timezones=timezones,
         url=current_item.url,
@@ -399,6 +403,7 @@ async def _worker(  # noqa: PLR0913
     cache_refresh: timedelta,
     job: str,
     max_depth: int,
+    proxy_provider: ProxyProvider,
     queue_provider: QueueProvider,
     timezones: list[str],
     user_agents: list[str],
@@ -423,6 +428,7 @@ async def _worker(  # noqa: PLR0913
             provider=queue_provider,
             queue=index_queue_name(job),
         ) as out_queue,
+        proxy_client(proxy_provider) as proxy,
     ):
         # Init Playwright context
         async with async_playwright() as p:
@@ -479,6 +485,7 @@ async def _worker(  # noqa: PLR0913
                             in_queue=in_queue,
                             max_depth=max_depth,
                             out_queue=out_queue,
+                            proxy=proxy,
                             timezones=timezones,
                             user_agents=user_agents,
                             viewports=viewports,
@@ -626,6 +633,7 @@ def _filter_routes(
 async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
     browser: Browser,
     previous_etag: str | None,
+    proxy: IProxy,
     referrer: str,
     timezones: list[str],
     url: str,
@@ -637,6 +645,31 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
 
     Pages are requested in English, using a random user agent in a Playwright browser. All links are extracted from the HTML content.
     """
+    network_used_bytes = 0
+
+    def _network_used_callback(size_bytes: int) -> None:
+        nonlocal network_used_bytes
+        network_used_bytes += size_bytes
+
+    # Configure a proxy
+    proxy_config = await proxy.get_one()
+    proxy_setting = None
+    if proxy_config:
+        proxy_setting = ProxySettings(
+            bypass="localhost",  # Coma separated list
+            server=f"{proxy_config.protocol}://{proxy_config.host}:{proxy_config.port}",
+            # Types are incorrect, must be strings
+            # See: https://github.com/microsoft/playwright-python/issues/1269
+            password=proxy_config.password or "",
+            username=proxy_config.username or "",
+        )
+        logger.debug("Using proxy %s", proxy_setting)
+
+    # Parse URL
+    url_clean = urlparse(url)._replace(
+        query="",
+        fragment="",
+    )
 
     def _generic_error(
         message: str,
@@ -644,8 +677,11 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
         etag: str | None = None,
         valid_until: datetime | None = None,
     ) -> ScrapedUrlModel:
-        logger.info("Cannot scrape: %s (%s)", message, url)
+        # We cannot know if the error is due to the proxy or the page, but we notify is in any case
+        if proxy_config:
+            proxy.report_failure(proxy_config)
         # Return an empty result if Playwright fails
+        logger.info("Cannot scrape: %s (%s)", message, url)
         return ScrapedUrlModel(
             etag=etag,
             network_used_mb=network_used_bytes / 1024 / 1024,
@@ -654,18 +690,6 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
             valid_until=valid_until,
         )
 
-    network_used_bytes = 0
-
-    def _network_used_callback(size_bytes: int) -> None:
-        nonlocal network_used_bytes
-        network_used_bytes += size_bytes
-
-    # Parse URL
-    url_clean = urlparse(url)._replace(
-        query="",
-        fragment="",
-    )
-
     # Load page
     async with (
         await browser.new_context(
@@ -673,6 +697,8 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
             accept_downloads=False,  # Disable downloads, we won't use them
             # Ease of use
             ignore_https_errors=True,  # Could be a security risk, but we are scraping, not browsing or testing
+            # Proxy
+            proxy=proxy_setting,
             # Privacy (random user context)
             color_scheme=random.choice(["dark", "light", "no-preference"]),
             device_scale_factor=random.randint(1, 3),
@@ -919,6 +945,7 @@ async def run(  # noqa: PLR0913
     job: str,
     max_depth: int,
     processes: int,
+    proxy_provider: ProxyProvider,
     queue_provider: QueueProvider,
     timezones: list[str],
     url: str,
@@ -996,6 +1023,7 @@ async def run(  # noqa: PLR0913
         job=job,
         max_depth=max_depth,
         name=f"scrape-{job}",
+        proxy_provider=proxy_provider,
         queue_provider=queue_provider,
         timezones=timezones,
         user_agents=user_agents,

@@ -19,6 +19,9 @@ class ISearch:
         key: str,
         selected_fields: set[str] | None = None,
     ) -> dict:
+        """
+        Get a document from the search index.
+        """
         pass
 
     @abstractmethod
@@ -26,6 +29,11 @@ class ISearch:
         self,
         documents: list[dict],
     ) -> None:
+        """
+        Upload a list of documents to the search index.
+
+        If a document with the same key already exists, it will be updated.
+        """
         pass
 
     @abstractmethod

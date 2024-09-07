@@ -1,7 +1,6 @@
 import asyncio
 import random
 import re
-import subprocess
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from http import HTTPStatus
@@ -1050,23 +1049,21 @@ async def _install_browser(
         args.append("--with-deps")
 
     # Run
-    proc = subprocess.run(
-        args=args,
-        capture_output=True,
-        check=False,
+    proc = await asyncio.create_subprocess_shell(
+        cmd=" ".join(args),
         env=get_driver_env(),
-        text=True,
     )
+    await proc.wait()
 
     # Display error logs if any
     err = proc.stderr
     if err:
-        logger.error("Browser install error:\n%s", err)
+        logger.error("Browser install error:\n%s", await err.read())
 
     # Display standard logs if any
     logs = proc.stdout
     if logs:
-        logger.info("Browser install logs:\n%s", proc.stdout)
+        logger.info("Browser install logs:\n%s", await logs.read())
 
     if proc.returncode != 0:
         raise RuntimeError("Failed to install browser")

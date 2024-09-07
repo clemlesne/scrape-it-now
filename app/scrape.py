@@ -932,10 +932,10 @@ async def run(  # noqa: PLR0913
     browser_name = "chromium"
     async with async_playwright() as p:
         browser_type = getattr(p, browser_name)
-        _install_browser(browser_type)
+        await _install_browser(browser_type)
 
     # Install Pandoc
-    _install_pandoc()
+    await _install_pandoc()
 
     # Parse cache_refresh
     cache_refresh_parsed = timedelta(hours=cache_refresh)
@@ -1028,7 +1028,7 @@ async def state(
         return model
 
 
-def _install_browser(
+async def _install_browser(
     browser_type: BrowserType,
     with_deps: bool = False,
 ) -> None:
@@ -1039,7 +1039,7 @@ def _install_browser(
     """
     # Add installation path to the environment
     # See: https://playwright.dev/docs/browsers#hermetic-install
-    env["PLAYWRIGHT_BROWSERS_PATH"] = browsers_install_path()
+    env["PLAYWRIGHT_BROWSERS_PATH"] = await browsers_install_path()
 
     # Get location of Playwright driver
     driver_executable, driver_cli = compute_driver_executable()
@@ -1078,8 +1078,12 @@ async def _get_broswer(
     """
     Launch a browser instance.
     """
+    # Using the application path not the default one from the SDK
+    playwright_path = await browsers_install_path()
+
+    # Launch the browser
     browser = await browser_type.launch(
-        downloads_path=browsers_install_path(),  # Using the application path not the default one from the SDK
+        downloads_path=playwright_path,
         chromium_sandbox=True,  # Enable the sandbox for security, we don't know what we are scraping
         # See: https://github.com/microsoft/playwright/blob/99a36310570617222290c09b96a2026beb8b00f9/packages/playwright-core/src/server/chromium/chromium.ts
         args=[
@@ -1089,7 +1093,7 @@ async def _get_broswer(
     return browser
 
 
-def _install_pandoc() -> None:
+async def _install_pandoc() -> None:
     """
     Install Pandoc.
 
@@ -1099,7 +1103,8 @@ def _install_pandoc() -> None:
     # See: https://github.com/jgm/pandoc/releases
     version = "3.2.1"
 
-    install_path = pandoc_install_path(version)
+    # Get location of Pandoc driver
+    install_path = await pandoc_install_path(version)
 
     # Download Pandoc if not installed
     ensure_pandoc_installed(

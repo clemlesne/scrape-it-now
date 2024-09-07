@@ -1,8 +1,9 @@
 import hashlib
-from os import makedirs, path
+from os.path import join
 from pathlib import Path
 
 import click
+from aiofiles.os import makedirs, path
 
 
 def dir_tests(sub: str) -> str:
@@ -59,37 +60,37 @@ def hash_url(url: str) -> str:
     ).hexdigest()
 
 
-def cache_dir() -> str:
+async def cache_dir() -> str:
     """
     Get the path to the cache directory.
 
     See: https://click.palletsprojects.com/en/8.1.x/api/#click.get_app_dir
     """
-    res = path.abspath(click.get_app_dir("scrape-it-now"))
+    res = await path.abspath(click.get_app_dir("scrape-it-now"))
     # Create if not exists
-    if not path.exists(res):
-        makedirs(res)
+    if not await path.exists(res):
+        await makedirs(res)
     return res
 
 
-def browsers_install_path() -> str:
+async def browsers_install_path() -> str:
     """
     Get the path to the browser executable.
     """
-    return path.join(cache_dir(), "browsers")
+    return join(await cache_dir(), "browsers")
 
 
-def pandoc_install_path(
+async def pandoc_install_path(
     version: str,
 ) -> str:
     """
     Get the path to the pandoc executable.
     """
-    return path.join(cache_dir(), "pandoc", version)
+    return join(await cache_dir(), "pandoc", version)
 
 
-def local_disk_cache_path() -> str:
+async def local_disk_cache_path() -> str:
     """
-    Get the path to the local disk persistance.
+    Get the path to the local disk persistence.
     """
-    return path.join(cache_dir(), "local_disk")
+    return join(await cache_dir(), "local_disk")

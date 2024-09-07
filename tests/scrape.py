@@ -66,8 +66,8 @@ async def test_scrape_page_website(
         browser_type = p.chromium
 
         # Make sure the browser and pandoc are installed
-        _install_browser(browser_type)
-        _install_pandoc()
+        await _install_browser(browser_type)
+        await _install_pandoc()
 
         # Launch the browser
         browser = await _get_broswer(browser_type)
@@ -113,8 +113,8 @@ async def test_scrape_page_links() -> None:
         browser_type = p.chromium
 
         # Make sure the browser and pandoc are installed
-        _install_browser(browser_type)
-        _install_pandoc()
+        await _install_browser(browser_type)
+        await _install_pandoc()
 
         # Launch the browser
         browser = await _get_broswer(browser_type)
@@ -168,8 +168,8 @@ async def test_scrape_page_paragraphs() -> None:
         browser_type = p.chromium
 
         # Make sure the browser and pandoc are installed
-        _install_browser(browser_type)
-        _install_pandoc()
+        await _install_browser(browser_type)
+        await _install_pandoc()
 
         # Launch the browser
         browser = await _get_broswer(browser_type)
@@ -216,8 +216,8 @@ async def test_scrape_page_timeout() -> None:
         browser_type = p.chromium
 
         # Make sure the browser and pandoc are installed
-        _install_browser(browser_type)
-        _install_pandoc()
+        await _install_browser(browser_type)
+        await _install_pandoc()
 
         # Launch the browser
         browser = await _get_broswer(browser_type)

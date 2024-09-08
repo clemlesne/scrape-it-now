@@ -21,7 +21,7 @@ Scraper:
 - [x] Block ads to lower network costs with [The Block List Project](https://github.com/blocklistproject/Lists)
 - [x] Explore pages in depth by detecting links and de-duplicating them
 - [x] Extract markdown content from a page with [Pandoc](https://github.com/jgm/pandoc)
-- [x] Load dynamic JavaScript content with [Playwright](https://github.com/microsoft/playwright-python)
+- [x] Load dynamic JavaScript content with [Playwright](https://github.com/microsoft/playwright-python) and [Chromium](https://www.chromium.org/Home)
 - [x] Preserve anonymity with a random user agent, random viewport size and no client hints headers
 - [x] Show progress with a status command
 - [x] Track progress of total network usage

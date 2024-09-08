@@ -1,6 +1,6 @@
 # 🛰️ Scrape It Now!
 
-A website to scrape? There's a simple way.
+Web scraper made for AI and simplicity in mind. It runs as a CLI that can be parallelized and outputs high-quality markdown content.
 
 <!-- github.com badges -->
 [![Last release date](https://img.shields.io/github/release-date/clemlesne/scrape-it-now)](https://github.com/clemlesne/scrape-it-now/releases)

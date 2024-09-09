@@ -14,6 +14,10 @@ on:
       - hotfix/*
       - main
 
+env:
+  # See: https://github.com/upx/upx/releases
+  UPX_VERSION: "4.2.4"
+
 jobs:
   init:
     name: Init
@@ -120,7 +124,12 @@ jobs:
           choco install make
           make --version
 
-      - name: Install dependencies
+      - name: Set up UPX (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          choco install upx --version ${{ env.UPX_VERSION }}
+          upx --version
+
         run: |
           python3 -m pip install --upgrade pip wheel setuptools
           make install-deps

@@ -63,6 +63,18 @@ jobs:
           cache: pip
           python-version: "3.12"
 
+      - name: Cache pytest
+        uses: actions/cache@v4.0.2
+        with:
+          path: .pytest_cache
+          key: pytest-${{ github.head_ref || github.ref_name }}-${{ hashFiles('requirements-dev.txt') }}
+
+      - name: Cache Ruff
+        uses: actions/cache@v4.0.2
+        with:
+          path: .ruff_cache
+          key: ruff-${{ github.head_ref || github.ref_name }}-${{ hashFiles('requirements-dev.txt') }}
+
       - name: Set up dependencies
         run: make install-deps
 

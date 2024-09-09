@@ -116,7 +116,9 @@ jobs:
 
       - name: Install make (Windows)
         if: runner.os == 'Windows'
-        run: choco install make
+        run: |
+          choco install make
+          make --version
 
       - name: Install dependencies
         run: |

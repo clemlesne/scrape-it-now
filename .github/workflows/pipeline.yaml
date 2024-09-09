@@ -63,7 +63,7 @@ jobs:
           cache: pip
           python-version: "3.12"
 
-      - name: Install dependencies
+      - name: Set up dependencies
         run: make install-deps
 
       - name: Configure environment variables
@@ -118,7 +118,7 @@ jobs:
           cache: pip
           python-version: "3.12"
 
-      - name: Install make (Windows)
+      - name: Set up make (Windows)
         if: runner.os == 'Windows'
         run: |
           choco install make
@@ -130,11 +130,12 @@ jobs:
           choco install upx --version ${{ env.UPX_VERSION }}
           upx --version
 
+      - name: Set up dependencies
         run: |
           python3 -m pip install --upgrade pip wheel setuptools
           make install-deps
 
-      - name: Install dependencies (Windows)
+      - name: Set up dependencies (Windows)
         if: runner.os == 'Windows'
         run: |
           python3 -m pip install pywin32-ctypes pefile

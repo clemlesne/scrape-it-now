@@ -70,7 +70,7 @@ test-static:
 	@echo "➡️ Test dependencies issues (deptry)..."
 	python3 -m deptry .
 
-	@echo "➡️ Test code smells (Pylint)..."
+	@echo "➡️ Test code smells (Ruff)..."
 	python3 -m ruff check --select I,PL,RUF,UP,ASYNC,A,DTZ,T20,ARG,PERF
 
 	@echo "➡️ Test types (Pyright)..."

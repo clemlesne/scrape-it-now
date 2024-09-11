@@ -16,7 +16,7 @@ from aiofiles.os import makedirs, path, remove, rmdir
 from pydantic import BaseModel, Field
 
 from app.helpers.logging import logger
-from app.helpers.resources import local_disk_cache_path
+from app.helpers.resources import file_lock, local_disk_cache_path
 from app.models.message import Message
 from app.persistence.iblob import (
     BlobAlreadyExistsError,
@@ -69,8 +69,8 @@ class LocalDiskBlob(IBlob):
 
         lease_file = await self._lease_path(blob)
 
-        # Ensure only this worker accesses the lease
-        async with self._file_lock(lease_file):
+        # Ensure only one worker is updating the lease
+        async with file_lock(lease_file):
             # Skip if the lease file already exists and is not expired
             if await path.exists(lease_file):
                 try:
@@ -230,36 +230,6 @@ class LocalDiskBlob(IBlob):
             for dir_name in dir_names:
                 await rmdir(join(root_name, dir_name))
         logger.info('Deleted Local Disk Blob "%s"', self._config.name)
-
-    @asynccontextmanager
-    async def _file_lock(self, file_path: str) -> AsyncGenerator[None, None]:
-        full_path = await path.abspath(file_path)
-        lock_file = f"{full_path}.lock"
-
-        # Create the directory if it doesn't exist
-        await makedirs(dirname(full_path), exist_ok=True)
-
-        # Wait until the lock file is removed
-        while await path.exists(lock_file):  # noqa: ASYNC110
-            await asyncio.sleep(0.1)
-
-        # Create the empty lock file
-        async with open(
-            file=lock_file,
-            mode="wb",
-        ) as _:
-            pass
-
-        try:
-            # Return to the caller
-            yield
-
-        finally:
-            try:
-                # Remove the lock file
-                await remove(lock_file)
-            except FileNotFoundError:
-                pass
 
     async def _lease_path(self, blob: str) -> str:
         working_path = await self._config.working_path()

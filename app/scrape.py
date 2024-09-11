@@ -34,6 +34,7 @@ from app.helpers.persistence import blob_client, queue_client
 from app.helpers.resources import (
     browsers_install_path,
     dir_resources,
+    file_lock,
     hash_url,
     index_queue_name,
     pandoc_install_path,
@@ -1231,17 +1232,19 @@ async def _install_browser(
     # Get location of Playwright driver
     driver_executable, driver_cli = compute_driver_executable()
 
-    # Build the command arguments
-    args = [driver_executable, driver_cli, "install", browser_type.name]
-    if with_deps:
-        args.append("--with-deps")
+    # Ensure only one worker is installing the browser
+    async with file_lock(driver_executable):
+        # Build the command arguments
+        args = [driver_executable, driver_cli, "install", browser_type.name]
+        if with_deps:
+            args.append("--with-deps")
 
-    # Run
-    proc = await asyncio.create_subprocess_shell(
-        cmd=" ".join(args),
-        env=get_driver_env(),
-    )
-    await proc.wait()
+        # Run
+        proc = await asyncio.create_subprocess_shell(
+            cmd=" ".join(args),
+            env=get_driver_env(),
+        )
+        await proc.wait()
 
     # Display error logs if any
     err = proc.stderr
@@ -1291,12 +1294,14 @@ async def _install_pandoc() -> None:
     # Get location of Pandoc driver
     install_path = await pandoc_install_path(version)
 
-    # Download Pandoc if not installed
-    ensure_pandoc_installed(
-        delete_installer=True,
-        targetfolder=install_path,
-        version=version,
-    )
+    # Ensure only one worker is installing Pandoc
+    async with file_lock(install_path):
+        # Download Pandoc if not installed
+        ensure_pandoc_installed(
+            delete_installer=True,
+            targetfolder=install_path,
+            version=version,
+        )
 
     # Add installation path to the environment
     # See: https://github.com/JessicaTegner/pypandoc?tab=readme-ov-file#specifying-the-location-of-pandoc-binaries

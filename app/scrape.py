@@ -925,11 +925,20 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
         # Extract text content
         # TODO: Make it async with a wrapper
         try:
+            # Remove "src" attributes to avoid downloading external resources
+            full_html_minus_resources = full_html
+            for attribute in ("src", "srcset"):
+                full_html_minus_resources = re.sub(
+                    rf"{attribute}=\"[^\"].*?\"",  # Match attribute
+                    f'{attribute}=""',  # Replace with empty string
+                    full_html_minus_resources,
+                )
+
             # Convert HTML to Markdown
             full_markdown = convert_text(
                 format="html",  # Input is HTML
                 sandbox=True,  # Enable sandbox mode, we don't know what we are scraping
-                source=full_html,
+                source=full_html_minus_resources,
                 to="markdown-fenced_divs-native_divs-raw_html-bracketed_spans-native_spans-link_attributes-header_attributes-inline_code_attributes",
                 extra_args=[
                     "--embed-resources=false",

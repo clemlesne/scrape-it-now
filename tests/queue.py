@@ -55,6 +55,8 @@ async def test_acid(provider: QueueProvider) -> None:
                 max_messages=10,
                 visibility_timeout=5,
             ):
+                if i == 0:  # Save first message
+                    received_message = message
                 # Check message content
                 assert message.content == contents[i], "Message content mismatch"
                 i += 1

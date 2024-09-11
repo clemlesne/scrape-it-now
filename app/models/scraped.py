@@ -18,6 +18,7 @@ class ScrapedUrlModel(ScrapedAbstractModel):
     content: str | None = None
     etag: str | None
     links: list[str] = []
+    metas: dict[str, str | None] = {}
     network_used_mb: float = 0.0
     raw: str | None = None
     title: str | None = None

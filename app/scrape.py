@@ -12,6 +12,7 @@ from playwright._impl._driver import compute_driver_executable, get_driver_env
 from playwright.async_api import (
     Browser,
     BrowserType,
+    ElementHandle,
     Error as PlaywrightError,
     Locator,
     Route,
@@ -877,7 +878,13 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
             )
 
         # Get title value, HTML selector, full page content, and all links
-        title, body_selector, full_html, links_selector = await asyncio.gather(
+        (
+            title,
+            body_selector,
+            full_html,
+            links_selector,
+            metas_selector,
+        ) = await asyncio.gather(
             # Page title specified in the metadata
             page.title(),
             # HTML tag element (= body)
@@ -889,6 +896,8 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
                 "link",
                 include_hidden=True,  # Gather links in navigation menus, those are usually hidden
             ).all(),
+            # All meta tags
+            page.query_selector_all("head > meta"),
         )
 
         # Extract body
@@ -990,6 +999,33 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
             ]
         )
 
+        async def _extract_meta(
+            element: ElementHandle,
+        ) -> tuple[str, str | None] | None:
+            """
+            Extract a meta tag from an element.
+
+            Name and content are returned. Other attributes are ignored.
+
+            See: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta#attributes
+            """
+            name, content = await asyncio.gather(
+                element.get_attribute("name"),
+                element.get_attribute("content"),
+            )
+            if not name:
+                return
+            return (name, content or None)
+
+        # Extract meta tags
+        metas: dict[str, str | None] = {
+            tag[0]: tag[1]
+            for tag in await asyncio.gather(
+                *[_extract_meta(meta) for meta in metas_selector]
+            )
+            if tag
+        }
+
         # Save screenshot if requested
         if save_screenshot:
             # Take it
@@ -1013,6 +1049,7 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
             content=full_markdown,
             etag=etag,
             links=list(links),
+            metas=metas,
             network_used_mb=network_used_bytes / 1024 / 1024,
             raw=body_html,
             redirect=redirect,

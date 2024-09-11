@@ -945,6 +945,7 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
                     "--wrap=none",
                 ],
             )
+
             # Filter out icons
             full_markdown = "\n".join(
                 [
@@ -953,12 +954,14 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
                     if "![](data:image/" not in line
                 ]
             )
+
             # Filter out embedded images but keep the alt text
             full_markdown = re.sub(
                 r"!\[(.*)]\(data:image/.*\)",
                 r"![\1]()",
                 full_markdown,
             )
+
             # Clean up by removing double newlines
             full_markdown = re.sub(r"\n\n+", "\n\n", full_markdown)
 
@@ -971,8 +974,12 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
                 valid_until=valid_until,
             )
 
-        # Extract links
         async def _extract_link(selector: Locator) -> str | None:
+            """
+            Extract a link from a selector.
+
+            The link will be formatted as an absolute URL (from a relative URL) and cleaned.
+            """
             try:
                 href = await selector.get_attribute(
                     name="href",

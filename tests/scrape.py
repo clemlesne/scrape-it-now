@@ -426,14 +426,5 @@ def _random_name() -> str:
     )
 
 
-def _random_content() -> str:
-    """
-    Generate a random content with a length of 512 characters.
-
-    All printable ASCII characters are used.
-    """
-    return "".join(random.choice(string.printable) for _ in range(512))
-
-
 async def _dummy_callback(*args, **kwargs):
     pass

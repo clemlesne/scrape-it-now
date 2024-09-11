@@ -36,7 +36,7 @@ class Trie:
     def _pattern_str(self, p_data: dict[str, Any]) -> str | None:
         data = p_data
         if "" in data and len(data.keys()) == 1:
-            return None
+            return
 
         alt = []
         cc = []
@@ -79,5 +79,5 @@ class Trie:
         pattern_str = self._pattern_str(self._dump_dict())
         # Skip if no pattern
         if not pattern_str:
-            return None
+            return
         return re.compile(r"\b" + pattern_str + r"\b", re.IGNORECASE)

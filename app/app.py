@@ -184,6 +184,7 @@ def scrape() -> None:
 @click.option(
     "--job-name",
     "-jn",
+    envvar="JOB_NAME",
     help="Name of the job. If not provided, a random name will be generated. Job name is not tested for uniqueness.",
     type=str,
 )

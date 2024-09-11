@@ -367,8 +367,9 @@ Browser binaries are automatically downloaded or updated at each run. Browser is
 
 ### How Local Disk storage works
 
-Local Disk storage is used for both blob and queue. It is not recommended for production use, as it is not scalable, not fault-tolerant and not parallelizable.
+Local Disk storage is used for both blob and queue. It is not recommended for production use, as it is not easily scalable, and not fault-tolerant. It is useful for testing and development or when you cannot use Azure services.
 
-Local Disk Blob uses a directory structure to store blobs. Each blob is stored in a file with the blob name as the file name. Lease is implemented with lock files. By default, files are stored in a directory relative to the command execution directory.
+Implementation:
 
-Local Disk Queue uses a SQLite database to store messages. Database is stored in the cache directory. SQL databases implement visibility timeout and deletion tokens to ensure consistency to the stateless queue services like Azure Queue Storage.
+- Local Disk Blob uses a directory structure to store blobs. Each blob is stored in a file with the blob name as the file name. Lease is implemented with lock files. By default, files are stored in a directory relative to the command execution directory.
+- Local Disk Queue uses a SQLite database to store messages. Database is stored in the cache directory. SQL databases implement visibility timeout and deletion tokens to ensure consistency to the stateless queue services like Azure Queue Storage.

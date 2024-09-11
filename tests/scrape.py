@@ -322,7 +322,7 @@ async def test_queue_simple(
             deph=test_depth,
             item_id=test_id,
             in_queue=in_queue,
-            max_depth=0,
+            max_depth=1,
             referrer=test_referrer,
             urls={test_url},
             whitelist={},
@@ -338,7 +338,7 @@ async def test_queue_simple(
         ):
             model = ScrapedQueuedModel.model_validate_json(message.content)
             # Check depth
-            assert model.depth == test_depth, "Depth should be the same"
+            assert model.depth == test_depth + 1, "Depth should be the same"
             # Check referrer
             assert model.referrer == test_referrer, "Referer should be the same"
             # Check URL

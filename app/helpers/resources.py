@@ -1,9 +1,14 @@
+import asyncio
 import hashlib
-from os.path import join
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from datetime import UTC, datetime, timedelta
+from os.path import dirname, join
 from pathlib import Path
 
 import click
-from aiofiles.os import makedirs, path
+from aiofiles import open
+from aiofiles.os import makedirs, path, remove
 
 
 def dir_tests(sub: str) -> str:
@@ -94,3 +99,53 @@ async def local_disk_cache_path() -> str:
     Get the path to the local disk persistence.
     """
     return join(await cache_dir(), "local_disk")
+
+
+@asynccontextmanager
+async def file_lock(file_path: str, timeout: int = 60) -> AsyncGenerator[None, None]:  # noqa: ASYNC109
+    """
+    Lock a file for exclusive access.
+
+    File path is built with `.lock` appended to the file path. Timeout is in seconds.
+    """
+    full_path = await path.abspath(file_path)
+    lock_file = f"{full_path}.lock"
+
+    # Create the directory if it doesn't exist
+    await makedirs(dirname(full_path), exist_ok=True)
+
+    # Wait until the lock file is removed
+    while await path.exists(lock_file):
+        # Wait a bit to now overwhelm the CPU
+        await asyncio.sleep(0.1)
+
+        try:
+            # Check if the lock file has been there for too long
+            if (
+                datetime.now(UTC)
+                - datetime.fromtimestamp(await path.getmtime(lock_file), UTC)
+            ) > timedelta(seconds=timeout):
+                # Run anyway, the initial worker may have crashed, and the other workers are waiting but *would* have to wait again because of the lock file timestamp update
+                break
+        except FileNotFoundError:
+            # The lock file was removed, continue
+            break
+
+    # Create the empty lock file
+    async with open(
+        encoding="utf-8",
+        file=lock_file,
+        mode="a",
+    ) as f:
+        await f.write("a")
+
+    try:
+        # Return to the caller
+        yield
+
+    finally:
+        try:
+            # Remove the lock file
+            await remove(lock_file)
+        except FileNotFoundError:
+            pass

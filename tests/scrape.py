@@ -80,7 +80,7 @@ async def test_scrape_page_website(
         mode="r",
     ) as f:
         expected = await f.read()
-        assert page.content == expected.rstrip(), "Markdown content should match"
+        assert page.content == expected.strip(), "Markdown content should match"
 
 
 async def test_scrape_page_links(browser: Browser) -> None:
@@ -166,7 +166,7 @@ async def test_scrape_page_paragraphs(browser: Browser) -> None:
         mode="r",
     ) as f:
         expected = await f.read()
-        assert page.content == expected.rstrip(), "Content should match"
+        assert page.content == expected.strip(), "Content should match"
 
     # Check title
     assert page.title == "Complex paragraph example", "Title should match"

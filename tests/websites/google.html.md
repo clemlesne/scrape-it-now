@@ -6,7 +6,7 @@ Skip to main content[Accessibility help](https://support.google.com/websearch/an
 
 Accessibility feedback
 
-[![Google](./google/googlelogo_light_color_92x30dp.png)](https://www.google.com/webhp?hl=en&sa=X&ved=0ahUKEwjqwcCgg4mIAxVqcKQEHWSHCUYQPAgI "Go to Google Home")
+[![Google]()](https://www.google.com/webhp?hl=en&sa=X&ved=0ahUKEwjqwcCgg4mIAxVqcKQEHWSHCUYQPAgI "Go to Google Home")
 
 Press / to jump to the search box
 
@@ -98,7 +98,7 @@ About 140,000,000 results (0.21 seconds) 
 
 Ctrl+Shift+X to select
 
-![Google](https://fonts.gstatic.com/s/i/productlogos/googleg/v6/24px.svg)
+![Google]()
 
 # Search settings
 
@@ -168,8 +168,6 @@ What color are bananas naturally?
 
 4:28
 
-![](https://fonts.gstatic.com/s/i/productlogos/youtube/v9/192px.svg)
-
 Mashed
 
 YouTube·
@@ -180,7 +178,7 @@ Aug 28, 2021
 
 # The Real Difference Between Red And Yellow Bananas
 
-![](https://www.gstatic.com/images/branding/product/1x/youtube_32dp.png)YouTube·Mashed·Aug 28, 2021
+YouTube·Mashed·Aug 28, 2021
 
 In this video
 
@@ -244,8 +242,6 @@ Healthline
 https://www.healthline.com › nutrition › green-bananas-\...
 
 Search for: [Is it better to eat bananas green or yellow?](/search?sca_esv=d3224e15adc24c7c&q=Is+it+better+to+eat+bananas+green+or+yellow%3F&sa=X&ved=2ahUKEwjqwcCgg4mIAxVqcKQEHWSHCUYQzmd6BAgkEAY)
-
-![](//www.gstatic.com/ui/v1/activityindicator/loading_24.gif)
 
 Feedback
 
@@ -408,21 +404,22 @@ YouTube · Scientific American
 
 1.  [](https://www.youtube.com/watch?v=0WCErY3OYng&t=40)
 
+
     From 00:40
 
     Why do bananas turn brown?
 2.  [](https://www.youtube.com/watch?v=0WCErY3OYng&t=57)
+
 
     From 00:57
 
     Melanin is part of a banana\'s defense system
 3.  [](https://www.youtube.com/watch?v=0WCErY3OYng&t=73)
 
+
     From 01:13
 
     Triggers of Ripening
-
-![](https://fonts.gstatic.com/s/i/productlogos/youtube/v9/192px.svg)
 
 Scientific American
 
@@ -434,7 +431,7 @@ Apr 13, 2018
 
 # Why Do Bananas Change Color?
 
-![](https://www.gstatic.com/images/branding/product/1x/youtube_32dp.png)YouTube·Scientific American·Apr 13, 2018
+YouTube·Scientific American·Apr 13, 2018
 
 In this video
 
@@ -450,8 +447,6 @@ In this video
     01:13
 
     Triggers of Ripening
-
-![](https://i.ytimg.com/vi/0WCErY3OYng/mqdefault.jpg?sqp=-oaymwEFCJQBEFM&rs=AMzJL3npWGNkEMCAQ2mRSduxEreZPZH0Fw)
 
 [\
 ](https://specialtyproduce.com/produce/Yellow_Bananas_919.php)
@@ -484,8 +479,6 @@ https://enchipsu.com › blogs › blogs › why-banana-chi\...
 Mar 15, 2023 --- Banana chips are yellow in color because *they are made from bananas*, which have a naturally yellow color. The carotenoid pigments in the bananas \...
 
 People also ask
-
-![](//www.gstatic.com/ui/v1/activityindicator/loading_24.gif)
 
 Feedback
 
@@ -550,4 +543,3 @@ Updating location...
 [Consumer information](https://support.google.com/websearch?p=fr_consumer_info&hl=en-FR&fg=1)[Report inappropriate content](https://support.google.com/legal/answer/3110420?hl=en-FR&fg=1)
 
 Google apps
-

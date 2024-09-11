@@ -3,22 +3,33 @@ from datetime import UTC, datetime
 from pydantic import BaseModel, Field
 
 
-class ScrapedUrlModel(BaseModel):
+class ScrapedAbstractModel(BaseModel):
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    redirect: str | None = None
+    status: int
+    url: str
+
+
+class ScrapedUrlModel(ScrapedAbstractModel):
     """
-    Scraped result with content and links.
+    Scraped HTML page with content and links.
     """
 
     content: str | None = None
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     etag: str | None
     links: list[str] = []
     network_used_mb: float = 0.0
     raw: str | None = None
-    redirect: str | None = None
-    status: int
     title: str | None = None
-    url: str
     valid_until: datetime | None
+
+
+class ScrapedImageModel(ScrapedAbstractModel):
+    """
+    Scraped image from a page.
+    """
+
+    pass
 
 
 class ScrapedQueuedModel(BaseModel):

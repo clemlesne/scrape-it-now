@@ -24,6 +24,8 @@ Scraper:
 - [x] Load dynamic JavaScript content with [Playwright](https://github.com/microsoft/playwright-python) and [Chromium](https://www.chromium.org/Home)
 - [x] Preserve anonymity with a random user agent, random viewport size and no client hints headers
 - [x] Show progress with a status command
+- [x] Store images collected on the page
+- [x] Store screenshot of the page
 - [x] Track progress of total network usage
 - [ ] Enhance anonymity with proxies
 - [ ] Respect [`robots.txt`](https://en.wikipedia.org/wiki/Robots.txt)
@@ -104,6 +106,8 @@ Most frequent options are:
 | `--job-name`</br>`-jn` | Job name | `JOB_NAME` |
 | `--max-depth`</br>`-md` | Maximum depth | `MAX_DEPTH` |
 | `--queue-provider`</br>`-qp` | Queue provider | `QUEUE_PROVIDER` |
+| `--save-images`</br>`-si` | Save images | `SAVE_IMAGES` |
+| `--save-screenshot`</br>`-ss` | Save screenshot | `SAVE_SCREENSHOT` |
 | `--whitelist`</br>`-w` | Whitelist | `WHITELIST` |
 
 For documentation on all available options, run:

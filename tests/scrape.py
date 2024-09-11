@@ -12,7 +12,7 @@ from playwright.async_api import ViewportSize, async_playwright
 
 from app.helpers.persistence import blob_client, queue_client
 from app.helpers.resources import dir_tests
-from app.models.scraped import ScrapedQueuedModel
+from app.models.scraped import ScrapedImageModel, ScrapedQueuedModel
 from app.persistence.iblob import (
     Provider as BlobProvider,
 )
@@ -75,8 +75,12 @@ async def test_scrape_page_website(
         # Process the item
         page = await _scrape_page(
             browser=browser,
+            image_callback=_dummy_callback,
             previous_etag=None,
             referrer=item.referrer,
+            save_images=False,
+            save_screenshot=False,
+            screenshot_callback=_dummy_callback,
             timezones=[DEFAULT_TIMEZONE],
             url=item.url,
             user_agents=[DEFAULT_USER_AGENT],
@@ -122,8 +126,12 @@ async def test_scrape_page_links() -> None:
         # Process the item
         page = await _scrape_page(
             browser=browser,
+            image_callback=_dummy_callback,
             previous_etag=None,
             referrer=item.referrer,
+            save_images=False,
+            save_screenshot=False,
+            screenshot_callback=_dummy_callback,
             timezones=[DEFAULT_TIMEZONE],
             url=item.url,
             user_agents=[DEFAULT_USER_AGENT],
@@ -177,8 +185,12 @@ async def test_scrape_page_paragraphs() -> None:
         # Process the item
         page = await _scrape_page(
             browser=browser,
+            image_callback=_dummy_callback,
             previous_etag=None,
             referrer=item.referrer,
+            save_images=False,
+            save_screenshot=False,
+            screenshot_callback=_dummy_callback,
             timezones=[DEFAULT_TIMEZONE],
             url=item.url,
             user_agents=[DEFAULT_USER_AGENT],
@@ -199,6 +211,66 @@ async def test_scrape_page_paragraphs() -> None:
 
         # Check title
         assert page.title == "Complex paragraph example", "Title should match"
+
+
+@pytest.mark.asyncio(scope="session")
+async def test_scrape_page_images() -> None:
+    """
+    Test a page with images against the expected images and title.
+    """
+    # Init values
+    item = ScrapedQueuedModel(
+        depth=0,
+        referrer="https://google.com",
+        url=f"{LOCALHOST_URL}/images.html",
+    )
+
+    # Init Playwright context
+    async with async_playwright() as p:
+        browser_type = p.chromium
+
+        # Make sure the browser and pandoc are installed
+        await _install_browser(browser_type)
+        await _install_pandoc()
+
+        # Launch the browser
+        browser = await _get_broswer(browser_type)
+
+        async def _image_callback(
+            body: bytes,
+            content_type: str | None,
+            image: ScrapedImageModel,
+        ) -> None:
+            assert content_type == "image/jpeg", "Content type should match"
+            assert image.url == f"{LOCALHOST_URL}/images/banana.jpg", "URL should match"
+
+            async with open(
+                file=join(dir_tests("websites"), "images", "banana.jpg"),
+                mode="r",
+            ) as f:
+                expected = await f.read()
+                assert body == expected, "Content should match"
+
+        # Process the item
+        page = await _scrape_page(
+            browser=browser,
+            image_callback=_image_callback,
+            previous_etag=None,
+            referrer=item.referrer,
+            save_images=False,
+            save_screenshot=False,
+            screenshot_callback=_dummy_callback,
+            timezones=[DEFAULT_TIMEZONE],
+            url=item.url,
+            user_agents=[DEFAULT_USER_AGENT],
+            viewports=[DEFAULT_VIEWPORT],
+        )
+
+        # Check page is not None
+        assert page is not None, "Page should not be None"
+
+        # Check title
+        assert page.title == "Test images", "Title should match"
 
 
 @pytest.mark.asyncio(scope="session")
@@ -226,8 +298,12 @@ async def test_scrape_page_timeout() -> None:
         start_time = datetime.now(UTC)
         page = await _scrape_page(
             browser=browser,
+            image_callback=_dummy_callback,
             previous_etag=None,
             referrer=item.referrer,
+            save_images=False,
+            save_screenshot=False,
+            screenshot_callback=_dummy_callback,
             timezones=[DEFAULT_TIMEZONE],
             url=item.url,
             user_agents=[DEFAULT_USER_AGENT],
@@ -357,3 +433,7 @@ def _random_content() -> str:
     All printable ASCII characters are used.
     """
     return "".join(random.choice(string.printable) for _ in range(512))
+
+
+async def _dummy_callback(*args, **kwargs):
+    pass

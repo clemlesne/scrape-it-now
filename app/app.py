@@ -188,6 +188,20 @@ def scrape() -> None:
     help="Name of the job. If not provided, a random name will be generated. Job name is not tested for uniqueness.",
     type=str,
 )
+@click.option(
+    "--save-images",
+    "-si",
+    envvar="SAVE_IMAGES",
+    help="Save images from the pages.",
+    is_flag=True,
+)
+@click.option(
+    "--save-screenshot",
+    "-ss",
+    envvar="SAVE_SCREENSHOT",
+    help="Save screenshots of the pages.",
+    is_flag=True,
+)
 @click.argument(
     "url",
     envvar="URL",
@@ -203,6 +217,8 @@ async def scrape_run(  # noqa: PLR0913
     max_depth: int,
     processes: int,
     queue_provider: QueueProvider,
+    save_images: bool,
+    save_screenshot: bool,
     timezone: list[str],
     url: str,
     user_agent: list[str],
@@ -251,6 +267,8 @@ async def scrape_run(  # noqa: PLR0913
         max_depth=max_depth,
         processes=processes,
         queue_provider=queue_provider,
+        save_images=save_images,
+        save_screenshot=save_screenshot,
         timezones=timezone,
         url=url,
         user_agents=user_agent,

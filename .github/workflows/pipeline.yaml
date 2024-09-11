@@ -86,6 +86,7 @@ jobs:
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4.3.6
+        if: always()
         with:
           compression-level: 9
           name: test-results

@@ -50,11 +50,7 @@ class LocalDiskBlob(IBlob):
         self,
         config: BlobConfig,
     ) -> None:
-        logger.info(
-            'Local Disk Blob "%s" is configured at "%s"',
-            config.name,
-            config.working_path,
-        )
+        logger.info('Local Disk Blob "%s" is configured', config.name)
         logger.warning(
             "Local disk Blob is configured, it is not recommended for production. Prefer a redundant / high availability service (not like a computer / VM)."
         )

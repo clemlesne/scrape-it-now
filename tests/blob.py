@@ -25,7 +25,6 @@ from app.persistence.iblob import (
     ],
     ids=lambda x: x.value,
 )
-@pytest.mark.asyncio(scope="session")
 @pytest.mark.repeat(10)  # Catch multi-threading and concurrency issues
 async def test_acid(provider: BlobProvider) -> None:
     # Init values
@@ -105,7 +104,6 @@ async def test_acid(provider: BlobProvider) -> None:
     ],
     ids=lambda x: x.value,
 )
-@pytest.mark.asyncio(scope="session")
 @pytest.mark.repeat(10)  # Catch multi-threading and concurrency issues
 async def test_lease(provider: BlobProvider) -> None:
     # Init values
@@ -245,7 +243,6 @@ async def test_lease(provider: BlobProvider) -> None:
     ],
     ids=lambda x: x.value,
 )
-@pytest.mark.asyncio(scope="session")
 @pytest.mark.repeat(5)  # Catch multi-threading and concurrency issues
 async def test_upload_many(provider: BlobProvider) -> None:
     # Init values

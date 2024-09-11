@@ -18,7 +18,6 @@ from app.persistence.iqueue import MessageNotFoundError, Provider as QueueProvid
     ],
     ids=lambda x: x.value,
 )
-@pytest.mark.asyncio(scope="session")
 @pytest.mark.repeat(10)  # Catch multi-threading and concurrency issues
 async def test_acid(provider: QueueProvider) -> None:
     # Init values
@@ -113,7 +112,6 @@ async def test_acid(provider: QueueProvider) -> None:
     ],
     ids=lambda x: x.value,
 )
-@pytest.mark.asyncio(scope="session")
 @pytest.mark.repeat(10)  # Catch multi-threading and concurrency issues
 async def test_send_many(provider: QueueProvider) -> None:
     # Init values

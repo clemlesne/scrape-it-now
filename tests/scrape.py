@@ -8,7 +8,7 @@ from uuid import uuid4
 import pytest
 from aiofiles import open
 from isodate import UTC
-from playwright.async_api import ViewportSize, async_playwright
+from playwright.async_api import Browser, ViewportSize
 
 from app.helpers.persistence import blob_client, queue_client
 from app.helpers.resources import dir_tests
@@ -17,13 +17,7 @@ from app.persistence.iblob import (
     Provider as BlobProvider,
 )
 from app.persistence.iqueue import Provider as QueueProvider
-from app.scrape import (
-    _get_broswer,
-    _install_browser,
-    _install_pandoc,
-    _queue,
-    _scrape_page,
-)
+from app.scrape import _queue, _scrape_page
 
 DEFAULT_TIMEZONE = "Europe/Moscow"
 DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
@@ -45,9 +39,9 @@ LOCALHOST_URL = "http://localhost:8000"
     ],
     ids=lambda x: x,
 )
-@pytest.mark.asyncio(scope="session")
 async def test_scrape_page_website(
     website: str,
+    browser: Browser,
 ) -> None:
     """
     Test a real website page against the expected Markdown content.
@@ -61,47 +55,35 @@ async def test_scrape_page_website(
         url=f"{LOCALHOST_URL}/{website}",
     )
 
-    # Init Playwright context
-    async with async_playwright() as p:
-        browser_type = p.chromium
+    # Process the item
+    page = await _scrape_page(
+        browser=browser,
+        image_callback=_dummy_callback,
+        previous_etag=None,
+        referrer=item.referrer,
+        save_images=False,
+        save_screenshot=False,
+        screenshot_callback=_dummy_callback,
+        timezones=[DEFAULT_TIMEZONE],
+        url=item.url,
+        user_agents=[DEFAULT_USER_AGENT],
+        viewports=[DEFAULT_VIEWPORT],
+    )
 
-        # Make sure the browser and pandoc are installed
-        await _install_browser(browser_type)
-        await _install_pandoc()
+    # Check page is not None
+    assert page is not None, "Page should not be None"
 
-        # Launch the browser
-        browser = await _get_broswer(browser_type)
-
-        # Process the item
-        page = await _scrape_page(
-            browser=browser,
-            image_callback=_dummy_callback,
-            previous_etag=None,
-            referrer=item.referrer,
-            save_images=False,
-            save_screenshot=False,
-            screenshot_callback=_dummy_callback,
-            timezones=[DEFAULT_TIMEZONE],
-            url=item.url,
-            user_agents=[DEFAULT_USER_AGENT],
-            viewports=[DEFAULT_VIEWPORT],
-        )
-
-        # Check page is not None
-        assert page is not None, "Page should not be None"
-
-        # Check Markdown content
-        async with open(
-            encoding="utf-8",
-            file=join(dir_tests("websites"), f"{website}.md"),
-            mode="r",
-        ) as f:
-            expected = await f.read()
-            assert page.content == expected.rstrip(), "Markdown content should match"
+    # Check Markdown content
+    async with open(
+        encoding="utf-8",
+        file=join(dir_tests("websites"), f"{website}.md"),
+        mode="r",
+    ) as f:
+        expected = await f.read()
+        assert page.content == expected.rstrip(), "Markdown content should match"
 
 
-@pytest.mark.asyncio(scope="session")
-async def test_scrape_page_links() -> None:
+async def test_scrape_page_links(browser: Browser) -> None:
     """
     Test a page with links against the expected links and title.
     """
@@ -112,55 +94,43 @@ async def test_scrape_page_links() -> None:
         url=f"{LOCALHOST_URL}/links.html",
     )
 
-    # Init Playwright context
-    async with async_playwright() as p:
-        browser_type = p.chromium
+    # Process the item
+    page = await _scrape_page(
+        browser=browser,
+        image_callback=_dummy_callback,
+        previous_etag=None,
+        referrer=item.referrer,
+        save_images=False,
+        save_screenshot=False,
+        screenshot_callback=_dummy_callback,
+        timezones=[DEFAULT_TIMEZONE],
+        url=item.url,
+        user_agents=[DEFAULT_USER_AGENT],
+        viewports=[DEFAULT_VIEWPORT],
+    )
 
-        # Make sure the browser and pandoc are installed
-        await _install_browser(browser_type)
-        await _install_pandoc()
+    # Check page is not None
+    assert page is not None, "Page should not be None"
 
-        # Launch the browser
-        browser = await _get_broswer(browser_type)
+    # Check links
+    assert set(page.links) == {
+        # Link 1
+        f"{LOCALHOST_URL}/link_1",
+        # Link 2
+        LOCALHOST_URL,
+        # Link 3
+        f"{LOCALHOST_URL}/abc",
+        # Link 4
+        "http://link_4/../abc",
+        # Link 5
+        f"{item.url}/link_5",
+    }, "Links should match"
 
-        # Process the item
-        page = await _scrape_page(
-            browser=browser,
-            image_callback=_dummy_callback,
-            previous_etag=None,
-            referrer=item.referrer,
-            save_images=False,
-            save_screenshot=False,
-            screenshot_callback=_dummy_callback,
-            timezones=[DEFAULT_TIMEZONE],
-            url=item.url,
-            user_agents=[DEFAULT_USER_AGENT],
-            viewports=[DEFAULT_VIEWPORT],
-        )
-
-        # Check page is not None
-        assert page is not None, "Page should not be None"
-
-        # Check links
-        assert set(page.links) == {
-            # Link 1
-            f"{LOCALHOST_URL}/link_1",
-            # Link 2
-            LOCALHOST_URL,
-            # Link 3
-            f"{LOCALHOST_URL}/abc",
-            # Link 4
-            "http://link_4/../abc",
-            # Link 5
-            f"{item.url}/link_5",
-        }, "Links should match"
-
-        # Check title
-        assert page.title == "Test links", "Title should match"
+    # Check title
+    assert page.title == "Test links", "Title should match"
 
 
-@pytest.mark.asyncio(scope="session")
-async def test_scrape_page_paragraphs() -> None:
+async def test_scrape_page_paragraphs(browser: Browser) -> None:
     """
     Test a page with paragraphs against the expected paragraphs and title.
     """
@@ -171,50 +141,38 @@ async def test_scrape_page_paragraphs() -> None:
         url=f"{LOCALHOST_URL}/paragraphs.html",
     )
 
-    # Init Playwright context
-    async with async_playwright() as p:
-        browser_type = p.chromium
+    # Process the item
+    page = await _scrape_page(
+        browser=browser,
+        image_callback=_dummy_callback,
+        previous_etag=None,
+        referrer=item.referrer,
+        save_images=False,
+        save_screenshot=False,
+        screenshot_callback=_dummy_callback,
+        timezones=[DEFAULT_TIMEZONE],
+        url=item.url,
+        user_agents=[DEFAULT_USER_AGENT],
+        viewports=[DEFAULT_VIEWPORT],
+    )
 
-        # Make sure the browser and pandoc are installed
-        await _install_browser(browser_type)
-        await _install_pandoc()
+    # Check page is not None
+    assert page is not None, "Page should not be None"
 
-        # Launch the browser
-        browser = await _get_broswer(browser_type)
+    # Check content
+    async with open(
+        encoding="utf-8",
+        file=join(dir_tests("websites"), "paragraphs.html.md"),
+        mode="r",
+    ) as f:
+        expected = await f.read()
+        assert page.content == expected.rstrip(), "Content should match"
 
-        # Process the item
-        page = await _scrape_page(
-            browser=browser,
-            image_callback=_dummy_callback,
-            previous_etag=None,
-            referrer=item.referrer,
-            save_images=False,
-            save_screenshot=False,
-            screenshot_callback=_dummy_callback,
-            timezones=[DEFAULT_TIMEZONE],
-            url=item.url,
-            user_agents=[DEFAULT_USER_AGENT],
-            viewports=[DEFAULT_VIEWPORT],
-        )
-
-        # Check page is not None
-        assert page is not None, "Page should not be None"
-
-        # Check content
-        async with open(
-            encoding="utf-8",
-            file=join(dir_tests("websites"), "paragraphs.html.md"),
-            mode="r",
-        ) as f:
-            expected = await f.read()
-            assert page.content == expected.rstrip(), "Content should match"
-
-        # Check title
-        assert page.title == "Complex paragraph example", "Title should match"
+    # Check title
+    assert page.title == "Complex paragraph example", "Title should match"
 
 
-@pytest.mark.asyncio(scope="session")
-async def test_scrape_page_images() -> None:
+async def test_scrape_page_images(browser: Browser) -> None:
     """
     Test a page with images against the expected images and title.
     """
@@ -225,56 +183,44 @@ async def test_scrape_page_images() -> None:
         url=f"{LOCALHOST_URL}/images.html",
     )
 
-    # Init Playwright context
-    async with async_playwright() as p:
-        browser_type = p.chromium
+    async def _image_callback(
+        body: bytes,
+        content_type: str | None,
+        image: ScrapedImageModel,
+    ) -> None:
+        assert content_type == "image/jpeg", "Content type should match"
+        assert image.url == f"{LOCALHOST_URL}/images/banana.jpg", "URL should match"
 
-        # Make sure the browser and pandoc are installed
-        await _install_browser(browser_type)
-        await _install_pandoc()
+        async with open(
+            file=join(dir_tests("websites"), "images", "banana.jpg"),
+            mode="r",
+        ) as f:
+            expected = await f.read()
+            assert body == expected, "Content should match"
 
-        # Launch the browser
-        browser = await _get_broswer(browser_type)
+    # Process the item
+    page = await _scrape_page(
+        browser=browser,
+        image_callback=_image_callback,
+        previous_etag=None,
+        referrer=item.referrer,
+        save_images=False,
+        save_screenshot=False,
+        screenshot_callback=_dummy_callback,
+        timezones=[DEFAULT_TIMEZONE],
+        url=item.url,
+        user_agents=[DEFAULT_USER_AGENT],
+        viewports=[DEFAULT_VIEWPORT],
+    )
 
-        async def _image_callback(
-            body: bytes,
-            content_type: str | None,
-            image: ScrapedImageModel,
-        ) -> None:
-            assert content_type == "image/jpeg", "Content type should match"
-            assert image.url == f"{LOCALHOST_URL}/images/banana.jpg", "URL should match"
+    # Check page is not None
+    assert page is not None, "Page should not be None"
 
-            async with open(
-                file=join(dir_tests("websites"), "images", "banana.jpg"),
-                mode="r",
-            ) as f:
-                expected = await f.read()
-                assert body == expected, "Content should match"
-
-        # Process the item
-        page = await _scrape_page(
-            browser=browser,
-            image_callback=_image_callback,
-            previous_etag=None,
-            referrer=item.referrer,
-            save_images=False,
-            save_screenshot=False,
-            screenshot_callback=_dummy_callback,
-            timezones=[DEFAULT_TIMEZONE],
-            url=item.url,
-            user_agents=[DEFAULT_USER_AGENT],
-            viewports=[DEFAULT_VIEWPORT],
-        )
-
-        # Check page is not None
-        assert page is not None, "Page should not be None"
-
-        # Check title
-        assert page.title == "Test images", "Title should match"
+    # Check title
+    assert page.title == "Test images", "Title should match"
 
 
-@pytest.mark.asyncio(scope="session")
-async def test_scrape_page_timeout() -> None:
+async def test_scrape_page_timeout(browser: Browser) -> None:
     """
     Test a page with a timeout against the expected timeout.
     """
@@ -283,54 +229,43 @@ async def test_scrape_page_timeout() -> None:
         depth=0, referrer="https://google.com", url="http://localhost:1234"
     )
 
-    # Init Playwright context
-    async with async_playwright() as p:
-        browser_type = p.chromium
+    # Process the item
+    start_time = datetime.now(UTC)
+    page = await _scrape_page(
+        browser=browser,
+        image_callback=_dummy_callback,
+        previous_etag=None,
+        referrer=item.referrer,
+        save_images=False,
+        save_screenshot=False,
+        screenshot_callback=_dummy_callback,
+        timezones=[DEFAULT_TIMEZONE],
+        url=item.url,
+        user_agents=[DEFAULT_USER_AGENT],
+        viewports=[DEFAULT_VIEWPORT],
+    )
+    end_time = datetime.now(UTC)
+    took_time = end_time - start_time
 
-        # Make sure the browser and pandoc are installed
-        await _install_browser(browser_type)
-        await _install_pandoc()
+    # Check timeout duration
+    assert took_time > timedelta(seconds=29) and took_time < timedelta(
+        seconds=35
+    ), "Timeout should be around 30 secs"
 
-        # Launch the browser
-        browser = await _get_broswer(browser_type)
+    # Check page is not None
+    assert page is not None, "Page should not be None"
 
-        # Process the item
-        start_time = datetime.now(UTC)
-        page = await _scrape_page(
-            browser=browser,
-            image_callback=_dummy_callback,
-            previous_etag=None,
-            referrer=item.referrer,
-            save_images=False,
-            save_screenshot=False,
-            screenshot_callback=_dummy_callback,
-            timezones=[DEFAULT_TIMEZONE],
-            url=item.url,
-            user_agents=[DEFAULT_USER_AGENT],
-            viewports=[DEFAULT_VIEWPORT],
-        )
-        end_time = datetime.now(UTC)
-        took_time = end_time - start_time
+    # Check status
+    assert page.status == -1, "Status should be -1"
 
-        # Check timeout duration
-        assert took_time > timedelta(seconds=29) and took_time < timedelta(
-            seconds=35
-        ), "Timeout should be around 30 secs"
+    # Check HTML
+    assert not page.raw, "HTML should be empty"
 
-        # Check page is not None
-        assert page is not None, "Page should not be None"
+    # Check content
+    assert not page.content, "Content should be empty"
 
-        # Check status
-        assert page.status == -1, "Status should be -1"
-
-        # Check HTML
-        assert not page.raw, "HTML should be empty"
-
-        # Check content
-        assert not page.content, "Content should be empty"
-
-        # Check title
-        assert not page.title, "Title should be empty"
+    # Check title
+    assert not page.title, "Title should be empty"
 
 
 @pytest.mark.parametrize(
@@ -349,7 +284,6 @@ async def test_scrape_page_timeout() -> None:
     ],
     ids=lambda x: x.value,
 )
-@pytest.mark.asyncio(scope="session")
 async def test_queue_simple(
     blob_provider: BlobProvider,
     queue_provider: QueueProvider,

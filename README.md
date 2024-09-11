@@ -293,6 +293,50 @@ graph LR
   cli -- 5. Push to search --> search
 ```
 
+## Design
+
+Blob storage is organized in folders:
+
+```txt
+[job_name]-scraping/            # Job name (either defined by the user or generated)
+    scraped/                    # All the data from the pages
+        [page_id]/              # Assets from a page
+            screenshot.jpeg     # Screenshot (if enabled)
+            [image_id].[ext]    # Image binary (if enabled)
+            [image_id].json     # Image metadata (if enabled)
+        [page_id].json          # Data from a page
+    state/                      # Job states (cache & parallelization)
+        [page_id]               # Page state
+    job.json                    # Job state (aggregated stats)
+```
+
+Page data is considered as an API (won't break until the next major version) and is stored in JSON format:
+
+```json
+{
+  "created_at": "2024-09-11T14:06:43.566187Z",
+  "redirect": "https://www.nytimes.com/interactive/2024/podcasts/serial-season-four-guantanamo.html",
+  "status": 200,
+  "url": "https://www.nytimes.com/interactive/2024/podcasts/serial-season-four-guantanamo.html",
+  "content": "## Listen to the trailer for Serial Season 4...",
+  "etag": null,
+  "links": [
+    "https://podcasts.apple.com/us/podcast/serial/id917918570",
+    "https://music.amazon.com/podcasts/d1022069-8863-42f3-823e-857fd8a7b616/serial?ref=dm_sh_OVBHkKYvW1poSzCOsBqHFXuLc",
+    ...
+  ],
+  "metas": {
+    "description": "“Serial” returns with a history of Guantánamo told by people who lived through key moments in Guantánamo’s evolution, who know things the rest of us don’t about what it’s like to be caught inside an improvised justice system.",
+    "articleid": "100000009373583",
+    "twitter:site": "@nytimes",
+    ...
+  },
+  "network_used_mb": 1.041460037231445,
+  "raw": "<head>...</head><body>...</body>",
+  "valid_until": "2024-09-11T14:11:37.790570Z"
+}
+```
+
 ## Advanced usage
 
 ### Source environment variables

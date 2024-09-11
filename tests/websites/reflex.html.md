@@ -1,4 +1,4 @@
--   [![Reflex Logo](/logos/light/reflex.svg)](/)
+-   [![Reflex Logo]()](/)
 
 -   [Docs](/docs/getting-started/introduction/)
 

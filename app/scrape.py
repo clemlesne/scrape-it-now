@@ -1266,12 +1266,8 @@ async def _get_broswer(
     """
     Launch a browser instance.
     """
-    # Using the application path not the default one from the SDK
-    playwright_path = await browsers_install_path()
-
     # Launch the browser
     browser = await browser_type.launch(
-        downloads_path=playwright_path,
         chromium_sandbox=True,  # Enable the sandbox for security, we don't know what we are scraping
         # See: https://github.com/microsoft/playwright/blob/99a36310570617222290c09b96a2026beb8b00f9/packages/playwright-core/src/server/chromium/chromium.ts
         args=[

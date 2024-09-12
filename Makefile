@@ -85,7 +85,7 @@ test-static-server:
 
 test-unit-run:
 	@echo "➡️ Unit tests (Pytest)..."
-	pytest \
+	python3 -m pytest \
 		--asyncio-mode=auto \
 		--junit-xml=test-reports/$(version_full).xml \
 		--maxprocesses=4 \

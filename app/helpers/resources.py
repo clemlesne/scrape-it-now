@@ -69,6 +69,8 @@ async def cache_dir() -> str:
     """
     Get the path to the cache directory.
 
+    If the directory does not exist, it will be created.
+
     See: https://click.palletsprojects.com/en/8.1.x/api/#click.get_app_dir
     """
     # Resolve
@@ -107,7 +109,7 @@ async def file_lock(file_path: str, timeout: int = 60) -> AsyncGenerator[None, N
     """
     Lock a file for exclusive access.
 
-    File path is built with `.lock` appended to the file path. Timeout is in seconds.
+    File path is built with `.lock` appended to the file path. Timeout is in seconds. If the folder does not exist, it will be created.
     """
     full_path = await path.abspath(file_path)
     lock_file = f"{full_path}.lock"

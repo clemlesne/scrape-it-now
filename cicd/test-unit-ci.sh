@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Start the first command in the background
-make test-static-server &
+make test-static-server 1>/dev/null 2>&1 &
 
 # Capture the PID of the background process
 UNIT_RUN_PID=$!

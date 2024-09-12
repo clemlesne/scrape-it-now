@@ -56,6 +56,8 @@ strip-extras = true
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 junit_suite_name = "scrape-it-now"
+log_file = "test-reports/last-logs.txt"
+log_file_level = "INFO"
 
 [tool.deptry]
 ignore_notebooks = true

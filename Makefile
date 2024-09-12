@@ -88,7 +88,7 @@ test-unit-run:
 	python3 -m pytest \
 		--junit-xml=test-reports/$(version_full).xml \
 		--maxprocesses=4 \
-		-n logical \
+		-n=logical \
 		tests/*.py
 
 dev:

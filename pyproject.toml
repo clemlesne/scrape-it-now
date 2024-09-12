@@ -53,6 +53,10 @@ py-modules = [
 generate-hashes = true
 strip-extras = true
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+junit_suite_name = "scrape-it-now"
+
 [tool.deptry]
 ignore_notebooks = true
 pep621_dev_dependency_groups = ["dev"]

@@ -1118,10 +1118,13 @@ async def run(  # noqa: PLR0913
     browser_name = "chromium"
     async with async_playwright() as p:
         browser_type = getattr(p, browser_name)
-        await _install_browser(browser_type)
 
-    # Install Pandoc
-    await _install_pandoc()
+        await asyncio.gather(
+            # Install Playwright
+            _install_browser(browser_type),
+            # Install Pandoc
+            _install_pandoc(),
+        )
 
     # Parse cache_refresh
     cache_refresh_parsed = timedelta(hours=cache_refresh)

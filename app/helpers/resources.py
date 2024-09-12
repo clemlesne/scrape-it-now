@@ -71,10 +71,11 @@ async def cache_dir() -> str:
 
     See: https://click.palletsprojects.com/en/8.1.x/api/#click.get_app_dir
     """
+    # Resolve
     res = await path.abspath(click.get_app_dir("scrape-it-now"))
     # Create if not exists
-    if not await path.exists(res):
-        await makedirs(res)
+    await makedirs(res, exist_ok=True)
+    # Return
     return res
 
 

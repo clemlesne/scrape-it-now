@@ -812,7 +812,7 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
             res = await page.goto(
                 url_clean.geturl(),
                 referer=referrer,
-                timeout=30000,  # 30 seconds
+                timeout=60000,  # 1 min
             )
         except TimeoutError:  # TODO: Retry maybe a few times for timeout errors?
             return _generic_error(
@@ -1042,7 +1042,7 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
                 full_page=True,  # Store the full page
                 quality=70,  # Quality is not a concern, let's keep it cheap to store
                 scale="css",  # Keep the same zoom level for all screenshots across random viewports
-                timeout=30000,  # 30 seconds
+                timeout=60000,  # 1 min
                 type="jpeg",  # JPEG is good enough for screenshots
             )
             # Callback to save the screenshot

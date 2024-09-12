@@ -248,9 +248,9 @@ async def test_scrape_page_timeout(browser: Browser) -> None:
     took_time = end_time - start_time
 
     # Check timeout duration
-    assert took_time > timedelta(seconds=29) and took_time < timedelta(
-        seconds=35
-    ), "Timeout should be around 30 secs"
+    assert took_time > timedelta(seconds=59) and took_time < timedelta(
+        seconds=65
+    ), "Timeout should be around 1 min"
 
     # Check page is not None
     assert page is not None, "Page should not be None"

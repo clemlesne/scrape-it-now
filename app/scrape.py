@@ -1013,14 +1013,18 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
             """
             Extract a meta tag from an element.
 
-            Name and content are returned. Other attributes are ignored.
+            Name and content are returned. Other attributes are ignored. If the browser fails to extract the attributes, None is returned.
 
             See: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta#attributes
             """
-            name, content = await asyncio.gather(
-                element.get_attribute("name"),
-                element.get_attribute("content"),
-            )
+            try:
+                name, content = await asyncio.gather(
+                    element.get_attribute("name"),
+                    element.get_attribute("content"),
+                )
+            except TimeoutError:
+                logger.debug("Timeout for selecting meta tag attributes", exc_info=True)
+                return
             if not name:
                 return
             return (name, content or None)

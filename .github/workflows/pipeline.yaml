@@ -66,14 +66,14 @@ jobs:
       - name: Cache pytest
         uses: actions/cache@v4.0.2
         with:
-          path: .pytest_cache
           key: pytest-${{ github.head_ref || github.ref_name }}-${{ hashFiles('requirements-dev.txt') }}
+          path: .pytest_cache
 
       - name: Cache Ruff
         uses: actions/cache@v4.0.2
         with:
-          path: .ruff_cache
           key: ruff-${{ github.head_ref || github.ref_name }}-${{ hashFiles('requirements-dev.txt') }}
+          path: .ruff_cache
 
       - name: Set up dependencies
         run: make install-deps

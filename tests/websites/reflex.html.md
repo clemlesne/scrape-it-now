@@ -1,23 +1,3 @@
--   [![Reflex Logo]()](/)
-
--   [Docs](/docs/getting-started/introduction/)
-
--   [Showcase](/docs/gallery/)
-
--   [Blog](/blog/)
-
--   Resources
-
--   [Components](/docs/library/)
-
--   [Hosting](/docs/hosting/deploy-quick-start/)
-
--   [](https://github.com/reflex-dev/reflex)
-
-    18.4K
-
--   [](https://discord.gg/T5WSbC2YtQ)
-
 -   [](/docs/getting-started/introduction/)
 
     ### Learn

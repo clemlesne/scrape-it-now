@@ -30,8 +30,6 @@ LOCALHOST_URL = "http://localhost:8000"
     [
         # 150+ links
         "azuresdkdocs.html",
-        # Common website (no kidding)
-        "google.html",
         # React website
         "reflex.html",
         # Simple website

@@ -9,7 +9,7 @@ from platform import python_version
 
 import click
 
-from app.helpers.logging import logger
+from app.helpers.logging import enable_debug_logging, logger
 from app.helpers.monitoring import VERSION
 from app.index import run as index_backend_run
 from app.persistence.iblob import Provider as BlobProvider
@@ -27,6 +27,22 @@ def run_in_async(func):
     return wrapper
 
 
+def common_params(func):
+    @click.option(
+        "--debug",
+        envvar="DEBUG",
+        help="Enable debug logging.",
+        is_flag=True,
+    )
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        if kwargs.pop("debug") is True:
+            enable_debug_logging()
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
 @click.group
 def cli() -> None:
     """
@@ -38,6 +54,7 @@ def cli() -> None:
 
 
 @cli.command
+@common_params
 def version() -> None:
     """
     Print the version.
@@ -207,6 +224,7 @@ def scrape() -> None:
     envvar="URL",
 )
 @scrape.command("run")
+@common_params
 @run_in_async
 async def scrape_run(  # noqa: PLR0913
     azure_storage_connection_string: str | None,
@@ -307,6 +325,7 @@ async def scrape_run(  # noqa: PLR0913
     envvar="JOB_NAME",
 )
 @scrape.command("status")
+@common_params
 @run_in_async
 async def scrape_status(
     azure_storage_connection_string: str | None,
@@ -461,6 +480,7 @@ def index() -> None:
     envvar="JOB_NAME",
 )
 @index.command("run")
+@common_params
 @run_in_async
 async def index_run(  # noqa: PLR0913
     azure_openai_api_key: str,

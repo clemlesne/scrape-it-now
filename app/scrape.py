@@ -111,16 +111,19 @@ async def _queue(  # noqa: PLR0913
 
         # If there is a whitelist, check if the URL is allowed
         if len(whitelist) > 0:
-            # Skip if the URL is not in the whitelist
             domain_paths = next(
+                # Match a domain
                 (
-                    paths
+                    paths or []
                     for domain, paths in whitelist.items()
                     if re.search(domain, new_url.netloc)
                 ),
+                # No domain matched
                 None,
             )
-            if not domain_paths:
+
+            # Skip if the URL is not in the whitelist
+            if domain_paths is None:
                 logger.debug("Skipping %s, domain not in whitelist", url)
                 return False
 

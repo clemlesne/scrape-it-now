@@ -121,10 +121,12 @@ async def _queue(  # noqa: PLR0913
                 None,
             )
             if not domain_paths:
+                logger.debug("Skipping %s, domain not in whitelist", url)
                 return False
 
             # Skip if the URL has an ignored path
             if any(re.search(path, new_url.path) for path in domain_paths):
+                logger.debug("Skipping %s, path is ignored", url)
                 return False
 
         # Test previous attempts
@@ -137,7 +139,7 @@ async def _queue(  # noqa: PLR0913
             # Date is now and not the one from the model, on purposes. Otherwise, if its a cached model, the date would match the frefresher date every time.
             if previous.created_at >= datetime.now(UTC) - cache_refresh:
                 logger.debug(
-                    "Skipping %s due to recent attempt at %s", url, previous.created_at
+                    "Skipping %s, recent attempt at %s", url, previous.created_at
                 )
                 return False
 

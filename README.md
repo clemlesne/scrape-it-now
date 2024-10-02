@@ -339,6 +339,28 @@ Page data is considered as an API (won't break until the next major version) and
 
 ## Advanced usage
 
+### Whitelist
+
+Whitelist option allows to restrict to a domain and ignore sub paths. It is a list of regular expressions:
+
+```txt
+domain1,regexp1,regexp2 domain2,regexp3
+```
+
+For examples:
+
+To whitelist `learn.microsoft.com`:
+
+```txt
+learn\.microsoft\.com
+```
+
+To whitelist `learn.microsoft.com` and `go.microsoft.com`, but ignore all sub paths except `/en-us`:
+
+```txt
+learn\.microsoft\.com,^/(?!en-us).* go\.microsoft\.com
+```
+
 ### Source environment variables
 
 To configure easily the CLI, source environment variables from a `.env` file. For example, for the `--azure-storage-connection-string` option:
@@ -350,7 +372,7 @@ AZURE_STORAGE_CONNECTION_STRING=xxx
 For arguments that accept multiple values, use a space-separated list. For example, for the `--whitelist` option:
 
 ```bash
-WHITELIST=learn\.microsoft\.com,^/(?!en-us).*,^/[^/]+/answers/,^/[^/]+/previous-versions/ go\.microsoft\.com,.*
+WHITELIST=learn\.microsoft\.com go\.microsoft\.com
 ```
 
 ### Application cache directory

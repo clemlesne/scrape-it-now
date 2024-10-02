@@ -106,15 +106,16 @@ jobs:
       matrix:
         # TODO: Build for musl (Alpine Linux)
         os:
-          # Last 2 versions of macOS
+          # All versions of macOS supported by GitHub Actions
           - macos-12
           - macos-13
           - macos-14
-          # Last 2 versions of Ubuntu
+          - macos-15
+          # All versions of Ubuntu supported by GitHub Actions
           - ubuntu-20.04
           - ubuntu-22.04
           - ubuntu-24.04
-          # Last 2 versions of Windows
+          # All versions of Windows supported by GitHub Actions
           - windows-2019
           - windows-2022
     steps:

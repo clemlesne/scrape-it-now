@@ -3,6 +3,7 @@ from typing import Any
 from azure.core.credentials import AzureKeyCredential
 from azure.core.exceptions import (
     HttpResponseError,
+    ResourceExistsError,
     ResourceNotFoundError,
     ServiceRequestError,
 )
@@ -160,6 +161,8 @@ class AzureSearch(ISearch):
                     )
                 )
                 logger.info('Created Search "%s"', self._config.index)
+            except ResourceExistsError:
+                pass
             except HttpResponseError as e:
                 if not e.error or not e.error.code == "ResourceNameAlreadyInUse":
                     raise e

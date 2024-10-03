@@ -10,32 +10,31 @@ Web scraper made for AI and simplicity in mind. It runs as a CLI that can be par
 
 Shared:
 
-- [x] 🏗️ Decoupled architecture with [Azure Queue Storage](https://learn.microsoft.com/en-us/azure/storage/queues) or local [sqlite](https://sqlite.org)
-- [x] 🔧 Executable as a CLI with a [standalone binary](http://github.com/clemlesne/scrape-it-now/releases/latest)
-- [x] ⚙️ Idempotent operations that can be run in parallel
-- [x] 💾 Scraped content is stored in [Azure Blob Storage](https://learn.microsoft.com/en-us/azure/storage/blobs) or local disk
+- 🏗️ Decoupled architecture with [Azure Queue Storage](https://learn.microsoft.com/en-us/azure/storage/queues) or local [sqlite](https://sqlite.org)
+- 🔧 Executable as a CLI with a [standalone binary](http://github.com/clemlesne/scrape-it-now/releases/latest)
+- ⚙️ Idempotent operations that can be run in parallel
+- 💾 Scraped content is stored in [Azure Blob Storage](https://learn.microsoft.com/en-us/azure/storage/blobs) or local disk
 
 Scraper:
 
-- [x] 🛑 Avoid re-scraping a page if it hasn't changed
-- [x] 🚫 Block ads to lower network costs with [The Block List Project](https://github.com/blocklistproject/Lists)
-- [x] 🔗 Explore pages in depth by detecting links and de-duplicating them
-- [x] ✍️ Extract markdown content from a page with [Pandoc](https://github.com/jgm/pandoc)
-- [x] 🏷️ Extract [metadata elements](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta) from the page
-- [x] 🖥️ Load dynamic JavaScript content with [Playwright](https://github.com/microsoft/playwright-python) and [Chromium](https://www.chromium.org/Home)
-- [x] 🕵️‍♂️ Preserve anonymity with a random user agent, random viewport size, and no client hints headers
-- [x] 📊 Show progress with a status command
-- [x] 🖼️ Store images collected on the page
-- [x] 📸 Store screenshot of the page
-- [x] 📡 Track progress of total network usage
-- [ ] 🤖 Respect [`robots.txt`](https://en.wikipedia.org/wiki/Robots.txt)
+- 🛑 Avoid re-scraping a page if it hasn't changed
+- 🚫 Block ads to lower network costs with [The Block List Project](https://github.com/blocklistproject/Lists)
+- 🔗 Explore pages in depth by detecting links and de-duplicating them
+- ✍️ Extract markdown content from a page with [Pandoc](https://github.com/jgm/pandoc)
+- 🏷️ Extract [metadata elements](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta) from the page
+- 🖥️ Load dynamic JavaScript content with [Playwright](https://github.com/microsoft/playwright-python) and [Chromium](https://www.chromium.org/Home)
+- 🕵️‍♂️ Preserve anonymity with a random user agent, random viewport size, and no client hints headers
+- 📊 Show progress with a status command
+- 🖼️ Store images collected on the page
+- 📸 Store screenshot of the page
+- 📡 Track progress of total network usage
 
 Indexer:
 
-- [x] 🧠 AI Search index is created automatically
-- [x] ✂️ Chunk markdown while keeping the content coherent
-- [x] 📈 Embed chunks with OpenAI embeddings
-- [x] 🔍 Indexed content is semantically searchable with [Azure AI Search](https://learn.microsoft.com/en-us/azure/search)
+- 🧠 AI Search index is created automatically
+- ✂️ Chunk markdown while keeping the content coherent
+- 📈 Embed chunks with OpenAI embeddings
+- 🔍 Indexed content is semantically searchable with [Azure AI Search](https://learn.microsoft.com/en-us/azure/search)
 
 ## Installation
 

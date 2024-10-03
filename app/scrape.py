@@ -515,108 +515,99 @@ async def _worker(  # noqa: PLR0913
             provider=queue_provider,
             queue=index_queue_name(job),
         ) as out_queue,
+        async_playwright() as p,
     ):
-        # Init Playwright context
-        async with async_playwright() as p:
-            browser_type: BrowserType = getattr(p, browser_name)
-            browser_usage = 0
-            browser: Browser | None = None
+        browser_type: BrowserType = getattr(p, browser_name)
+        browser_usage = 0
+        browser: Browser | None = None
 
-            # Process the queue
-            while messages := in_queue.receive_messages(
-                max_messages=32,
-                visibility_timeout=32 * 5,  # 5 secs per message
-            ):
-                total_network_used_mb = 0.0
-                total_processed = 0
-                total_queued = 0
+        # Process the queue
+        while messages := in_queue.receive_messages(
+            max_messages=32,
+            visibility_timeout=32 * 5,  # 5 secs per message
+        ):
+            total_network_used_mb = 0.0
+            total_processed = 0
+            total_queued = 0
 
-                # Iterate over the messages
-                logger.debug("Processing new messages")
-                async for message in messages:
-                    # Parse the message
-                    current_item = ScrapedQueuedModel.model_validate_json(
-                        message.content
-                    )
+            # Iterate over the messages
+            logger.debug("Processing new messages")
+            async for message in messages:
+                # Parse the message
+                current_item = ScrapedQueuedModel.model_validate_json(message.content)
+                logger.info(
+                    'Processing "%s" (%i)',
+                    current_item.url,
+                    current_item.depth,
+                )
+
+                # Get a browser instance
+                # Limit the usage of the browser to 100 scrapings, to avoid memory leaks. Restart the browser after that. Memory leaks have been observed in both macOS and Ubuntu, with over 150 GB of memory used after an hour.
+                # TODO: Create an issue in the Playwright repository to investigate the memory leak
+                if not browser:  # First start
+                    browser = await _get_broswer(browser_type)
+                    logger.debug("Started browser %s", browser_type.name)
+                elif browser_usage < 100:  # noqa: PLR2004
+                    browser_usage += 1
+                else:  # Restart
+                    await browser.close()
+                    browser = await _get_broswer(browser_type)
                     logger.info(
-                        'Processing "%s" (%i)',
-                        current_item.url,
-                        current_item.depth,
+                        "Restarted browser %s after %i iterations",
+                        browser_type.name,
+                        browser_usage,
                     )
+                    browser_usage = 0
 
-                    # Get a browser instance
-                    # Limit the usage of the browser to 100 scrapings, to avoid memory leaks. Restart the browser after that. Memory leaks have been observed in both macOS and Ubuntu, with over 150 GB of memory used after an hour.
-                    # TODO: Create an issue in the Playwright repository to investigate the memory leak
-                    if not browser:  # First start
-                        browser = await _get_broswer(browser_type)
-                        logger.debug("Started browser %s", browser_type.name)
-                    elif browser_usage < 100:  # noqa: PLR2004
-                        browser_usage += 1
-                    else:  # Restart
-                        await browser.close()
-                        browser = await _get_broswer(browser_type)
-                        logger.info(
-                            "Restarted browser %s after %i iterations",
-                            browser_type.name,
-                            browser_usage,
-                        )
-                        browser_usage = 0
+                try:
+                    processed, queued, network_used_mb = await _process_one(
+                        blob=blob,
+                        browser=browser,
+                        cache_refresh=cache_refresh,
+                        current_item=current_item,
+                        in_queue=in_queue,
+                        max_depth=max_depth,
+                        out_queue=out_queue,
+                        save_images=save_images,
+                        save_screenshot=save_screenshot,
+                        timezones=timezones,
+                        user_agents=user_agents,
+                        viewports=viewports,
+                        whitelist=whitelist,
+                    )
 
                     try:
-                        processed, queued, network_used_mb = await _process_one(
-                            blob=blob,
-                            browser=browser,
-                            cache_refresh=cache_refresh,
-                            current_item=current_item,
-                            in_queue=in_queue,
-                            max_depth=max_depth,
-                            out_queue=out_queue,
-                            save_images=save_images,
-                            save_screenshot=save_screenshot,
-                            timezones=timezones,
-                            user_agents=user_agents,
-                            viewports=viewports,
-                            whitelist=whitelist,
-                        )
+                        await in_queue.delete_message(message)
+                    except MessageNotFoundError:  # Race condition, message has already been deleted by another worker, pass silently to the next message, as it has already been processed
+                        continue
 
-                        try:
-                            await in_queue.delete_message(message)
-                        except MessageNotFoundError:  # Race condition, message has already been deleted by another worker, pass silently to the next message, as it has already been processed
-                            continue
+                    # Update counters
+                    total_network_used_mb += network_used_mb
+                    total_processed += processed
+                    total_queued += queued
 
-                        # Update counters
-                        total_network_used_mb += network_used_mb
-                        total_processed += processed
-                        total_queued += queued
-
-                    except Exception:
-                        # TODO: Add a dead-letter queue
-                        # TODO: Add a retry mechanism
-                        # TODO: Narrow the exception type
-                        logger.error(
-                            "Error processing %s (%i)",
-                            current_item.url,
-                            current_item.depth,
-                            exc_info=True,
-                        )
-
-                # Update job state if data was processed
-                if total_network_used_mb > 0 or total_processed > 0 or total_queued > 0:
-                    await _update_job_state(
-                        blob=blob,
-                        network_used_mb=total_network_used_mb,
-                        processed=total_processed,
-                        queued=total_queued,
+                except Exception:
+                    # TODO: Add a dead-letter queue
+                    # TODO: Add a retry mechanism
+                    # TODO: Narrow the exception type
+                    logger.error(
+                        "Error processing %s (%i)",
+                        current_item.url,
+                        current_item.depth,
+                        exc_info=True,
                     )
 
-                # Wait 3 sec to avoid spamming the queue if it is empty
-                await asyncio.sleep(3)
+            # Update job state if data was processed
+            if total_network_used_mb > 0 or total_processed > 0 or total_queued > 0:
+                await _update_job_state(
+                    blob=blob,
+                    network_used_mb=total_network_used_mb,
+                    processed=total_processed,
+                    queued=total_queued,
+                )
 
-            logger.info("No more queued messages, exiting")
-
-            # Close the browser
-            if browser:
-                await browser.close()
+            # Wait 3 sec to avoid spamming the queue if it is empty
+            await asyncio.sleep(3)
 
 
 def _ads_pattern() -> re.Pattern | None:

@@ -360,13 +360,13 @@ def _count_tokens(content: str) -> int:
 
 
 async def run(  # noqa: PLR0913
-    azure_search_api_key: str | None,
-    azure_search_endpoint: str | None,
     azure_openai_api_key: str,
     azure_openai_embedding_deployment: str,
     azure_openai_embedding_dimensions: int,
     azure_openai_embedding_model: str,
     azure_openai_endpoint: str,
+    azure_search_api_key: str | None,
+    azure_search_endpoint: str | None,
     azure_storage_connection_string: str | None,
     blob_path: str,
     blob_provider: BlobProvider,
@@ -404,13 +404,13 @@ async def run(  # noqa: PLR0913
             )
 
     run_workers(
-        azure_search_api_key=azure_search_api_key,
-        azure_search_endpoint=azure_search_endpoint,
         azure_openai_api_key=azure_openai_api_key,
         azure_openai_embedding_deployment=azure_openai_embedding_deployment,
         azure_openai_embedding_dimensions=azure_openai_embedding_dimensions,
         azure_openai_embedding_model=azure_openai_embedding_model,
         azure_openai_endpoint=azure_openai_endpoint,
+        azure_search_api_key=azure_search_api_key,
+        azure_search_endpoint=azure_search_endpoint,
         azure_storage_connection_string=azure_storage_connection_string,
         blob_path=blob_path,
         blob_provider=blob_provider,
@@ -425,13 +425,13 @@ async def run(  # noqa: PLR0913
 
 
 async def _worker(  # noqa: PLR0913
-    azure_search_api_key: str | None,
-    azure_search_endpoint: str | None,
     azure_openai_api_key: str,
     azure_openai_embedding_deployment: str,
     azure_openai_embedding_dimensions: int,
     azure_openai_embedding_model: str,
     azure_openai_endpoint: str,
+    azure_search_api_key: str | None,
+    azure_search_endpoint: str | None,
     azure_storage_connection_string: str | None,
     blob_path: str,
     blob_provider: BlobProvider,
@@ -458,8 +458,7 @@ async def _worker(  # noqa: PLR0913
             provider=queue_provider,
             queue=index_queue_name(job),
         ) as queue,
-    ):
-        async with search_client(
+        search_client(
             azure_search_api_key=azure_search_api_key,
             azure_search_endpoint=azure_search_endpoint,
             azure_openai_api_key=azure_openai_api_key,
@@ -469,40 +468,41 @@ async def _worker(  # noqa: PLR0913
             azure_openai_endpoint=azure_openai_endpoint,
             index=index_index_name(job),
             provider=search_provider,
-        ) as search:
-            # Process the queue
-            while messages := queue.receive_messages(
-                max_messages=32,
-                visibility_timeout=32 * 10,  # 10 secs per message
-            ):
-                logger.debug("Processing new messages")
-                async for message in messages:
-                    blob_name = message.content
-                    logger.info('Processing "%s"', blob_name)
+        ) as search,
+    ):
+        # Process the queue
+        while messages := queue.receive_messages(
+            max_messages=32,
+            visibility_timeout=32 * 10,  # 10 secs per message
+        ):
+            logger.debug("Processing new messages")
+            async for message in messages:
+                blob_name = message.content
+                logger.info('Processing "%s"', blob_name)
+
+                try:
+                    await _process_one(
+                        blob=blob,
+                        embedding_deployment=azure_openai_embedding_deployment,
+                        embedding_dimensions=azure_openai_embedding_dimensions,
+                        file_name=blob_name,
+                        openai=openai,
+                        search=search,
+                    )
 
                     try:
-                        await _process_one(
-                            blob=blob,
-                            embedding_deployment=azure_openai_embedding_deployment,
-                            embedding_dimensions=azure_openai_embedding_dimensions,
-                            file_name=blob_name,
-                            openai=openai,
-                            search=search,
-                        )
+                        await queue.delete_message(message)
+                    except MessageNotFoundError:  # Race condition, message has already been deleted by another worker, pass silently to the next message, as it has already been processed
+                        continue
 
-                        try:
-                            await queue.delete_message(message)
-                        except MessageNotFoundError:  # Race condition, message has already been deleted by another worker, pass silently to the next message, as it has already been processed
-                            continue
+                except Exception:
+                    # TODO: Add a dead-letter queue
+                    # TODO: Add a retry mechanism
+                    # TODO: Narrow the exception type
+                    logger.error("Error processing %s", blob_name, exc_info=True)
 
-                    except Exception:
-                        # TODO: Add a dead-letter queue
-                        # TODO: Add a retry mechanism
-                        # TODO: Narrow the exception type
-                        logger.error("Error processing %s", blob_name, exc_info=True)
-
-                # Wait 3 sec to avoid spamming the queue if it is empty
-                await asyncio.sleep(3)
+            # Wait 3 sec to avoid spamming the queue if it is empty
+            await asyncio.sleep(3)
 
 
 async def _force_requeue(

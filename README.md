@@ -28,7 +28,6 @@ Scraper:
 - [x] 🖼️ Store images collected on the page
 - [x] 📸 Store screenshot of the page
 - [x] 📡 Track progress of total network usage
-- [ ] 🕵️‍♀️ Enhance anonymity with proxies
 - [ ] 🤖 Respect [`robots.txt`](https://en.wikipedia.org/wiki/Robots.txt)
 
 Indexer:
@@ -395,3 +394,7 @@ Implementation:
 
 - Local Disk Blob uses a directory structure to store blobs. Each blob is stored in a file with the blob name as the file name. Lease is implemented with lock files. By default, files are stored in a directory relative to the command execution directory.
 - Local Disk Queue uses a SQLite database to store messages. Database is stored in the cache directory. SQL databases implement visibility timeout and deletion tokens to ensure consistency to the stateless queue services like Azure Queue Storage.
+
+### Use proxies for anonymity
+
+Proxies are not implemented in the application. Network security cannot be achieved from the application level. Use a VPN (e.g. your, third-party) or a proxy service (e.g. residential procies, Tor) to ensure anonymity and configure the system firewall to limit the application network access to it.

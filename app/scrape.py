@@ -65,6 +65,9 @@ JOB_STATE_NAME = "job.json"
 # Ads pattern
 _ads_pattern_cache: re.Pattern | None = None
 
+# Bowser
+BROWSER_NAME = "chromium"
+
 
 async def _queue(  # noqa: PLR0913
     blob: IBlob,
@@ -485,7 +488,6 @@ async def _worker(  # noqa: PLR0913
     azure_storage_connection_string: str,
     blob_path: str,
     blob_provider: BlobProvider,
-    browser_name: str,
     cache_refresh: timedelta,
     job: str,
     max_depth: int,
@@ -517,7 +519,7 @@ async def _worker(  # noqa: PLR0913
         ) as out_queue,
         async_playwright() as p,
     ):
-        browser_type: BrowserType = getattr(p, browser_name)
+        browser_type: BrowserType = getattr(p, BROWSER_NAME)
         browser_usage = 0
         browser: Browser | None = None
 
@@ -1144,9 +1146,8 @@ async def run(  # noqa: PLR0913
     logger.info("Start scraping job %s", job)
 
     # Install Playwright
-    browser_name = "chromium"
     async with async_playwright() as p:
-        browser_type = getattr(p, browser_name)
+        browser_type = getattr(p, BROWSER_NAME)
 
         await asyncio.gather(
             # Install Playwright
@@ -1207,7 +1208,6 @@ async def run(  # noqa: PLR0913
         azure_storage_connection_string=azure_storage_connection_string,
         blob_path=blob_path,
         blob_provider=blob_provider,
-        browser_name=browser_name,
         cache_refresh=cache_refresh_parsed,
         count=processes,
         func=_worker,

@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from collections.abc import AsyncGenerator
 from contextlib import AbstractAsyncContextManager
 from enum import Enum, unique
 from typing import Any
@@ -53,6 +54,13 @@ class IBlob:
         self,
         blob: str,
     ) -> str:
+        pass
+
+    @abstractmethod
+    def list_blobs(
+        self,
+        starts_with: str | None = None,
+    ) -> AsyncGenerator[tuple[str, int], None]:
         pass
 
     @abstractmethod

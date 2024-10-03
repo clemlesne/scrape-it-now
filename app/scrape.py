@@ -3,6 +3,7 @@ import random
 import re
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
+from functools import lru_cache
 from http import HTTPStatus
 from mimetypes import guess_extension
 from os import environ as env
@@ -61,10 +62,6 @@ from app.persistence.iqueue import (
 # State
 JOB_STATE_NAME = "job.json"
 
-# Storage
-SCRAPED_PREFIX = "scraped"
-STATE_PREFIX = "state"
-
 # Ads pattern
 _ads_pattern_cache: re.Pattern | None = None
 
@@ -97,7 +94,7 @@ async def _queue(  # noqa: PLR0913
     # Add the referrer to the set of scraped URLs
     state_bytes = StateScrapedModel().model_dump_json().encode(blob.encoding)
     await blob.upload_blob(
-        blob=f"{STATE_PREFIX}/{item_id}",
+        blob=_state_blob_prefix(item_id),
         data=state_bytes,
         length=len(state_bytes),
         overwrite=True,
@@ -135,7 +132,7 @@ async def _queue(  # noqa: PLR0913
         # Test previous attempts
         try:
             # Load from the validity cache
-            previous_raw = await blob.download_blob(f"{STATE_PREFIX}/{hash_url(url)}")
+            previous_raw = await blob.download_blob(_state_blob_prefix(_item_id(url)))
             previous = StateScrapedModel.model_validate_json(previous_raw)
 
             # Skip if the previous attempt is too recent
@@ -152,7 +149,7 @@ async def _queue(  # noqa: PLR0913
         await asyncio.gather(
             # Update the validity cache
             blob.upload_blob(
-                blob=f"{STATE_PREFIX}/{hash_url(url)}",
+                blob=_state_blob_prefix(_item_id(url)),
                 data=state_bytes,
                 length=len(state_bytes),
                 overwrite=True,
@@ -203,8 +200,8 @@ async def _process_one(  # noqa: PLR0913
     Returns the number of processed URLs, queued URLs, and total network used.
     """
     queued_urls = 0
-    current_id = hash_url(current_item.url)
-    blob_prefix = f"{SCRAPED_PREFIX}/{current_id}"
+    current_id = _item_id(current_item.url)
+    blob_prefix = scraped_blob_prefix(current_id)
     page_blob_name = f"{blob_prefix}.json"
 
     # Check if the URL has already been processed
@@ -287,7 +284,7 @@ async def _process_one(  # noqa: PLR0913
             )
             return
 
-        name_prefix = f"{blob_prefix}/{hash_url(image.url)}"
+        name_prefix = f"{blob_prefix}/{_item_id(image.url)}"
         image_content_blob_name = f"{name_prefix}{extension}"
         image_model_blob_name = f"{name_prefix}.json"
         model_bytes = image.model_dump_json().encode(blob.encoding)
@@ -369,7 +366,7 @@ async def _process_one(  # noqa: PLR0913
             overwrite=True,
         ),
         # Mark current file to be processed for chunking
-        out_queue.send_message(f"{SCRAPED_PREFIX}/{current_id}.json"),
+        out_queue.send_message(f"{scraped_blob_prefix(current_id)}.json"),
         # Add the links to the queue
         _queue(
             blob=blob,
@@ -387,6 +384,29 @@ async def _process_one(  # noqa: PLR0913
     # Return the number of processed URLs, queued URLs, and total network used
     logger.info("Scraped %s (%i)", new_page.url, current_item.depth)
     return (1, queued_urls, new_page.network_used_mb)
+
+
+@lru_cache(maxsize=512)
+def _item_id(url: str) -> str:
+    return hash_url(url)
+
+
+def _state_blob_prefix(item_id: str) -> str:
+    """
+    Return the blob prefix for a state URL.
+
+    The prefix is used to store the state of the URL: `state/{hash}.json`.
+    """
+    return f"state/{item_id}"
+
+
+def scraped_blob_prefix(item_id: str) -> str:
+    """
+    Return the blob prefix for a scraped URL.
+
+    The prefix is used to store the scraped content of the URL: `scraped/{hash}.json`.
+    """
+    return f"scraped/{item_id}"
 
 
 async def _update_job_state(
@@ -1176,7 +1196,7 @@ async def run(  # noqa: PLR0913
             blob=blob,
             cache_refresh=cache_refresh_parsed,
             deph=model.depth,
-            item_id=hash_url(model.referrer),
+            item_id=_item_id(model.referrer),
             in_queue=in_queue,
             max_depth=max_depth,
             referrer=model.referrer,

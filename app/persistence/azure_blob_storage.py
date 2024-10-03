@@ -154,6 +154,19 @@ class AzureBlobStorage(IBlob):
         stop=stop_after_attempt(8),
         wait=wait_random_exponential(multiplier=0.8, max=60),
     )
+    async def list_blobs(
+        self,
+        starts_with: str | None = None,
+    ) -> AsyncGenerator[tuple[str, int], None]:
+        async for blob in self._client.list_blobs(name_starts_with=starts_with):
+            yield blob.name, blob.size
+
+    @retry(
+        reraise=True,
+        retry=retry_if_exception_type(ServiceRequestError),  # Catch for network errors
+        stop=stop_after_attempt(8),
+        wait=wait_random_exponential(multiplier=0.8, max=60),
+    )
     async def delete_container(
         self,
     ) -> None:

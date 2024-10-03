@@ -95,6 +95,23 @@ class AzureQueueStorage(IQueue):
         stop=stop_after_attempt(8),
         wait=wait_random_exponential(multiplier=0.8, max=60),
     )
+    async def create_queue(
+        self,
+    ) -> bool:
+        try:
+            await self._client.create_queue()
+            logger.info('Created Queue Storage "%s"', self._config.name)
+            return True
+        except ResourceExistsError:
+            pass
+        return False
+
+    @retry(
+        reraise=True,
+        retry=retry_if_exception_type(ServiceRequestError),  # Catch for network errors
+        stop=stop_after_attempt(8),
+        wait=wait_random_exponential(multiplier=0.8, max=60),
+    )
     async def delete_queue(
         self,
     ) -> None:
@@ -126,11 +143,7 @@ class AzureQueueStorage(IQueue):
             queue=self._config.name,
         )
         # Create if it does not exist
-        try:
-            await self._client.create_queue()
-            logger.info('Created Queue Storage "%s"', self._config.name)
-        except ResourceExistsError:
-            pass
+        await self.create_queue()
         return self
 
     async def __aexit__(self, *exc: Any) -> None:

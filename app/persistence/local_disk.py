@@ -215,6 +215,18 @@ class LocalDiskBlob(IBlob):
         ) as f:
             return (await f.read()).decode(self.encoding)
 
+    async def list_blobs(
+        self,
+        starts_with: str | None = None,
+    ) -> AsyncGenerator[tuple[str, int], None]:
+        working_path = await self._config.working_path()
+
+        # List all files in the working path
+        for _, _, file_names in walk(top=working_path):
+            for file_name in file_names:
+                if starts_with is None or file_name.startswith(starts_with):
+                    yield (file_name, 0)
+
     async def delete_container(
         self,
     ) -> None:
@@ -369,28 +381,15 @@ class LocalDiskQueue(IQueue):
                     f'Message with id "{message.message_id}" not found'
                 )
 
-    async def delete_queue(
+    async def create_queue(
         self,
-    ) -> None:
-        await remove(await self._config.db_path())
-        logger.info('Deleted Local Disk Queue "%s"', self._config.name)
-
-    @asynccontextmanager
-    async def _use_connection(self) -> AsyncGenerator[aiosqlite.Connection, None]:
-        # Connect and return the connection
-        async with aiosqlite.connect(
-            database=await self._config.db_path(),
-            timeout=self._config.timeout,  # Wait for 30 secs before giving up
-        ) as connection:
-            yield connection
-
-    async def __aenter__(self) -> "LocalDiskQueue":
+    ) -> bool:
         file_path = await self._config.db_path()
         first_run = not await path.exists(file_path)
 
         # Skip if the database is already initialized
         if not first_run:
-            return self
+            return False
 
         # Create the directory if it doesn't exist
         await makedirs(dirname(file_path), exist_ok=True)
@@ -424,6 +423,25 @@ class LocalDiskQueue(IQueue):
             # Commit as other workers might be waiting for the table to be created
             await connection.commit()
 
+        return True
+
+    async def delete_queue(
+        self,
+    ) -> None:
+        await remove(await self._config.db_path())
+        logger.info('Deleted Local Disk Queue "%s"', self._config.name)
+
+    @asynccontextmanager
+    async def _use_connection(self) -> AsyncGenerator[aiosqlite.Connection, None]:
+        # Connect and return the connection
+        async with aiosqlite.connect(
+            database=await self._config.db_path(),
+            timeout=self._config.timeout,  # Wait for 30 secs before giving up
+        ) as connection:
+            yield connection
+
+    async def __aenter__(self) -> "LocalDiskQueue":
+        await self.create_queue()
         return self
 
     async def __aexit__(self, *exc: Any) -> None:

@@ -289,6 +289,13 @@ async def test_upload_many(provider: BlobProvider) -> None:
             tasks = [_validate(name, content) for name, content in blobs]
             await asyncio.gather(*tasks)
 
+            # Enumerate blobs
+            found_blobs = [blob async for blob in client.list_blobs()]
+            assert len(found_blobs) == len(blobs), "Blob count mismatch"
+            assert all(
+                blob[0] in [name for name, _ in blobs] for blob in found_blobs
+            ), "Blob name mismatch"
+
         finally:
             # Clean up
             await client.delete_container()

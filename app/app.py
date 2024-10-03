@@ -475,6 +475,13 @@ def index() -> None:
     required=True,
     type=str,
 )
+@click.option(
+    "--force",
+    "-f",
+    envvar="FORCE",
+    help="Force reindexing of the data.",
+    is_flag=True,
+)
 @click.argument(
     "job_name",
     envvar="JOB_NAME",
@@ -493,6 +500,7 @@ async def index_run(  # noqa: PLR0913
     azure_storage_connection_string: str | None,
     blob_path: str,
     blob_provider: BlobProvider,
+    force: bool,
     job_name: str,
     openai_api_version: str,
     processes: int,
@@ -516,6 +524,7 @@ async def index_run(  # noqa: PLR0913
         azure_openai_endpoint=azure_openai_endpoint,
         blob_path=blob_path,
         blob_provider=blob_provider,
+        force=force,
         job=job_name,
         openai_api_version=openai_api_version,
         processes=processes,

@@ -42,6 +42,12 @@ class IQueue:
         pass
 
     @abstractmethod
+    async def create_queue(
+        self,
+    ) -> bool:
+        pass
+
+    @abstractmethod
     async def delete_queue(
         self,
     ) -> None:

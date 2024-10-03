@@ -960,6 +960,7 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
                 sandbox=True,  # Enable sandbox mode, we don't know what we are scraping
                 source=full_html_minus_resources,
                 to="markdown-fenced_divs-native_divs-raw_html-bracketed_spans-native_spans-link_attributes-header_attributes-inline_code_attributes",
+                verify_format=False,  # We know the format, don't verify it
                 extra_args=[
                     "--embed-resources=false",
                     "--wrap=none",

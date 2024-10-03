@@ -335,6 +335,17 @@ Page data is considered as an API (won't break until the next major version) and
 }
 ```
 
+Then, indexed data is stored in Azure AI Search:
+
+| Field | Type | Description |
+|-|-|-|
+| `chunck_number` | `Edm.Int32` | Chunk number, from `0` to *`x`* |
+| `content` | `Edm.String` | Chunck content |
+| `created_at` | `Edm.DateTimeOffset` | Source scrape date |
+| `id` | `Edm.String` | Chunck ID |
+| `title` | `Edm.String` | Source page title |
+| `url` | `Edm.String` | Source page URL |
+
 ## Advanced usage
 
 ### Whitelist

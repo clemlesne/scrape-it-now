@@ -48,13 +48,22 @@ class Config(BaseModel):
 class AzureSearch(ISearch):
     _client: SearchClient
     _config: Config
+    _schema_version: int = 2
 
     def __init__(
         self,
         config: Config,
     ) -> None:
-        logger.info('Azure Search "%s" is configured', config.index)
+        logger.info(
+            'Azure Search "%s" is configured (schema v%i)',
+            config.index,
+            self._schema_version,
+        )
         self._config = config
+
+    @property
+    def _index_name(self) -> str:
+        return f"{self._config.index}-v{self._schema_version}"
 
     @retry(
         reraise=True,
@@ -90,20 +99,39 @@ class AzureSearch(ISearch):
     async def __aenter__(self) -> "AzureSearch":
         # Index configuration
         fields = [
+            # Required field for indexing key
             SimpleField(
                 name="id",
                 key=True,
                 type=SearchFieldDataType.String,
             ),
+            # Custom fields
+            SimpleField(
+                filterable=True,
+                name="chunck_number",
+                sortable=True,
+                type=SearchFieldDataType.Int32,
+            ),
             SearchableField(
-                name="content",
                 analyzer_name=LexicalAnalyzerName.STANDARD_LUCENE,
+                name="content",
                 type=SearchFieldDataType.String,
             ),
             SimpleField(
-                name="url",
+                filterable=True,
+                name="created_at",
+                sortable=True,
+                type=SearchFieldDataType.DateTimeOffset,
+            ),
+            SearchableField(
+                analyzer_name=LexicalAnalyzerName.STANDARD_LUCENE,
+                name="title",
+                type=SearchFieldDataType.String,
+            ),
+            SimpleField(
                 analyzer_name=LexicalAnalyzerName.STANDARD_LUCENE,
                 filterable=True,
+                name="url",
                 sortable=True,
                 type=SearchFieldDataType.String,
             ),
@@ -145,7 +173,7 @@ class AzureSearch(ISearch):
         async with SearchIndexClient(
             # Deployment
             endpoint=self._config.endpoint,
-            index_name=self._config.index,
+            index_name=self._index_name,
             # Index configuration
             fields=fields,
             vector_search=vector_search,
@@ -156,11 +184,11 @@ class AzureSearch(ISearch):
                 await client.create_index(
                     SearchIndex(
                         fields=fields,
-                        name=self._config.index,
+                        name=self._index_name,
                         vector_search=vector_search,
                     )
                 )
-                logger.info('Created Search "%s"', self._config.index)
+                logger.info('Created Search "%s"', self._index_name)
             except ResourceExistsError:
                 pass
             except HttpResponseError as e:
@@ -171,7 +199,7 @@ class AzureSearch(ISearch):
         self._client = SearchClient(
             # Deployment
             endpoint=self._config.endpoint,
-            index_name=self._config.index,
+            index_name=self._index_name,
             # Authentication
             credential=AzureKeyCredential(self._config.api_key),
         )

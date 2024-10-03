@@ -128,12 +128,17 @@ async def _process_one(  # noqa: PLR0913
     # Add to the index list
     models = [
         IndexedIngestModel(
-            content=content,
+            chunck_number=chunck_number,
+            content=chunck_content,
+            created_at=result.created_at,
             indexed_id=doc_id,
+            title=result.title,
             url=result.url,
             vectors=embedding.embedding,
         )
-        for doc_id, content, embedding in zip(doc_ids, chunks, embeddings)
+        for doc_id, chunck_content, chunck_number, embedding in zip(
+            doc_ids, chunks, range(len(chunks)), embeddings
+        )
     ]
 
     # Index the documents

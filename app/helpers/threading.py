@@ -24,6 +24,7 @@ def run_workers(
     threads: list[Thread] = [
         Thread(
             args=(func(**kwargs),),
+            daemon=True,
             name=f"{name}-{i}",
             target=asyncio.run,
         )
@@ -35,5 +36,8 @@ def run_workers(
         thread.start()
 
     # Wait
-    for thread in threads:
-        thread.join()
+    try:
+        for thread in threads:
+            thread.join()
+    except KeyboardInterrupt:
+        pass

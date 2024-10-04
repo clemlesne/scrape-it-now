@@ -1303,6 +1303,7 @@ async def _get_broswer(
     # Launch the browser
     browser = await browser_type.launch(
         chromium_sandbox=True,  # Enable the sandbox for security, we don't know what we are scraping
+        timeout=BROWSER_TIMEOUT_MS,
         # See: https://github.com/microsoft/playwright/blob/99a36310570617222290c09b96a2026beb8b00f9/packages/playwright-core/src/server/chromium/chromium.ts
         args=[
             "--disable-gl-drawing-for-tests",  # Disable UI rendering, lower CPU usage

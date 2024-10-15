@@ -43,6 +43,37 @@ def common_params(func):
     return wrapper
 
 
+def azure_storage_params(func):
+    @click.option(
+        "--azure-storage-access-key",
+        "-asak",
+        envvar="AZURE_STORAGE_ACCESS_KEY",
+        help="Azure Storage access key. Used for Azure Blob Storage and Azure Queue Storage providers. If not prvided, AAD identity will be used.",
+        hide_input=True,
+        type=str,
+    )
+    @click.option(
+        "--azure-storage-account-name",
+        "-asan",
+        envvar="AZURE_STORAGE_ACCOUNT_NAME",
+        help="Azure Storage account name. Mandatory for Azure Blob Storage and Azure Queue Storage providers.",
+        type=str,
+    )
+    @click.option(
+        "--azure-storage-endpoint-suffix",
+        "-ases",
+        default="core.windows.net",
+        envvar="AZURE_STORAGE_ENDPOINT_SUFFIX",
+        help="Azure Storage endpoint suffix. Mandatory for Azure Blob Storage and Azure Queue Storage providers.",
+        type=str,
+    )
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
 @click.group
 def cli() -> None:
     """
@@ -182,14 +213,6 @@ def scrape() -> None:
     type=str,
 )
 @click.option(
-    "--azure-storage-connection-string",
-    "-ascs",
-    envvar="AZURE_STORAGE_CONNECTION_STRING",
-    help="Azure Storage connection string. Mandatory for Azure Blob Storage and Azure Queue Storage providers.",
-    hide_input=True,
-    type=str,
-)
-@click.option(
     "--processes",
     "-p",
     default=int((cpu_count() or 4) / 2),
@@ -225,9 +248,12 @@ def scrape() -> None:
 )
 @scrape.command("run")
 @common_params
+@azure_storage_params
 @run_in_async
 async def scrape_run(  # noqa: PLR0913
-    azure_storage_connection_string: str | None,
+    azure_storage_access_key: str | None,
+    azure_storage_account_name: str | None,
+    azure_storage_endpoint_suffix: str | None,
     blob_path: str,
     blob_provider: BlobProvider,
     cache_refresh: int,
@@ -277,7 +303,9 @@ async def scrape_run(  # noqa: PLR0913
         logger.info("Whitelist: %s", whitelist_parsed)
 
     await scrape_backend_run(
-        azure_storage_connection_string=azure_storage_connection_string,
+        azure_storage_access_key=azure_storage_access_key,
+        azure_storage_account_name=azure_storage_account_name,
+        azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
         blob_path=blob_path,
         blob_provider=blob_provider,
         cache_refresh=cache_refresh,
@@ -312,23 +340,18 @@ async def scrape_run(  # noqa: PLR0913
     help="Path to the blob container. Mandatory for Local Disk Blob provider.",
     type=str,
 )
-@click.option(
-    "--azure-storage-connection-string",
-    "-ascs",
-    envvar="AZURE_STORAGE_CONNECTION_STRING",
-    help="Azure Storage connection string. Mandatory for Azure Blob Storage provider.",
-    hide_input=True,
-    type=str,
-)
 @click.argument(
     "job_name",
     envvar="JOB_NAME",
 )
 @scrape.command("status")
 @common_params
+@azure_storage_params
 @run_in_async
-async def scrape_status(
-    azure_storage_connection_string: str | None,
+async def scrape_status(  # noqa: PLR0913
+    azure_storage_access_key: str | None,
+    azure_storage_account_name: str | None,
+    azure_storage_endpoint_suffix: str | None,
     blob_path: str,
     blob_provider: BlobProvider,
     job_name: str,
@@ -337,10 +360,12 @@ async def scrape_status(
     Get the state of a scraping job.
     """
     state = await scrape_backend_state(
+        azure_storage_access_key=azure_storage_access_key,
+        azure_storage_account_name=azure_storage_account_name,
+        azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
         blob_path=blob_path,
         blob_provider=blob_provider,
         job=job_name,
-        azure_storage_connection_string=azure_storage_connection_string,
     )
 
     # Log error if no state found
@@ -397,14 +422,6 @@ def index() -> None:
     type=str,
 )
 @click.option(
-    "--azure-storage-connection-string",
-    "-ascs",
-    envvar="AZURE_STORAGE_CONNECTION_STRING",
-    help="Azure Storage connection string. Mandatory for Azure Blob Storage and Azure Queue Storage providers.",
-    hide_input=True,
-    type=str,
-)
-@click.option(
     "--azure-openai-embedding-dimensions",
     "-aoed",
     envvar="AZURE_OPENAI_EMBEDDING_DIMENSIONS",
@@ -440,7 +457,7 @@ def index() -> None:
     "--azure-search-api-key",
     "-asak",
     envvar="AZURE_SEARCH_API_KEY",
-    help="Azure Search API key. Mandatory for Azure AI Search provider.",
+    help="Azure Search API key. Mandatory for Azure AI Search provider. Otherwise, AAD identity is used.",
     type=str,
 )
 @click.option(
@@ -455,7 +472,6 @@ def index() -> None:
     "-aoak",
     envvar="AZURE_OPENAI_API_KEY",
     help="Azure OpenAI API key.",
-    required=True,
     type=str,
 )
 @click.option(
@@ -487,17 +503,20 @@ def index() -> None:
     envvar="JOB_NAME",
 )
 @index.command("run")
+@azure_storage_params
 @common_params
 @run_in_async
 async def index_run(  # noqa: PLR0913
-    azure_openai_api_key: str,
+    azure_openai_api_key: str | None,
     azure_openai_embedding_deployment_name: str,
     azure_openai_embedding_dimensions: int,
     azure_openai_embedding_model_name: str,
     azure_openai_endpoint: str,
     azure_search_api_key: str | None,
     azure_search_endpoint: str | None,
-    azure_storage_connection_string: str | None,
+    azure_storage_access_key: str | None,
+    azure_storage_account_name: str | None,
+    azure_storage_endpoint_suffix: str | None,
     blob_path: str,
     blob_provider: BlobProvider,
     force: bool,
@@ -515,13 +534,16 @@ async def index_run(  # noqa: PLR0913
     Program is built to be idempotent. Multiple runs of the same job can be ran simultaneously and won't duplicate data.
     """
     await index_backend_run(
-        azure_search_api_key=azure_search_api_key,
-        azure_search_endpoint=azure_search_endpoint,
         azure_openai_api_key=azure_openai_api_key,
         azure_openai_embedding_deployment=azure_openai_embedding_deployment_name,
         azure_openai_embedding_dimensions=azure_openai_embedding_dimensions,
         azure_openai_embedding_model=azure_openai_embedding_model_name,
         azure_openai_endpoint=azure_openai_endpoint,
+        azure_search_api_key=azure_search_api_key,
+        azure_search_endpoint=azure_search_endpoint,
+        azure_storage_access_key=azure_storage_access_key,
+        azure_storage_account_name=azure_storage_account_name,
+        azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
         blob_path=blob_path,
         blob_provider=blob_provider,
         force=force,
@@ -530,7 +552,6 @@ async def index_run(  # noqa: PLR0913
         processes=processes,
         queue_provider=queue_provider,
         search_provider=search_provider,
-        azure_storage_connection_string=azure_storage_connection_string,
     )
 
 

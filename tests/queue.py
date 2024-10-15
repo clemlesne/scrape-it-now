@@ -32,7 +32,9 @@ async def test_acid(provider: QueueProvider) -> None:
 
     # Init client
     async with queue_client(
-        azure_storage_connection_string=env["AZURE_STORAGE_CONNECTION_STRING"],
+        azure_storage_access_key=None,
+        azure_storage_account_name=env["AZURE_STORAGE_ACCOUNT_NAME"],
+        azure_storage_endpoint_suffix="core.windows.net",
         provider=provider,
         queue=queue_name,
     ) as client:
@@ -129,7 +131,9 @@ async def test_send_many(provider: QueueProvider) -> None:
 
     # Init client
     async with queue_client(
-        azure_storage_connection_string=env["AZURE_STORAGE_CONNECTION_STRING"],
+        azure_storage_access_key=None,
+        azure_storage_account_name=env["AZURE_STORAGE_ACCOUNT_NAME"],
+        azure_storage_endpoint_suffix="core.windows.net",
         provider=provider,
         queue=queue_name,
     ) as client:

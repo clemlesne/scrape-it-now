@@ -303,13 +303,17 @@ async def test_queue_simple(
     # Init clients
     async with (
         blob_client(
-            azure_storage_connection_string=env["AZURE_STORAGE_CONNECTION_STRING"],
+            azure_storage_access_key=None,
+            azure_storage_account_name=env["AZURE_STORAGE_ACCOUNT_NAME"],
+            azure_storage_endpoint_suffix="core.windows.net",
             container=container_name,
             path="scraping-test",
             provider=blob_provider,
         ) as blob,
         queue_client(
-            azure_storage_connection_string=env["AZURE_STORAGE_CONNECTION_STRING"],
+            azure_storage_access_key=None,
+            azure_storage_account_name=env["AZURE_STORAGE_ACCOUNT_NAME"],
+            azure_storage_endpoint_suffix="core.windows.net",
             provider=queue_provider,
             queue=in_queue_name,
         ) as in_queue,

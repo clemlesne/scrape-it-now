@@ -365,14 +365,16 @@ def _count_tokens(content: str) -> int:
 
 
 async def run(  # noqa: PLR0913
-    azure_openai_api_key: str,
+    azure_openai_api_key: str | None,
     azure_openai_embedding_deployment: str,
     azure_openai_embedding_dimensions: int,
     azure_openai_embedding_model: str,
     azure_openai_endpoint: str,
     azure_search_api_key: str | None,
     azure_search_endpoint: str | None,
-    azure_storage_connection_string: str | None,
+    azure_storage_access_key: str | None,
+    azure_storage_account_name: str | None,
+    azure_storage_endpoint_suffix: str | None,
     blob_path: str,
     blob_provider: BlobProvider,
     force: bool,
@@ -392,13 +394,17 @@ async def run(  # noqa: PLR0913
         # Init clients
         async with (
             blob_client(
-                azure_storage_connection_string=azure_storage_connection_string,
+                azure_storage_access_key=azure_storage_access_key,
+                azure_storage_account_name=azure_storage_account_name,
+                azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
                 container=scrape_container_name(job),
                 path=blob_path,
                 provider=blob_provider,
             ) as blob,
             queue_client(
-                azure_storage_connection_string=azure_storage_connection_string,
+                azure_storage_access_key=azure_storage_access_key,
+                azure_storage_account_name=azure_storage_account_name,
+                azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
                 provider=queue_provider,
                 queue=index_queue_name(job),
             ) as queue,
@@ -416,7 +422,9 @@ async def run(  # noqa: PLR0913
         azure_openai_endpoint=azure_openai_endpoint,
         azure_search_api_key=azure_search_api_key,
         azure_search_endpoint=azure_search_endpoint,
-        azure_storage_connection_string=azure_storage_connection_string,
+        azure_storage_access_key=azure_storage_access_key,
+        azure_storage_account_name=azure_storage_account_name,
+        azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
         blob_path=blob_path,
         blob_provider=blob_provider,
         count=processes,
@@ -430,14 +438,16 @@ async def run(  # noqa: PLR0913
 
 
 async def _worker(  # noqa: PLR0913
-    azure_openai_api_key: str,
+    azure_openai_api_key: str | None,
     azure_openai_embedding_deployment: str,
     azure_openai_embedding_dimensions: int,
     azure_openai_embedding_model: str,
     azure_openai_endpoint: str,
     azure_search_api_key: str | None,
     azure_search_endpoint: str | None,
-    azure_storage_connection_string: str | None,
+    azure_storage_access_key: str | None,
+    azure_storage_account_name: str | None,
+    azure_storage_endpoint_suffix: str | None,
     blob_path: str,
     blob_provider: BlobProvider,
     job: str,
@@ -448,7 +458,9 @@ async def _worker(  # noqa: PLR0913
     # Init clients
     async with (
         blob_client(
-            azure_storage_connection_string=azure_storage_connection_string,
+            azure_storage_access_key=azure_storage_access_key,
+            azure_storage_account_name=azure_storage_account_name,
+            azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
             container=scrape_container_name(job),
             path=blob_path,
             provider=blob_provider,
@@ -459,7 +471,9 @@ async def _worker(  # noqa: PLR0913
             openai_api_version=openai_api_version,
         ) as openai,
         queue_client(
-            azure_storage_connection_string=azure_storage_connection_string,
+            azure_storage_access_key=azure_storage_access_key,
+            azure_storage_account_name=azure_storage_account_name,
+            azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
             provider=queue_provider,
             queue=index_queue_name(job),
         ) as queue,

@@ -486,7 +486,9 @@ async def _update_job_state(
 
 
 async def _worker(  # noqa: PLR0913
-    azure_storage_connection_string: str,
+    azure_storage_access_key: str | None,
+    azure_storage_account_name: str | None,
+    azure_storage_endpoint_suffix: str | None,
     blob_path: str,
     blob_provider: BlobProvider,
     cache_refresh: timedelta,
@@ -503,18 +505,24 @@ async def _worker(  # noqa: PLR0913
     # Init clients
     async with (
         blob_client(
-            azure_storage_connection_string=azure_storage_connection_string,
+            azure_storage_access_key=azure_storage_access_key,
+            azure_storage_account_name=azure_storage_account_name,
+            azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
             container=scrape_container_name(job),
             path=blob_path,
             provider=blob_provider,
         ) as blob,
         queue_client(
-            azure_storage_connection_string=azure_storage_connection_string,
+            azure_storage_access_key=azure_storage_access_key,
+            azure_storage_account_name=azure_storage_account_name,
+            azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
             provider=queue_provider,
             queue=scrape_queue_name(job),
         ) as in_queue,
         queue_client(
-            azure_storage_connection_string=azure_storage_connection_string,
+            azure_storage_access_key=azure_storage_access_key,
+            azure_storage_account_name=azure_storage_account_name,
+            azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
             provider=queue_provider,
             queue=index_queue_name(job),
         ) as out_queue,
@@ -1129,7 +1137,9 @@ def _format_path(path: str) -> str:
 
 
 async def run(  # noqa: PLR0913
-    azure_storage_connection_string: str | None,
+    azure_storage_access_key: str | None,
+    azure_storage_account_name: str | None,
+    azure_storage_endpoint_suffix: str | None,
     blob_path: str,
     blob_provider: BlobProvider,
     cache_refresh: int,
@@ -1169,13 +1179,17 @@ async def run(  # noqa: PLR0913
     # Init clients
     async with (
         blob_client(
-            azure_storage_connection_string=azure_storage_connection_string,
+            azure_storage_access_key=azure_storage_access_key,
+            azure_storage_account_name=azure_storage_account_name,
+            azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
             container=scrape_container_name(job),
             path=blob_path,
             provider=blob_provider,
         ) as blob,
         queue_client(
-            azure_storage_connection_string=azure_storage_connection_string,
+            azure_storage_access_key=azure_storage_access_key,
+            azure_storage_account_name=azure_storage_account_name,
+            azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
             provider=queue_provider,
             queue=scrape_queue_name(job),
         ) as in_queue,
@@ -1207,7 +1221,9 @@ async def run(  # noqa: PLR0913
         )
 
     run_workers(
-        azure_storage_connection_string=azure_storage_connection_string,
+        azure_storage_access_key=azure_storage_access_key,
+        azure_storage_account_name=azure_storage_account_name,
+        azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
         blob_path=blob_path,
         blob_provider=blob_provider,
         cache_refresh=cache_refresh_parsed,
@@ -1226,15 +1242,19 @@ async def run(  # noqa: PLR0913
     )
 
 
-async def state(
+async def state(  # noqa: PLR0913
+    azure_storage_access_key: str | None,
+    azure_storage_account_name: str | None,
+    azure_storage_endpoint_suffix: str | None,
     blob_path: str,
     blob_provider: BlobProvider,
     job: str,
-    azure_storage_connection_string: str | None,
 ) -> StateJobModel | None:
     # Init clients
     async with blob_client(
-        azure_storage_connection_string=azure_storage_connection_string,
+        azure_storage_access_key=azure_storage_access_key,
+        azure_storage_account_name=azure_storage_account_name,
+        azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
         container=scrape_container_name(job),
         path=blob_path,
         provider=blob_provider,

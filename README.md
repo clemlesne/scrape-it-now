@@ -69,7 +69,8 @@ Usage with Azure Blob Storage and Azure Queue Storage:
 
 ```bash
 # Azure Storage configuration
-export AZURE_STORAGE_CONNECTION_STRING=xxx
+export AZURE_STORAGE_ACCESS_KEY=xxx
+export AZURE_STORAGE_ACCOUNT_NAME=xxx
 # Run the job
 scrape-it-now scrape run https://nytimes.com
 ```
@@ -100,7 +101,8 @@ Most frequent options are:
 
 | `Options` | Description | `Environment variable` |
 |-|-|-|
-| `--azure-storage-connection-string`</br>`-ascs` | Azure Storage connection string | `AZURE_STORAGE_CONNECTION_STRING` |
+| `--azure-storage-access-key`</br>`-asak` | Azure Storage access key | `AZURE_STORAGE_ACCESS_KEY` |
+| `--azure-storage-account-name`</br>`-asan` | Azure Storage account name | `AZURE_STORAGE_ACCOUNT_NAME` |
 | `--blob-provider`</br>`-bp` | Blob provider | `BLOB_PROVIDER` |
 | `--job-name`</br>`-jn` | Job name | `JOB_NAME` |
 | `--max-depth`</br>`-md` | Maximum depth | `MAX_DEPTH` |
@@ -145,7 +147,8 @@ Most frequent options are:
 
 | `Options` | Description | `Environment variable` |
 |-|-|-|
-| `--azure-storage-connection-string`</br>`-ascs` | Azure Storage connection string | `AZURE_STORAGE_CONNECTION_STRING` |
+| `--azure-storage-access-key`</br>`-asak` | Azure Storage access key | `AZURE_STORAGE_ACCESS_KEY` |
+| `--azure-storage-account-name`</br>`-asan` | Azure Storage account name | `AZURE_STORAGE_ACCOUNT_NAME` |
 | `--blob-provider`</br>`-bp` | Blob provider | `BLOB_PROVIDER` |
 
 For documentation on all available options, run:
@@ -167,11 +170,15 @@ export AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME=xxx
 export AZURE_OPENAI_EMBEDDING_DIMENSIONS=xxx
 export AZURE_OPENAI_EMBEDDING_MODEL_NAME=xxx
 export AZURE_OPENAI_ENDPOINT=xxx
+
 # Azure Search configuration
 export AZURE_SEARCH_API_KEY=xxx
 export AZURE_SEARCH_ENDPOINT=xxx
+
 # Azure Storage configuration
-export AZURE_STORAGE_CONNECTION_STRING=xxx
+export AZURE_STORAGE_ACCESS_KEY=xxx
+export AZURE_STORAGE_ACCOUNT_NAME=xxx
+
 # Run the job
 scrape-it-now index run [job_name]
 ```
@@ -218,7 +225,8 @@ Most frequent options are:
 | `--azure-openai-endpoint`</br>`-aoe` | Azure OpenAI endpoint | `AZURE_OPENAI_ENDPOINT` |
 | `--azure-search-api-key`</br>`-asak` | Azure Search API key | `AZURE_SEARCH_API_KEY` |
 | `--azure-search-endpoint`</br>`-ase` | Azure Search endpoint | `AZURE_SEARCH_ENDPOINT` |
-| `--azure-storage-connection-string`</br>`-ascs` | Azure Storage connection string | `AZURE_STORAGE_CONNECTION_STRING` |
+| `--azure-storage-access-key`</br>`-asak` | Azure Storage access key | `AZURE_STORAGE_ACCESS_KEY` |
+| `--azure-storage-account-name`</br>`-asan` | Azure Storage account name | `AZURE_STORAGE_ACCOUNT_NAME` |
 | `--blob-provider`</br>`-bp` | Blob provider | `BLOB_PROVIDER` |
 | `--queue-provider`</br>`-qp` | Queue provider | `QUEUE_PROVIDER` |
 
@@ -372,10 +380,10 @@ learn\.microsoft\.com,^/(?!en-us).* go\.microsoft\.com
 
 ### Source environment variables
 
-To configure easily the CLI, source environment variables from a `.env` file. For example, for the `--azure-storage-connection-string` option:
+To configure easily the CLI, source environment variables from a `.env` file. For example, for the `--azure-storage-access-key` option:
 
 ```bash
-AZURE_STORAGE_CONNECTION_STRING=xxx
+AZURE_STORAGE_ACCESS_KEY=xxx
 ```
 
 For arguments that accept multiple values, use a space-separated list. For example, for the `--whitelist` option:

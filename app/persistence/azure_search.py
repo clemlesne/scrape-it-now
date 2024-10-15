@@ -30,13 +30,15 @@ from tenacity import (
     wait_random_exponential,
 )
 
+from app.helpers.http import azure_transport
+from app.helpers.identity import credential
 from app.helpers.logging import logger
 from app.persistence.isearch import DocumentNotFoundError, ISearch
 
 
 class Config(BaseModel):
-    api_key: str
-    azure_openai_api_key: str
+    api_key: str | None
+    azure_openai_api_key: str | None
     azure_openai_embedding_deployment: str
     azure_openai_embedding_dimensions: int
     azure_openai_embedding_model: str
@@ -177,8 +179,12 @@ class AzureSearch(ISearch):
             # Index configuration
             fields=fields,
             vector_search=vector_search,
+            # Performance
+            transport=await azure_transport(),
             # Authentication
-            credential=AzureKeyCredential(self._config.api_key),
+            credential=AzureKeyCredential(self._config.api_key)
+            if self._config.api_key
+            else await credential(),
         ) as client:
             try:
                 await client.create_index(
@@ -200,8 +206,12 @@ class AzureSearch(ISearch):
             # Deployment
             endpoint=self._config.endpoint,
             index_name=self._index_name,
+            # Performance
+            transport=await azure_transport(),
             # Authentication
-            credential=AzureKeyCredential(self._config.api_key),
+            credential=AzureKeyCredential(self._config.api_key)
+            if self._config.api_key
+            else await credential(),
         )
         return self
 

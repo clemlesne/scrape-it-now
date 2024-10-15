@@ -9,5 +9,6 @@
       "source.fixAll": "explicit",
       "source.organizeImports": "explicit"
     }
-  }
+  },
+  "codeQL.githubDatabase.download": "never"
 }

@@ -76,8 +76,10 @@ async def search_client(  # noqa: PLR0913
 
 
 @asynccontextmanager
-async def blob_client(
-    azure_storage_connection_string: str | None,
+async def blob_client(  # noqa: PLR0913
+    azure_storage_access_key: str | None,
+    azure_storage_account_name: str | None,
+    azure_storage_endpoint_suffix: str | None,
     container: str,
     path: str | None,
     provider: BlobProvider,
@@ -89,7 +91,9 @@ async def blob_client(
     if provider == BlobProvider.AZURE_BLOB_STORAGE:
         # Validate arguments
         config = AzureBlobStorageConfig(
-            connection_string=azure_storage_connection_string,  # pyright: ignore [reportArgumentType]
+            access_key=azure_storage_access_key,
+            account_name=azure_storage_account_name,  # pyright: ignore [reportArgumentType]
+            endpoint_suffix=azure_storage_endpoint_suffix,  # pyright: ignore [reportArgumentType]
             name=container,
         )  # pyright: ignore [reportArgumentType]
         # Init client
@@ -110,7 +114,9 @@ async def blob_client(
 
 @asynccontextmanager
 async def queue_client(
-    azure_storage_connection_string: str | None,
+    azure_storage_access_key: str | None,
+    azure_storage_account_name: str | None,
+    azure_storage_endpoint_suffix: str | None,
     provider: QueueProvider,
     queue: str,
 ) -> AsyncGenerator[IQueue, None]:
@@ -121,7 +127,9 @@ async def queue_client(
     if provider == QueueProvider.AZURE_QUEUE_STORAGE:
         # Validate arguments
         config = AzureQueueStorageConfig(
-            connection_string=azure_storage_connection_string,  # pyright: ignore [reportArgumentType]
+            access_key=azure_storage_access_key,
+            account_name=azure_storage_account_name,  # pyright: ignore [reportArgumentType]
+            endpoint_suffix=azure_storage_endpoint_suffix,  # pyright: ignore [reportArgumentType]
             name=queue,
         )
         # Init client

@@ -17,6 +17,8 @@ from tenacity import (
     wait_random_exponential,
 )
 
+from app.helpers.http import azure_transport
+from app.helpers.identity import credential
 from app.helpers.logging import logger
 from app.persistence.iblob import (
     BlobAlreadyExistsError,
@@ -28,7 +30,9 @@ from app.persistence.iblob import (
 
 
 class Config(BaseModel):
-    connection_string: str
+    access_key: str | None
+    account_name: str
+    endpoint_suffix: str
     name: str
 
 
@@ -174,10 +178,18 @@ class AzureBlobStorage(IBlob):
         logger.info('Deleted Blob Storage "%s"', self._config.name)
 
     async def __aenter__(self) -> "AzureBlobStorage":
-        self._service = BlobServiceClient.from_connection_string(
-            self._config.connection_string
+        self._service = BlobServiceClient(
+            # Deployment
+            account_url=f"https://{self._config.account_name}.blob.{self._config.endpoint_suffix}",
+            # Performance
+            transport=await azure_transport(),
+            # Authentication
+            credential=self._config.access_key or await credential(),
         )
-        self._client = self._service.get_container_client(self._config.name)
+        self._client = self._service.get_container_client(
+            # Deployment
+            container=self._config.name,
+        )
         # Create if it does not exist
         try:
             await self._client.create_container()

@@ -6,9 +6,11 @@ name = "scrape-it-now"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+  "aiodns~=3.2",
   "aiofiles~=24.1",
   "aiohttp~=3.10",
   "aiosqlite~=0.20",
+  "azure-identity~=1.17",
   "azure-monitor-opentelemetry~=1.6",
   "azure-search-documents==11.6.0b4",
   "azure-storage-blob~=12.22",

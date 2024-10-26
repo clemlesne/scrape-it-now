@@ -38,7 +38,9 @@ async def test_acid(provider: BlobProvider) -> None:
 
     # Init client
     async with blob_client(
-        azure_storage_connection_string=env["AZURE_STORAGE_CONNECTION_STRING"],
+        azure_storage_access_key=None,
+        azure_storage_account_name=env["AZURE_STORAGE_ACCOUNT_NAME"],
+        azure_storage_endpoint_suffix="core.windows.net",
         container=container_name,
         path="scraping-test",
         provider=provider,
@@ -117,7 +119,9 @@ async def test_lease(provider: BlobProvider) -> None:
 
     # Init client
     async with blob_client(
-        azure_storage_connection_string=env["AZURE_STORAGE_CONNECTION_STRING"],
+        azure_storage_access_key=None,
+        azure_storage_account_name=env["AZURE_STORAGE_ACCOUNT_NAME"],
+        azure_storage_endpoint_suffix="core.windows.net",
         container=container_name,
         path="scraping-test",
         provider=provider,
@@ -260,7 +264,9 @@ async def test_upload_many(provider: BlobProvider) -> None:
 
     # Init client
     async with blob_client(
-        azure_storage_connection_string=env["AZURE_STORAGE_CONNECTION_STRING"],
+        azure_storage_access_key=None,
+        azure_storage_account_name=env["AZURE_STORAGE_ACCOUNT_NAME"],
+        azure_storage_endpoint_suffix="core.windows.net",
         container=container_name,
         path="scraping-test",
         provider=provider,

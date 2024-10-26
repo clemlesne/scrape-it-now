@@ -6,11 +6,13 @@ name = "scrape-it-now"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+  "aiodns~=3.2",
   "aiofiles~=24.1",
   "aiohttp~=3.10",
   "aiosqlite~=0.20",
+  "azure-identity~=1.17",
   "azure-monitor-opentelemetry~=1.6",
-  "azure-search-documents==11.6.0b4",
+  "azure-search-documents~=11.6a0",
   "azure-storage-blob~=12.22",
   "azure-storage-queue~=12.11",
   "click~=8.1",
@@ -65,6 +67,7 @@ pep621_dev_dependency_groups = ["dev"]
 
 [tool.deptry.per_rule_ignores]
 DEP002 = [
+  "aiodns",  # Async DNS resolver for aiohttp
   "aiohttp",  # Async HTTP client for Azure SDKs
 ]
 DEP003 = [

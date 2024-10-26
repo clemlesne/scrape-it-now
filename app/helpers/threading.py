@@ -1,5 +1,6 @@
 import asyncio
 from collections.abc import Awaitable, Callable
+from functools import wraps
 from os import cpu_count
 from threading import Thread
 
@@ -41,3 +42,24 @@ def run_workers(
             thread.join()
     except KeyboardInterrupt:
         pass
+
+
+def asyncio_cache(func):
+    """
+    Cache the result of an async function.
+
+    Cache key is composed of the loop ID, args and kwargs.
+    """
+    cache = {}
+
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        loop_id = id(asyncio.get_event_loop())
+        key = (loop_id, args, frozenset(kwargs.items()))
+        if key in cache:
+            return cache[key]
+        result = await func(*args, **kwargs)
+        cache[key] = result
+        return result
+
+    return wrapper

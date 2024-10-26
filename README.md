@@ -261,14 +261,14 @@ graph LR
     end
   end
 
-  cli -- 1. Pull message --> to_scrape
-  cli -- 2. Get cache --> scraped
-  cli -- 3. Browse --> web
-  cli -- 4. Update cache --> scraped
-  cli -- 5. Push state --> state
-  cli -- 6. Add message --> to_scrape
-  cli -- 7. Add message --> to_chunk
-  cli -- 8. Update state --> job
+  cli -- (1) Pull message --> to_scrape
+  cli -- (2) Get cache --> scraped
+  cli -- (3) Browse --> web
+  cli -- (4) Update cache --> scraped
+  cli -- (5) Push state --> state
+  cli -- (6) Add message --> to_scrape
+  cli -- (7) Add message --> to_chunk
+  cli -- (8) Update state --> job
 ```
 
 ### Index
@@ -292,11 +292,11 @@ graph LR
     end
   end
 
-  cli -- 1. Pull message --> to_chunk
-  cli -- 2. Get cache --> scraped
-  cli -- 3. Chunk --> cli
-  cli -- 4. Embed --> embeddings
-  cli -- 5. Push to search --> search
+  cli -- (1) Pull message --> to_chunk
+  cli -- (2) Get cache --> scraped
+  cli -- (3) Chunk --> cli
+  cli -- (4) Embed --> embeddings
+  cli -- (5) Push to search --> search
 ```
 
 ## Design

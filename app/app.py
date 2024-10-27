@@ -220,7 +220,7 @@ def scrape() -> None:
     envvar="PROCESSES",
     help="Number of processes to use for scraping.",
     required=True,
-    type=int,
+    type=click.IntRange(min=1),
 )
 @click.option(
     "--job-name",
@@ -453,7 +453,7 @@ def index() -> None:
     envvar="PROCESSES",
     help="Number of processes to use for indexing.",
     required=True,
-    type=int,
+    type=click.IntRange(min=1),
 )
 @click.option(
     "--azure-search-api-key",

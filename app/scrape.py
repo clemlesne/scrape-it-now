@@ -838,12 +838,15 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
             await page.set_extra_http_headers({"if-none-match": previous_etag})
 
         try:
+            # Launch a new page
             res = await page.goto(
                 referer=referrer,
                 timeout=BROWSER_TIMEOUT_MS,
                 url=url_clean.geturl(),
                 wait_until="load",  # Wait for "load" event, compatible with PWA apps
             )
+            # Wait for 5 secs, to make sure the page is fully loaded
+            await page.wait_for_timeout(5000)
         except TimeoutError:  # TODO: Retry maybe a few times for timeout errors?
             return _generic_error(
                 etag=previous_etag,

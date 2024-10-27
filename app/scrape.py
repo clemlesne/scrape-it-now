@@ -812,7 +812,9 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
             color_scheme=random.choice(["dark", "light", "no-preference"]),
             device_scale_factor=random.randint(1, 3),
             has_touch=random.choice([True, False]),
-            locale="en-US",
+            locale=random.choice(
+                ["en-US", "en-GB", "en-CA", "en-AU"]
+            ),  # English only, with main variants
             timezone_id=random.choice(list(timezones)),
             user_agent=random.choice(list(user_agents)),
             viewport=random.choice(viewports),

@@ -1,12 +1,15 @@
+import asyncio
 import random
 import string
 from datetime import datetime, timedelta
-from os import environ as env
+from os import environ as env, walk
 from os.path import join
 from uuid import uuid4
+from zipfile import ZipFile
 
 import pytest
 from aiofiles import open
+from aiofiles.os import remove, rmdir
 from isodate import UTC
 from playwright.async_api import Browser, ViewportSize
 
@@ -28,12 +31,14 @@ LOCALHOST_URL = "http://localhost:8000"
 @pytest.mark.parametrize(
     "website",
     [
-        # 150+ links
-        "azuresdkdocs.html",
-        # React website
-        "reflex.html",
-        # Simple website
-        "hackernews.html",
+        "azure",
+        "bing",
+        "craigslist",
+        "google",
+        "hackernews",
+        "lemonde",
+        "nytimes",
+        "servicepublic",
     ],
     ids=lambda x: x,
 )
@@ -46,39 +51,71 @@ async def test_scrape_page_website(
 
     Expected Markdown content is stored in the `tests/websites` directory. Text content is generated manually a first time using this same application.
     """
-    # Init values
-    item = ScrapedQueuedModel(
-        depth=0,
-        referrer="https://google.com",
-        url=f"{LOCALHOST_URL}/{website}",
-    )
+    website_path = join(dir_tests("websites"), website)
 
-    # Process the item
-    page = await _scrape_page(
-        browser=browser,
-        image_callback=_dummy_callback,
-        previous_etag=None,
-        referrer=item.referrer,
-        save_images=False,
-        save_screenshot=False,
-        screenshot_callback=_dummy_callback,
-        timezones=[DEFAULT_TIMEZONE],
-        url=item.url,
-        user_agents=[DEFAULT_USER_AGENT],
-        viewports=[DEFAULT_VIEWPORT],
-    )
+    try:
+        # Unzip the website content
+        with ZipFile(
+            file=join(dir_tests("websites"), f"{website}.zip"),
+            mode="r",
+        ) as z:
+            z.extractall(website_path)
 
-    # Check page is not None
-    assert page is not None, "Page should not be None"
+        # Init values
+        item = ScrapedQueuedModel(
+            depth=0,
+            referrer="https://google.com",
+            url=f"{LOCALHOST_URL}/{website}/{website}.html",
+        )
 
-    # Check Markdown content
-    async with open(
-        encoding="utf-8",
-        file=join(dir_tests("websites"), f"{website}.md"),
-        mode="r",
-    ) as f:
-        expected = await f.read()
-        assert page.content == expected.strip(), "Markdown content should match"
+        # Process the item
+        page = await _scrape_page(
+            browser=browser,
+            image_callback=_dummy_callback,
+            previous_etag=None,
+            referrer=item.referrer,
+            save_images=False,
+            save_screenshot=False,
+            screenshot_callback=_dummy_callback,
+            timezones=[DEFAULT_TIMEZONE],
+            url=item.url,
+            user_agents=[DEFAULT_USER_AGENT],
+            viewports=[DEFAULT_VIEWPORT],
+        )
+
+        # Check page is not None
+        assert page is not None, "Page should not be None"
+
+        # Check content is not empty
+        assert page.content, "Content should not be empty"
+
+        # debug: Write Markdown content to file
+        async with open(
+            encoding="utf-8",
+            file=join(website_path, f"{website}.md"),
+            mode="w",
+        ) as f:
+            await f.write(page.content)
+
+        # Check Markdown content
+        async with open(
+            encoding="utf-8",
+            file=join(website_path, f"{website}.md"),
+            mode="r",
+        ) as f:
+            expected = await f.read()
+            assert page.content == expected.strip(), "Markdown content should match"
+
+    finally:
+        # Clean up the extracted website content
+        for walk_root, walk_dirs, walk_files in walk(website_path, topdown=False):
+            await asyncio.gather(
+                *[remove(join(walk_root, walk_file)) for walk_file in walk_files]
+            )
+            await asyncio.gather(
+                *[rmdir(join(walk_root, walk_dir)) for walk_dir in walk_dirs]
+            )
+        await rmdir(website_path)
 
 
 async def test_scrape_page_links(browser: Browser) -> None:

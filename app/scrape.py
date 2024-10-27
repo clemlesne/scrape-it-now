@@ -1,17 +1,19 @@
 import asyncio
 import random
 import re
-import subprocess
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
+from functools import lru_cache
 from http import HTTPStatus
+from mimetypes import guess_extension
 from os import environ as env
-from urllib.parse import urlparse
+from urllib.parse import ParseResult, urlparse
 
 from playwright._impl._driver import compute_driver_executable, get_driver_env
 from playwright.async_api import (
     Browser,
     BrowserType,
+    ElementHandle,
     Error as PlaywrightError,
     Locator,
     Route,
@@ -33,6 +35,7 @@ from app.helpers.persistence import blob_client, queue_client
 from app.helpers.resources import (
     browsers_install_path,
     dir_resources,
+    file_lock,
     hash_url,
     index_queue_name,
     pandoc_install_path,
@@ -41,7 +44,7 @@ from app.helpers.resources import (
 )
 from app.helpers.threading import run_workers
 from app.helpers.trie import Trie
-from app.models.scraped import ScrapedQueuedModel, ScrapedUrlModel
+from app.models.scraped import ScrapedImageModel, ScrapedQueuedModel, ScrapedUrlModel
 from app.models.state import StateJobModel, StateScrapedModel
 from app.persistence.iblob import (
     BlobNotFoundError,
@@ -59,12 +62,12 @@ from app.persistence.iqueue import (
 # State
 JOB_STATE_NAME = "job.json"
 
-# Storage
-SCRAPED_PREFIX = "scraped"
-STATE_PREFIX = "state"
-
 # Ads pattern
 _ads_pattern_cache: re.Pattern | None = None
+
+# Bowser
+BROWSER_NAME = "chromium"
+BROWSER_TIMEOUT_MS = 180000  # 3 mins
 
 
 async def _queue(  # noqa: PLR0913
@@ -95,7 +98,7 @@ async def _queue(  # noqa: PLR0913
     # Add the referrer to the set of scraped URLs
     state_bytes = StateScrapedModel().model_dump_json().encode(blob.encoding)
     await blob.upload_blob(
-        blob=f"{STATE_PREFIX}/{item_id}",
+        blob=_state_blob_prefix(item_id),
         data=state_bytes,
         length=len(state_bytes),
         overwrite=True,
@@ -109,54 +112,60 @@ async def _queue(  # noqa: PLR0913
 
         # If there is a whitelist, check if the URL is allowed
         if len(whitelist) > 0:
-            # Skip if the URL is not in the whitelist
             domain_paths = next(
+                # Match a domain
                 (
-                    paths
+                    paths or []
                     for domain, paths in whitelist.items()
                     if re.search(domain, new_url.netloc)
                 ),
+                # No domain matched
                 None,
             )
-            if not domain_paths:
+
+            # Skip if the URL is not in the whitelist
+            if domain_paths is None:
+                logger.debug("Skipping %s, domain not in whitelist", url)
                 return False
 
             # Skip if the URL has an ignored path
             if any(re.search(path, new_url.path) for path in domain_paths):
+                logger.debug("Skipping %s, path is ignored", url)
                 return False
 
         # Test previous attempts
         try:
             # Load from the validity cache
-            previous_raw = await blob.download_blob(f"{STATE_PREFIX}/{hash_url(url)}")
+            previous_raw = await blob.download_blob(_state_blob_prefix(_item_id(url)))
             previous = StateScrapedModel.model_validate_json(previous_raw)
 
             # Skip if the previous attempt is too recent
             # Date is now and not the one from the model, on purposes. Otherwise, if its a cached model, the date would match the frefresher date every time.
             if previous.created_at >= datetime.now(UTC) - cache_refresh:
                 logger.debug(
-                    "Skipping %s due to recent attempt at %s", url, previous.created_at
+                    "Skipping %s, recent attempt at %s", url, previous.created_at
                 )
                 return False
 
         except (BlobNotFoundError, ValidationError):
             logger.debug("State miss for %s", url)
 
-        # Update the validity cache
-        await blob.upload_blob(
-            blob=f"{STATE_PREFIX}/{hash_url(url)}",
-            data=state_bytes,
-            length=len(state_bytes),
-            overwrite=True,
-        )
-
-        # Add the sub URL to the input queue
-        await in_queue.send_message(
-            ScrapedQueuedModel(
-                depth=new_depth,
-                referrer=referrer,
-                url=url,
-            ).model_dump_json(),
+        await asyncio.gather(
+            # Update the validity cache
+            blob.upload_blob(
+                blob=_state_blob_prefix(_item_id(url)),
+                data=state_bytes,
+                length=len(state_bytes),
+                overwrite=True,
+            ),
+            # Add the sub URL to the input queue
+            in_queue.send_message(
+                ScrapedQueuedModel(
+                    depth=new_depth,
+                    referrer=referrer,
+                    url=url,
+                ).model_dump_json(),
+            ),
         )
         return True
 
@@ -182,6 +191,8 @@ async def _process_one(  # noqa: PLR0913
     in_queue: IQueue,
     max_depth: int,
     out_queue: IQueue,
+    save_images: bool,
+    save_screenshot: bool,
     timezones: list[str],
     user_agents: list[str],
     viewports: list[ViewportSize],
@@ -193,39 +204,40 @@ async def _process_one(  # noqa: PLR0913
     Returns the number of processed URLs, queued URLs, and total network used.
     """
     queued_urls = 0
+    current_id = _item_id(current_item.url)
+    blob_prefix = scraped_blob_prefix(current_id)
+    page_blob_name = f"{blob_prefix}.json"
 
     # Check if the URL has already been processed
-    current_id = hash_url(current_item.url)
-    cache_name = f"{SCRAPED_PREFIX}/{current_id}.json"
-    cache_item = None
+    cache_page = None
     try:
         # Load the cache
-        cache_raw = await blob.download_blob(cache_name)
-        cache_item = ScrapedUrlModel.model_validate_json(cache_raw)
+        cache_raw = await blob.download_blob(page_blob_name)
+        cache_page = ScrapedUrlModel.model_validate_json(cache_raw)
 
         # Skip if previous attempt encountered a server error
-        if cache_item.status >= HTTPStatus.INTERNAL_SERVER_ERROR:
+        if cache_page.status >= HTTPStatus.INTERNAL_SERVER_ERROR:
             logger.info(
                 "Loaded %s (%i) from cache, but server error",
-                cache_item.url,
+                cache_page.url,
                 current_item.depth,
             )
             raise BlobNotFoundError
 
         # Skip if the cache has no validity date
-        if not cache_item.valid_until:
+        if not cache_page.valid_until:
             logger.info(
                 "Loaded %s (%i) from cache, no validity date",
-                cache_item.url,
+                cache_page.url,
                 current_item.depth,
             )
             raise BlobNotFoundError
 
         # Skip if the cache is explicitly marked as expired
-        if cache_item.valid_until and cache_item.valid_until < datetime.now(UTC):
+        if cache_page.valid_until and cache_page.valid_until < datetime.now(UTC):
             logger.info(
                 "Loaded %s (%i) from cache, but expired",
-                cache_item.url,
+                cache_page.url,
                 current_item.depth,
             )
             raise BlobNotFoundError
@@ -238,14 +250,14 @@ async def _process_one(  # noqa: PLR0913
             item_id=current_id,
             in_queue=in_queue,
             max_depth=max_depth,
-            referrer=cache_item.url,
-            urls=set(cache_item.links),
+            referrer=cache_page.url,
+            urls=set(cache_page.links),
             whitelist=whitelist,
         )
 
         logger.info(
             "Loaded %s (%i) from cache",
-            cache_item.url,
+            cache_page.url,
             current_item.depth,
         )
 
@@ -255,11 +267,71 @@ async def _process_one(  # noqa: PLR0913
     except (BlobNotFoundError, ValidationError):
         logger.debug("Cache miss for %s", current_item.url)
 
+    async def _image_callback(
+        body: bytes,
+        content_type: str | None,
+        image: ScrapedImageModel,
+    ) -> None:
+        """
+        Callback to save images and their metadata.
+        """
+        # Skip if content type is empty
+        if not content_type:
+            logger.debug("Empty content type for %s, skipping", image.url)
+            return
+
+        # Guess file extension
+        extension = guess_extension(content_type)
+        if not extension:
+            logger.debug(
+                "No extension found for %s (%s), skipping", image.url, content_type
+            )
+            return
+
+        name_prefix = f"{blob_prefix}/{_item_id(image.url)}"
+        image_content_blob_name = f"{name_prefix}{extension}"
+        image_model_blob_name = f"{name_prefix}.json"
+        model_bytes = image.model_dump_json().encode(blob.encoding)
+        await asyncio.gather(
+            # Store image model
+            blob.upload_blob(
+                blob=image_model_blob_name,
+                data=model_bytes,
+                length=len(model_bytes),
+                overwrite=True,
+            ),
+            # Store image content
+            blob.upload_blob(
+                blob=image_content_blob_name,
+                data=body,
+                length=len(body),
+                overwrite=True,
+            ),
+        )
+
+    async def _screenshot_callback(
+        screenshot: bytes,
+    ) -> None:
+        """
+        Callback to save screenshots.
+        """
+        screenshot_blob_name = f"{blob_prefix}/screenshot.jpeg"
+        await blob.upload_blob(
+            blob=screenshot_blob_name,
+            data=screenshot,
+            length=len(screenshot),
+            overwrite=True,
+        )
+
     # Process the URL
-    new_result = await _scrape_page(
+    new_page = await _scrape_page(
         browser=browser,
-        previous_etag=cache_item.etag if cache_item else None,
+        image_callback=_image_callback,
+        previous_etag=cache_page.etag if cache_page else None,
         referrer=current_item.referrer,
+        save_images=save_images,
+        save_screenshot=save_screenshot,
+        screenshot_callback=_screenshot_callback,
         timezones=timezones,
         url=current_item.url,
         user_agents=user_agents,
@@ -267,7 +339,7 @@ async def _process_one(  # noqa: PLR0913
     )
 
     # Use cache data if scraping fails or is cached
-    if not new_result and cache_item:
+    if not new_page and cache_page:
         # Add the links to the queue
         queued_urls = await _queue(
             blob=blob,
@@ -276,47 +348,69 @@ async def _process_one(  # noqa: PLR0913
             item_id=current_id,
             in_queue=in_queue,
             max_depth=max_depth,
-            referrer=cache_item.url,
-            urls=set(cache_item.links),
+            referrer=cache_page.url,
+            urls=set(cache_page.links),
             whitelist=whitelist,
         )
-        logger.info("Used cache for %s (%i)", cache_item.url, current_item.depth)
+        logger.info("Used cache for %s (%i)", cache_page.url, current_item.depth)
         # Return the number of processed URLs, queued URLs, and total network used
         return (0, queued_urls, 0.0)
 
     # TODO: Review the algorithm to avoid the use of exceptions for control flow
-    if not new_result:
+    if not new_page:
         raise RuntimeError("Failed to scrape URL and no cache available, fill an issue")
 
-    # Output to a blob and queue
-    model_bytes = new_result.model_dump_json().encode(blob.encoding)
-    await blob.upload_blob(
-        blob=cache_name,
-        data=model_bytes,
-        length=len(model_bytes),
-        overwrite=True,
+    model_bytes = new_page.model_dump_json().encode(blob.encoding)
+    _, _, queued_urls = await asyncio.gather(
+        # Store model
+        blob.upload_blob(
+            blob=page_blob_name,
+            data=model_bytes,
+            length=len(model_bytes),
+            overwrite=True,
+        ),
+        # Mark current file to be processed for chunking
+        out_queue.send_message(f"{scraped_blob_prefix(current_id)}.json"),
+        # Add the links to the queue
+        _queue(
+            blob=blob,
+            cache_refresh=cache_refresh,
+            deph=current_item.depth,
+            item_id=current_id,
+            in_queue=in_queue,
+            max_depth=max_depth,
+            referrer=new_page.url,
+            urls=set(new_page.links),
+            whitelist=whitelist,
+        ),
     )
-
-    # Mark current file to be processed for chunking
-    await out_queue.send_message(f"{SCRAPED_PREFIX}/{current_id}.json")
-
-    # Add the links to the queue
-    queued_urls = await _queue(
-        blob=blob,
-        cache_refresh=cache_refresh,
-        deph=current_item.depth,
-        item_id=current_id,
-        in_queue=in_queue,
-        max_depth=max_depth,
-        referrer=new_result.url,
-        urls=set(new_result.links),
-        whitelist=whitelist,
-    )
-
-    logger.info("Scraped %s (%i)", new_result.url, current_item.depth)
 
     # Return the number of processed URLs, queued URLs, and total network used
-    return (1, queued_urls, new_result.network_used_mb)
+    logger.info("Scraped %s (%i)", new_page.url, current_item.depth)
+    return (1, queued_urls, new_page.network_used_mb)
+
+
+@lru_cache(maxsize=512)
+def _item_id(url: str) -> str:
+    return hash_url(url)
+
+
+def _state_blob_prefix(item_id: str) -> str:
+    """
+    Return the blob prefix for a state URL.
+
+    The prefix is used to store the state of the URL: `state/{hash}.json`.
+    """
+    return f"state/{item_id}"
+
+
+def scraped_blob_prefix(item_id: str) -> str:
+    """
+    Return the blob prefix for a scraped URL.
+
+    The prefix is used to store the scraped content of the URL: `scraped/{hash}.json`.
+    """
+    return f"scraped/{item_id}"
 
 
 async def _update_job_state(
@@ -392,14 +486,17 @@ async def _update_job_state(
 
 
 async def _worker(  # noqa: PLR0913
-    azure_storage_connection_string: str,
+    azure_storage_access_key: str | None,
+    azure_storage_account_name: str | None,
+    azure_storage_endpoint_suffix: str | None,
     blob_path: str,
     blob_provider: BlobProvider,
-    browser_name: str,
     cache_refresh: timedelta,
     job: str,
     max_depth: int,
     queue_provider: QueueProvider,
+    save_images: bool,
+    save_screenshot: bool,
     timezones: list[str],
     user_agents: list[str],
     viewports: list[ViewportSize],
@@ -408,105 +505,111 @@ async def _worker(  # noqa: PLR0913
     # Init clients
     async with (
         blob_client(
-            azure_storage_connection_string=azure_storage_connection_string,
+            azure_storage_access_key=azure_storage_access_key,
+            azure_storage_account_name=azure_storage_account_name,
+            azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
             container=scrape_container_name(job),
             path=blob_path,
             provider=blob_provider,
         ) as blob,
         queue_client(
-            azure_storage_connection_string=azure_storage_connection_string,
+            azure_storage_access_key=azure_storage_access_key,
+            azure_storage_account_name=azure_storage_account_name,
+            azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
             provider=queue_provider,
             queue=scrape_queue_name(job),
         ) as in_queue,
         queue_client(
-            azure_storage_connection_string=azure_storage_connection_string,
+            azure_storage_access_key=azure_storage_access_key,
+            azure_storage_account_name=azure_storage_account_name,
+            azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
             provider=queue_provider,
             queue=index_queue_name(job),
         ) as out_queue,
+        async_playwright() as p,
     ):
-        # Init Playwright context
-        async with async_playwright() as p:
-            browser_type: BrowserType = getattr(p, browser_name)
-            browser_usage = 0
-            browser: Browser | None = None
+        browser_type: BrowserType = getattr(p, BROWSER_NAME)
+        browser_usage = 0
+        browser: Browser | None = None
 
-            # Process the queue
-            while messages := in_queue.receive_messages(
-                max_messages=32,
-                visibility_timeout=32 * 5,  # 5 secs per message
-            ):
-                total_network_used_mb = 0.0
-                total_processed = 0
-                total_queued = 0
+        # Process the queue
+        while messages := in_queue.receive_messages(
+            max_messages=32,
+            visibility_timeout=32 * 5,  # 5 secs per message
+        ):
+            total_network_used_mb = 0.0
+            total_processed = 0
+            total_queued = 0
 
-                # Iterate over the messages
-                logger.debug("Processing new messages")
-                async for message in messages:
-                    # Parse the message
-                    current_item = ScrapedQueuedModel.model_validate_json(
-                        message.content
-                    )
+            # Iterate over the messages
+            logger.debug("Processing new messages")
+            async for message in messages:
+                # Parse the message
+                current_item = ScrapedQueuedModel.model_validate_json(message.content)
+                logger.info(
+                    'Processing "%s" (%i)',
+                    current_item.url,
+                    current_item.depth,
+                )
+
+                # Get a browser instance
+                # Limit the usage of the browser to 100 scrapings, to avoid memory leaks. Restart the browser after that. Memory leaks have been observed in both macOS and Ubuntu, with over 150 GB of memory used after an hour.
+                # TODO: Create an issue in the Playwright repository to investigate the memory leak
+                if not browser:  # First start
+                    browser = await _get_broswer(browser_type)
+                    logger.debug("Started browser %s", browser_type.name)
+                elif browser_usage < 100:  # noqa: PLR2004
+                    browser_usage += 1
+                else:  # Restart
+                    await browser.close()
+                    browser = await _get_broswer(browser_type)
                     logger.info(
-                        'Processing "%s" (%i)',
-                        current_item.url,
-                        current_item.depth,
+                        "Restarted browser %s after %i iterations",
+                        browser_type.name,
+                        browser_usage,
                     )
+                    browser_usage = 0
 
-                    # Get a browser instance
-                    # Limit the usage of the browser to 100 scrapings, to avoid memory leaks. Restart the browser after that. Memory leaks have been observed in both macOS and Ubuntu, with over 150 GB of memory used after an hour.
-                    # TODO: Create an issue in the Playwright repository to investigate the memory leak
-                    if not browser:  # First start
-                        browser = await _get_broswer(browser_type)
-                        logger.debug("Started browser %s", browser_type.name)
-                    elif browser_usage < 100:  # noqa: PLR2004
-                        browser_usage += 1
-                    else:  # Restart
-                        await browser.close()
-                        browser = await _get_broswer(browser_type)
-                        logger.info(
-                            "Restarted browser %s after %i iterations",
-                            browser_type.name,
-                            browser_usage,
-                        )
-                        browser_usage = 0
+                try:
+                    processed, queued, network_used_mb = await _process_one(
+                        blob=blob,
+                        browser=browser,
+                        cache_refresh=cache_refresh,
+                        current_item=current_item,
+                        in_queue=in_queue,
+                        max_depth=max_depth,
+                        out_queue=out_queue,
+                        save_images=save_images,
+                        save_screenshot=save_screenshot,
+                        timezones=timezones,
+                        user_agents=user_agents,
+                        viewports=viewports,
+                        whitelist=whitelist,
+                    )
 
                     try:
-                        processed, queued, network_used_mb = await _process_one(
-                            blob=blob,
-                            browser=browser,
-                            cache_refresh=cache_refresh,
-                            current_item=current_item,
-                            in_queue=in_queue,
-                            max_depth=max_depth,
-                            out_queue=out_queue,
-                            timezones=timezones,
-                            user_agents=user_agents,
-                            viewports=viewports,
-                            whitelist=whitelist,
-                        )
+                        await in_queue.delete_message(message)
+                    except MessageNotFoundError:  # Race condition, message has already been deleted by another worker, pass silently to the next message, as it has already been processed
+                        continue
 
-                        try:
-                            await in_queue.delete_message(message)
-                        except MessageNotFoundError:  # Race condition, message has already been deleted by another worker, pass silently to the next message, as it has already been processed
-                            continue
+                    # Update counters
+                    total_network_used_mb += network_used_mb
+                    total_processed += processed
+                    total_queued += queued
 
-                        # Update counters
-                        total_network_used_mb += network_used_mb
-                        total_processed += processed
-                        total_queued += queued
+                except Exception:
+                    # TODO: Add a dead-letter queue
+                    # TODO: Add a retry mechanism
+                    # TODO: Narrow the exception type
+                    logger.error(
+                        "Error processing %s (%i)",
+                        current_item.url,
+                        current_item.depth,
+                        exc_info=True,
+                    )
 
-                    except Exception:
-                        # TODO: Add a dead-letter queue
-                        # TODO: Add a retry mechanism
-                        # TODO: Narrow the exception type
-                        logger.error(
-                            "Error processing %s (%i)",
-                            current_item.url,
-                            current_item.depth,
-                            exc_info=True,
-                        )
-
-                # Update job state
+            # Update job state if data was processed
+            if total_network_used_mb > 0 or total_processed > 0 or total_queued > 0:
                 await _update_job_state(
                     blob=blob,
                     network_used_mb=total_network_used_mb,
@@ -514,14 +617,8 @@ async def _worker(  # noqa: PLR0913
                     queued=total_queued,
                 )
 
-                # Wait 3 sec to avoid spamming the queue if it is empty
-                await asyncio.sleep(3)
-
-            logger.info("No more queued messages, exiting")
-
-            # Close the browser
-            if browser:
-                await browser.close()
+            # Wait 3 sec to avoid spamming the queue if it is empty
+            await asyncio.sleep(3)
 
 
 def _ads_pattern() -> re.Pattern | None:
@@ -561,7 +658,10 @@ def _ads_pattern() -> re.Pattern | None:
 
 
 def _filter_routes(
-    size_callback: Callable[[int], None],
+    image_callback: Callable[[bytes, str | None, ScrapedImageModel], Awaitable[None]],
+    network_used_callback: Callable[[int], None],
+    reduce_network: bool,
+    save_images: bool,
 ) -> Callable[[Route], Awaitable[None]]:
     """
     Speed up page loading by aborting some requests.
@@ -580,16 +680,22 @@ def _filter_routes(
     async def _wrapper(
         route: Route,
     ) -> None:
-        # Skip UI resources
-        if route.request.resource_type in {"image", "media", "font", "stylesheet"}:
+        # Skip UI resources if network reduction is enabled
+        if reduce_network and route.request.resource_type in {
+            "media",
+            "font",
+            "stylesheet",
+        }:
             logger.debug("Blocked resource type %s", route.request.resource_type)
             await route.abort("blockedbyclient")
             return
 
+        url_clean = _clean_url(route.request.url).geturl()
+
         # Check if the request is to a known ad domain
         if pattern := _ads_pattern():
-            if pattern.search(route.request.url) is not None:
-                logger.debug("Blocked ad %s", route.request.url)
+            if pattern.search(url_clean) is not None:
+                logger.debug("Blocked ad %s", url_clean)
                 await route.abort("blockedbyclient")
                 return
 
@@ -606,8 +712,39 @@ def _filter_routes(
                 max_retries=3,  # Retry 3 times on network errors
             )
         except PlaywrightError:
-            logger.debug("Failed to fetch resource %s", route.request.url)
+            logger.debug("Failed to fetch resource %s", url_clean)
             return
+
+        # Persist the image, if it is an image
+        if route.request.resource_type == "image":
+            # Skip if download is disabled
+            if not save_images:
+                await route.abort("blockedbyclient")
+                return
+
+            # Check for status code
+            status = res.status
+            if status != HTTPStatus.OK:  # Parse the content only if status is OK
+                logger.debug("Failed to download image %s (%i)", url_clean, status)
+                await route.abort("failed")
+                return
+
+            # Consume the response
+            body = await res.body()
+            content_type = res.headers.get("content-type")
+            redirect = res.url
+
+            # Callback to save the image
+            await image_callback(
+                body,
+                content_type,
+                ScrapedImageModel(
+                    redirect=redirect,
+                    status=status,
+                    url=url_clean,
+                ),
+            )
+            logger.debug("Downloaded image %s", url_clean)
 
         # Store content size
         size_bytes = (
@@ -615,7 +752,7 @@ def _filter_routes(
             if (content_length := res.headers.get("content-length"))
             else 0
         )
-        size_callback(size_bytes)
+        network_used_callback(size_bytes)
 
         # Continue the request
         await route.fulfill(response=res)
@@ -625,8 +762,12 @@ def _filter_routes(
 
 async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
     browser: Browser,
+    image_callback: Callable[[bytes, str | None, ScrapedImageModel], Awaitable[None]],
     previous_etag: str | None,
     referrer: str,
+    save_images: bool,
+    save_screenshot: bool,
+    screenshot_callback: Callable[[bytes], Awaitable[None]],
     timezones: list[str],
     url: str,
     user_agents: list[str],
@@ -637,6 +778,8 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
 
     Pages are requested in English, using a random user agent in a Playwright browser. All links are extracted from the HTML content.
     """
+    network_used_bytes = 0
+    url_clean = _clean_url(url)
 
     def _generic_error(
         message: str,
@@ -654,17 +797,9 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
             valid_until=valid_until,
         )
 
-    network_used_bytes = 0
-
     def _network_used_callback(size_bytes: int) -> None:
         nonlocal network_used_bytes
         network_used_bytes += size_bytes
-
-    # Parse URL
-    url_clean = urlparse(url)._replace(
-        query="",
-        fragment="",
-    )
 
     # Load page
     async with (
@@ -677,7 +812,9 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
             color_scheme=random.choice(["dark", "light", "no-preference"]),
             device_scale_factor=random.randint(1, 3),
             has_touch=random.choice([True, False]),
-            locale="en-US",
+            locale=random.choice(
+                ["en-US", "en-GB", "en-CA", "en-AU"]
+            ),  # English only, with main variants
             timezone_id=random.choice(list(timezones)),
             user_agent=random.choice(list(user_agents)),
             viewport=random.choice(viewports),
@@ -686,18 +823,30 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
         page = await context.new_page()
 
         # Apply filtering to reduce traffic and CPU usage
-        await page.route("**/*", _filter_routes(_network_used_callback))
+        await page.route(
+            "**/*",
+            _filter_routes(
+                image_callback=image_callback,
+                network_used_callback=_network_used_callback,
+                reduce_network=not save_screenshot,
+                save_images=save_images,
+            ),
+        )
 
         # Caching of unchanged resources
         if previous_etag:
             await page.set_extra_http_headers({"if-none-match": previous_etag})
 
         try:
+            # Launch a new page
             res = await page.goto(
-                url_clean.geturl(),
                 referer=referrer,
-                timeout=30000,  # 30 seconds
+                timeout=BROWSER_TIMEOUT_MS,
+                url=url_clean.geturl(),
+                wait_until="load",  # Wait for "load" event, compatible with PWA apps
             )
+            # Wait for 5 secs, to make sure the page is fully loaded
+            await page.wait_for_timeout(5000)
         except TimeoutError:  # TODO: Retry maybe a few times for timeout errors?
             return _generic_error(
                 etag=previous_etag,
@@ -763,7 +912,13 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
             )
 
         # Get title value, HTML selector, full page content, and all links
-        title, body_selector, full_html, links_selector = await asyncio.gather(
+        (
+            title,
+            body_selector,
+            full_html,
+            links_selector,
+            metas_selector,
+        ) = await asyncio.gather(
             # Page title specified in the metadata
             page.title(),
             # HTML tag element (= body)
@@ -775,6 +930,8 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
                 "link",
                 include_hidden=True,  # Gather links in navigation menus, those are usually hidden
             ).all(),
+            # All meta tags
+            page.query_selector_all("head > meta"),
         )
 
         # Extract body
@@ -800,18 +957,30 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
             )
 
         # Extract text content
+        # TODO: Make it async with a wrapper
         try:
+            # Remove "src" attributes to avoid downloading external resources
+            full_html_minus_resources = full_html
+            for attribute in ("src", "srcset"):
+                full_html_minus_resources = re.sub(
+                    rf"{attribute}=\"[^\"].*?\"",  # Match attribute
+                    f'{attribute}=""',  # Replace with empty string
+                    full_html_minus_resources,
+                )
+
             # Convert HTML to Markdown
             full_markdown = convert_text(
                 format="html",  # Input is HTML
                 sandbox=True,  # Enable sandbox mode, we don't know what we are scraping
-                source=full_html,
+                source=full_html_minus_resources,
                 to="markdown-fenced_divs-native_divs-raw_html-bracketed_spans-native_spans-link_attributes-header_attributes-inline_code_attributes",
+                verify_format=False,  # We know the format, don't verify it
                 extra_args=[
                     "--embed-resources=false",
                     "--wrap=none",
                 ],
             )
+
             # Filter out icons
             full_markdown = "\n".join(
                 [
@@ -820,14 +989,25 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
                     if "![](data:image/" not in line
                 ]
             )
+
             # Filter out embedded images but keep the alt text
             full_markdown = re.sub(
                 r"!\[(.*)]\(data:image/.*\)",
                 r"![\1]()",
                 full_markdown,
             )
+
+            # Remove empty images
+            full_markdown = full_markdown.replace("![]()", "")
+
+            # Remove empty links
+            full_markdown = full_markdown.replace("[]()", "")
+
             # Clean up by removing double newlines
             full_markdown = re.sub(r"\n\n+", "\n\n", full_markdown)
+
+            # Strip
+            full_markdown = full_markdown.strip()
 
         except (
             RuntimeError
@@ -838,12 +1018,16 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
                 valid_until=valid_until,
             )
 
-        # Extract links
         async def _extract_link(selector: Locator) -> str | None:
+            """
+            Extract a link from a selector.
+
+            The link will be formatted as an absolute URL (from a relative URL) and cleaned.
+            """
             try:
                 href = await selector.get_attribute(
                     name="href",
-                    timeout=1000,  # 1 second
+                    timeout=BROWSER_TIMEOUT_MS,
                 )
             except (
                 TimeoutError
@@ -875,6 +1059,52 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
             ]
         )
 
+        async def _extract_meta(
+            element: ElementHandle,
+        ) -> tuple[str, str | None] | None:
+            """
+            Extract a meta tag from an element.
+
+            Name and content are returned. Other attributes are ignored. If the browser fails to extract the attributes, None is returned.
+
+            See: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta#attributes
+            """
+            try:
+                name, content = await asyncio.gather(
+                    element.get_attribute("name"),
+                    element.get_attribute("content"),
+                )
+            except TimeoutError:
+                logger.debug("Timeout for selecting meta tag attributes", exc_info=True)
+                return
+            if not name:
+                return
+            return (name, content or None)
+
+        # Extract meta tags
+        metas: dict[str, str | None] = {
+            tag[0]: tag[1]
+            for tag in await asyncio.gather(
+                *[_extract_meta(meta) for meta in metas_selector]
+            )
+            if tag
+        }
+
+        # Save screenshot if requested
+        if save_screenshot:
+            # Take it
+            screenshot = await page.screenshot(
+                animations="disabled",  # Avoid animations to perturb the render
+                full_page=True,  # Store the full page
+                quality=70,  # Quality is not a concern, let's keep it cheap to store
+                scale="css",  # Keep the same zoom level for all screenshots across random viewports
+                timeout=BROWSER_TIMEOUT_MS,
+                type="jpeg",  # JPEG is good enough for screenshots
+            )
+            # Callback to save the screenshot
+            await screenshot_callback(screenshot)
+            logger.debug("Saved screenshot for %s", url_clean.geturl())
+
         # Get final URL after redirects
         redirect = res.url
 
@@ -883,6 +1113,7 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
             content=full_markdown,
             etag=etag,
             links=list(links),
+            metas=metas,
             network_used_mb=network_used_bytes / 1024 / 1024,
             raw=body_html,
             redirect=redirect,
@@ -912,7 +1143,9 @@ def _format_path(path: str) -> str:
 
 
 async def run(  # noqa: PLR0913
-    azure_storage_connection_string: str | None,
+    azure_storage_access_key: str | None,
+    azure_storage_account_name: str | None,
+    azure_storage_endpoint_suffix: str | None,
     blob_path: str,
     blob_provider: BlobProvider,
     cache_refresh: int,
@@ -920,6 +1153,8 @@ async def run(  # noqa: PLR0913
     max_depth: int,
     processes: int,
     queue_provider: QueueProvider,
+    save_images: bool,
+    save_screenshot: bool,
     timezones: list[str],
     url: str,
     user_agents: list[str],
@@ -929,13 +1164,15 @@ async def run(  # noqa: PLR0913
     logger.info("Start scraping job %s", job)
 
     # Install Playwright
-    browser_name = "chromium"
     async with async_playwright() as p:
-        browser_type = getattr(p, browser_name)
-        _install_browser(browser_type)
+        browser_type = getattr(p, BROWSER_NAME)
 
-    # Install Pandoc
-    _install_pandoc()
+        await asyncio.gather(
+            # Install Playwright
+            _install_browser(browser_type),
+            # Install Pandoc
+            _install_pandoc(),
+        )
 
     # Parse cache_refresh
     cache_refresh_parsed = timedelta(hours=cache_refresh)
@@ -948,13 +1185,17 @@ async def run(  # noqa: PLR0913
     # Init clients
     async with (
         blob_client(
-            azure_storage_connection_string=azure_storage_connection_string,
+            azure_storage_access_key=azure_storage_access_key,
+            azure_storage_account_name=azure_storage_account_name,
+            azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
             container=scrape_container_name(job),
             path=blob_path,
             provider=blob_provider,
         ) as blob,
         queue_client(
-            azure_storage_connection_string=azure_storage_connection_string,
+            azure_storage_access_key=azure_storage_access_key,
+            azure_storage_account_name=azure_storage_account_name,
+            azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
             provider=queue_provider,
             queue=scrape_queue_name(job),
         ) as in_queue,
@@ -969,7 +1210,7 @@ async def run(  # noqa: PLR0913
             blob=blob,
             cache_refresh=cache_refresh_parsed,
             deph=model.depth,
-            item_id=hash_url(model.referrer),
+            item_id=_item_id(model.referrer),
             in_queue=in_queue,
             max_depth=max_depth,
             referrer=model.referrer,
@@ -986,10 +1227,11 @@ async def run(  # noqa: PLR0913
         )
 
     run_workers(
-        azure_storage_connection_string=azure_storage_connection_string,
+        azure_storage_access_key=azure_storage_access_key,
+        azure_storage_account_name=azure_storage_account_name,
+        azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
         blob_path=blob_path,
         blob_provider=blob_provider,
-        browser_name=browser_name,
         cache_refresh=cache_refresh_parsed,
         count=processes,
         func=_worker,
@@ -997,6 +1239,8 @@ async def run(  # noqa: PLR0913
         max_depth=max_depth,
         name=f"scrape-{job}",
         queue_provider=queue_provider,
+        save_images=save_images,
+        save_screenshot=save_screenshot,
         timezones=timezones,
         user_agents=user_agents,
         viewports=viewports_parsed,
@@ -1004,15 +1248,19 @@ async def run(  # noqa: PLR0913
     )
 
 
-async def state(
+async def state(  # noqa: PLR0913
+    azure_storage_access_key: str | None,
+    azure_storage_account_name: str | None,
+    azure_storage_endpoint_suffix: str | None,
     blob_path: str,
     blob_provider: BlobProvider,
     job: str,
-    azure_storage_connection_string: str | None,
 ) -> StateJobModel | None:
     # Init clients
     async with blob_client(
-        azure_storage_connection_string=azure_storage_connection_string,
+        azure_storage_access_key=azure_storage_access_key,
+        azure_storage_account_name=azure_storage_account_name,
+        azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
         container=scrape_container_name(job),
         path=blob_path,
         provider=blob_provider,
@@ -1028,7 +1276,7 @@ async def state(
         return model
 
 
-def _install_browser(
+async def _install_browser(
     browser_type: BrowserType,
     with_deps: bool = False,
 ) -> None:
@@ -1039,34 +1287,34 @@ def _install_browser(
     """
     # Add installation path to the environment
     # See: https://playwright.dev/docs/browsers#hermetic-install
-    env["PLAYWRIGHT_BROWSERS_PATH"] = browsers_install_path()
+    env["PLAYWRIGHT_BROWSERS_PATH"] = await browsers_install_path()
 
     # Get location of Playwright driver
     driver_executable, driver_cli = compute_driver_executable()
 
-    # Build the command arguments
-    args = [driver_executable, driver_cli, "install", browser_type.name]
-    if with_deps:
-        args.append("--with-deps")
+    # Ensure only one worker is installing the browser
+    async with file_lock(driver_executable):
+        # Build the command arguments
+        args = [driver_executable, driver_cli, "install", browser_type.name]
+        if with_deps:
+            args.append("--with-deps")
 
-    # Run
-    proc = subprocess.run(
-        args=args,
-        capture_output=True,
-        check=False,
-        env=get_driver_env(),
-        text=True,
-    )
+        # Run
+        proc = await asyncio.create_subprocess_shell(
+            cmd=" ".join(args),
+            env=get_driver_env(),
+        )
+        await proc.wait()
 
     # Display error logs if any
     err = proc.stderr
     if err:
-        logger.error("Browser install error:\n%s", err)
+        logger.error("Browser install error:\n%s", await err.read())
 
     # Display standard logs if any
     logs = proc.stdout
     if logs:
-        logger.info("Browser install logs:\n%s", proc.stdout)
+        logger.info("Browser install logs:\n%s", await logs.read())
 
     if proc.returncode != 0:
         raise RuntimeError("Failed to install browser")
@@ -1078,9 +1326,10 @@ async def _get_broswer(
     """
     Launch a browser instance.
     """
+    # Launch the browser
     browser = await browser_type.launch(
-        downloads_path=browsers_install_path(),  # Using the application path not the default one from the SDK
         chromium_sandbox=True,  # Enable the sandbox for security, we don't know what we are scraping
+        timeout=BROWSER_TIMEOUT_MS,
         # See: https://github.com/microsoft/playwright/blob/99a36310570617222290c09b96a2026beb8b00f9/packages/playwright-core/src/server/chromium/chromium.ts
         args=[
             "--disable-gl-drawing-for-tests",  # Disable UI rendering, lower CPU usage
@@ -1089,7 +1338,7 @@ async def _get_broswer(
     return browser
 
 
-def _install_pandoc() -> None:
+async def _install_pandoc() -> None:
     """
     Install Pandoc.
 
@@ -1099,15 +1348,30 @@ def _install_pandoc() -> None:
     # See: https://github.com/jgm/pandoc/releases
     version = "3.2.1"
 
-    install_path = pandoc_install_path(version)
+    # Get location of Pandoc driver
+    install_path = await pandoc_install_path(version)
 
-    # Download Pandoc if not installed
-    ensure_pandoc_installed(
-        delete_installer=True,
-        targetfolder=install_path,
-        version=version,
-    )
+    # Ensure only one worker is installing Pandoc
+    async with file_lock(install_path):
+        # Download Pandoc if not installed
+        ensure_pandoc_installed(
+            delete_installer=True,
+            targetfolder=install_path,
+            version=version,
+        )
 
     # Add installation path to the environment
     # See: https://github.com/JessicaTegner/pypandoc?tab=readme-ov-file#specifying-the-location-of-pandoc-binaries
     env["PYPANDOC_PANDOC"] = install_path
+
+
+def _clean_url(url: str) -> ParseResult:
+    """
+    Remove query and fragment from an URL.
+
+    Returns a ParseResult object.
+    """
+    return urlparse(url)._replace(
+        query="",
+        fragment="",
+    )

@@ -17,13 +17,17 @@ from tenacity import (
     wait_random_exponential,
 )
 
+from app.helpers.http import azure_transport
+from app.helpers.identity import credential
 from app.helpers.logging import logger
 from app.models.message import Message
 from app.persistence.iqueue import IQueue, MessageNotFoundError
 
 
 class Config(BaseModel):
-    connection_string: str
+    access_key: str | None
+    account_name: str
+    endpoint_suffix: str
     name: str
 
 
@@ -95,6 +99,23 @@ class AzureQueueStorage(IQueue):
         stop=stop_after_attempt(8),
         wait=wait_random_exponential(multiplier=0.8, max=60),
     )
+    async def create_queue(
+        self,
+    ) -> bool:
+        try:
+            await self._client.create_queue()
+            logger.info('Created Queue Storage "%s"', self._config.name)
+            return True
+        except ResourceExistsError:
+            pass
+        return False
+
+    @retry(
+        reraise=True,
+        retry=retry_if_exception_type(ServiceRequestError),  # Catch for network errors
+        stop=stop_after_attempt(8),
+        wait=wait_random_exponential(multiplier=0.8, max=60),
+    )
     async def delete_queue(
         self,
     ) -> None:
@@ -119,18 +140,22 @@ class AzureQueueStorage(IQueue):
             return value
 
     async def __aenter__(self) -> "AzureQueueStorage":
-        self._service = QueueServiceClient.from_connection_string(
-            self._config.connection_string
+        self._service = QueueServiceClient(
+            # Deployment
+            account_url=f"https://{self._config.account_name}.queue.{self._config.endpoint_suffix}",
+            # Performance
+            transport=await azure_transport(),
+            # Authentication
+            credential=self._config.access_key or await credential(),
         )
         self._client = self._service.get_queue_client(
+            # Deployment
             queue=self._config.name,
+            # Performance
+            transport=await azure_transport(),
         )
         # Create if it does not exist
-        try:
-            await self._client.create_queue()
-            logger.info('Created Queue Storage "%s"', self._config.name)
-        except ResourceExistsError:
-            pass
+        await self.create_queue()
         return self
 
     async def __aexit__(self, *exc: Any) -> None:

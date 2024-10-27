@@ -25,7 +25,6 @@ from app.persistence.iblob import (
     ],
     ids=lambda x: x.value,
 )
-@pytest.mark.asyncio(scope="session")
 @pytest.mark.repeat(10)  # Catch multi-threading and concurrency issues
 async def test_acid(provider: BlobProvider) -> None:
     # Init values
@@ -39,7 +38,9 @@ async def test_acid(provider: BlobProvider) -> None:
 
     # Init client
     async with blob_client(
-        azure_storage_connection_string=env["AZURE_STORAGE_CONNECTION_STRING"],
+        azure_storage_access_key=None,
+        azure_storage_account_name=env["AZURE_STORAGE_ACCOUNT_NAME"],
+        azure_storage_endpoint_suffix="core.windows.net",
         container=container_name,
         path="scraping-test",
         provider=provider,
@@ -105,7 +106,6 @@ async def test_acid(provider: BlobProvider) -> None:
     ],
     ids=lambda x: x.value,
 )
-@pytest.mark.asyncio(scope="session")
 @pytest.mark.repeat(10)  # Catch multi-threading and concurrency issues
 async def test_lease(provider: BlobProvider) -> None:
     # Init values
@@ -119,7 +119,9 @@ async def test_lease(provider: BlobProvider) -> None:
 
     # Init client
     async with blob_client(
-        azure_storage_connection_string=env["AZURE_STORAGE_CONNECTION_STRING"],
+        azure_storage_access_key=None,
+        azure_storage_account_name=env["AZURE_STORAGE_ACCOUNT_NAME"],
+        azure_storage_endpoint_suffix="core.windows.net",
         container=container_name,
         path="scraping-test",
         provider=provider,
@@ -245,7 +247,6 @@ async def test_lease(provider: BlobProvider) -> None:
     ],
     ids=lambda x: x.value,
 )
-@pytest.mark.asyncio(scope="session")
 @pytest.mark.repeat(5)  # Catch multi-threading and concurrency issues
 async def test_upload_many(provider: BlobProvider) -> None:
     # Init values
@@ -263,7 +264,9 @@ async def test_upload_many(provider: BlobProvider) -> None:
 
     # Init client
     async with blob_client(
-        azure_storage_connection_string=env["AZURE_STORAGE_CONNECTION_STRING"],
+        azure_storage_access_key=None,
+        azure_storage_account_name=env["AZURE_STORAGE_ACCOUNT_NAME"],
+        azure_storage_endpoint_suffix="core.windows.net",
         container=container_name,
         path="scraping-test",
         provider=provider,
@@ -291,6 +294,13 @@ async def test_upload_many(provider: BlobProvider) -> None:
 
             tasks = [_validate(name, content) for name, content in blobs]
             await asyncio.gather(*tasks)
+
+            # Enumerate blobs
+            found_blobs = [blob async for blob in client.list_blobs()]
+            assert len(found_blobs) == len(blobs), "Blob count mismatch"
+            assert all(
+                blob[0] in [name for name, _ in blobs] for blob in found_blobs
+            ), "Blob name mismatch"
 
         finally:
             # Clean up

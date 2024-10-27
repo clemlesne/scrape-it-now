@@ -32,3 +32,7 @@ logger = logging.getLogger("saai")
 logger.propagate = False
 logger.addHandler(ClickHandler())
 logger.setLevel(logging.INFO)
+
+
+def enable_debug_logging() -> None:
+    logger.setLevel(logging.DEBUG)

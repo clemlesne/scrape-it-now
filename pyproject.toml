@@ -6,39 +6,41 @@ name = "scrape-it-now"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-  "aiofiles==24.1.0",
-  "aiohttp==3.10.2",
-  "aiosqlite==0.20.0",
-  "azure-monitor-opentelemetry==1.6.1",
-  "azure-search-documents==11.6.0b4",
-  "azure-storage-blob==12.22.0",
-  "azure-storage-queue==12.11.0",
-  "click==8.1.7",
-  "openai==1.42.0",
-  "opentelemetry-instrumentation-aiohttp-client==0.47b0",
-  "opentelemetry-instrumentation-httpx==0.47b0",
-  "opentelemetry-instrumentation-openai==0.27.0",
-  "opentelemetry-instrumentation-redis==0.47b0",
-  "opentelemetry-instrumentation-sqlite3==0.47b0",
-  "playwright==1.46.0",
-  "pydantic==2.8.2",
-  "pypandoc==1.13",
-  "python-dotenv==1.0.1",
-  "tenacity==9.0.0",
-  "tiktoken==0.7.0",
+  "aiodns~=3.2",
+  "aiofiles~=24.1",
+  "aiohttp~=3.10",
+  "aiosqlite~=0.20",
+  "azure-identity~=1.17",
+  "azure-monitor-opentelemetry~=1.6",
+  "azure-search-documents~=11.6a0",
+  "azure-storage-blob~=12.22",
+  "azure-storage-queue~=12.11",
+  "click~=8.1",
+  "openai~=1.42",
+  "opentelemetry-instrumentation-aiohttp-client~=0.0",
+  "opentelemetry-instrumentation-httpx~=0.0",
+  "opentelemetry-instrumentation-openai~=0.0",
+  "opentelemetry-instrumentation-redis~=0.0",
+  "opentelemetry-instrumentation-sqlite3~=0.0",
+  "playwright~=1.46",
+  "pydantic~=2.8",
+  "pypandoc~=1.13",
+  "python-dotenv~=1.0",
+  "tenacity~=9.0",
+  "tiktoken~=0.7",
 ]
 
 [project.optional-dependencies]
 dev = [
-  "deptry==0.19.1",  # Dependency tree testing
-  "pip-tools==7.4.1",  # Compile requirements.txt from pyproject.toml
-  "pyinstaller==6.10.0",
-  "pyright==1.1.377",  # Static type checker
-  "pytest-asyncio==0.23.7",  # Pytest plugin for async tests
-  "pytest-repeat==0.9.3",  # Pytest plugin for repeating tests
-  "pytest-xdist[psutil]==3.6.1",  # Pytest plugin for parallel testing
-  "pytest==8.3.2",  # Testing framework
-  "ruff==0.6.2",  # Linter
+  "deptry~=0.19",  # Dependency tree testing
+  "pip-tools~=7.4",  # Compile requirements.txt from pyproject.toml
+  "pyinstaller~=6.11",  # Create standalone executable
+  "pyright~=1.1",  # Static type checker
+  "pytest-asyncio~=0.23",  # Pytest plugin for async tests
+  "pytest-repeat~=0.9",  # Pytest plugin for repeating tests
+  "pytest-xdist[psutil]~=3.6",  # Pytest plugin for parallel testing
+  "pytest~=8.3",  # Testing framework
+  "ruff~=0.6",  # Linter
 ]
 
 [project.scripts]
@@ -53,12 +55,19 @@ py-modules = [
 generate-hashes = true
 strip-extras = true
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+junit_suite_name = "scrape-it-now"
+log_file = "test-reports/last-logs.txt"
+log_file_level = "INFO"
+
 [tool.deptry]
 ignore_notebooks = true
 pep621_dev_dependency_groups = ["dev"]
 
 [tool.deptry.per_rule_ignores]
 DEP002 = [
+  "aiodns",  # Async DNS resolver for aiohttp
   "aiohttp",  # Async HTTP client for Azure SDKs
 ]
 DEP003 = [

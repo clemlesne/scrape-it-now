@@ -18,7 +18,6 @@ from app.persistence.iqueue import MessageNotFoundError, Provider as QueueProvid
     ],
     ids=lambda x: x.value,
 )
-@pytest.mark.asyncio(scope="session")
 @pytest.mark.repeat(10)  # Catch multi-threading and concurrency issues
 async def test_acid(provider: QueueProvider) -> None:
     # Init values
@@ -33,7 +32,9 @@ async def test_acid(provider: QueueProvider) -> None:
 
     # Init client
     async with queue_client(
-        azure_storage_connection_string=env["AZURE_STORAGE_CONNECTION_STRING"],
+        azure_storage_access_key=None,
+        azure_storage_account_name=env["AZURE_STORAGE_ACCOUNT_NAME"],
+        azure_storage_endpoint_suffix="core.windows.net",
         provider=provider,
         queue=queue_name,
     ) as client:
@@ -56,6 +57,8 @@ async def test_acid(provider: QueueProvider) -> None:
                 max_messages=10,
                 visibility_timeout=5,
             ):
+                if i == 0:  # Save first message
+                    received_message = message
                 # Check message content
                 assert message.content == contents[i], "Message content mismatch"
                 i += 1
@@ -113,7 +116,6 @@ async def test_acid(provider: QueueProvider) -> None:
     ],
     ids=lambda x: x.value,
 )
-@pytest.mark.asyncio(scope="session")
 @pytest.mark.repeat(10)  # Catch multi-threading and concurrency issues
 async def test_send_many(provider: QueueProvider) -> None:
     # Init values
@@ -129,7 +131,9 @@ async def test_send_many(provider: QueueProvider) -> None:
 
     # Init client
     async with queue_client(
-        azure_storage_connection_string=env["AZURE_STORAGE_CONNECTION_STRING"],
+        azure_storage_access_key=None,
+        azure_storage_account_name=env["AZURE_STORAGE_ACCOUNT_NAME"],
+        azure_storage_endpoint_suffix="core.windows.net",
         provider=provider,
         queue=queue_name,
     ) as client:

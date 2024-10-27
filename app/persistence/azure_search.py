@@ -3,6 +3,7 @@ from typing import Any
 from azure.core.credentials import AzureKeyCredential
 from azure.core.exceptions import (
     HttpResponseError,
+    ResourceExistsError,
     ResourceNotFoundError,
     ServiceRequestError,
 )
@@ -29,13 +30,15 @@ from tenacity import (
     wait_random_exponential,
 )
 
+from app.helpers.http import azure_transport
+from app.helpers.identity import credential
 from app.helpers.logging import logger
 from app.persistence.isearch import DocumentNotFoundError, ISearch
 
 
 class Config(BaseModel):
-    api_key: str
-    azure_openai_api_key: str
+    api_key: str | None
+    azure_openai_api_key: str | None
     azure_openai_embedding_deployment: str
     azure_openai_embedding_dimensions: int
     azure_openai_embedding_model: str
@@ -47,13 +50,22 @@ class Config(BaseModel):
 class AzureSearch(ISearch):
     _client: SearchClient
     _config: Config
+    _schema_version: int = 2
 
     def __init__(
         self,
         config: Config,
     ) -> None:
-        logger.info('Azure Search "%s" is configured', config.index)
+        logger.info(
+            'Azure Search "%s" is configured (schema v%i)',
+            config.index,
+            self._schema_version,
+        )
         self._config = config
+
+    @property
+    def _index_name(self) -> str:
+        return f"{self._config.index}-v{self._schema_version}"
 
     @retry(
         reraise=True,
@@ -89,20 +101,39 @@ class AzureSearch(ISearch):
     async def __aenter__(self) -> "AzureSearch":
         # Index configuration
         fields = [
+            # Required field for indexing key
             SimpleField(
                 name="id",
                 key=True,
                 type=SearchFieldDataType.String,
             ),
+            # Custom fields
+            SimpleField(
+                filterable=True,
+                name="chunck_number",
+                sortable=True,
+                type=SearchFieldDataType.Int32,
+            ),
             SearchableField(
-                name="content",
                 analyzer_name=LexicalAnalyzerName.STANDARD_LUCENE,
+                name="content",
                 type=SearchFieldDataType.String,
             ),
             SimpleField(
-                name="url",
+                filterable=True,
+                name="created_at",
+                sortable=True,
+                type=SearchFieldDataType.DateTimeOffset,
+            ),
+            SearchableField(
+                analyzer_name=LexicalAnalyzerName.STANDARD_LUCENE,
+                name="title",
+                type=SearchFieldDataType.String,
+            ),
+            SimpleField(
                 analyzer_name=LexicalAnalyzerName.STANDARD_LUCENE,
                 filterable=True,
+                name="url",
                 sortable=True,
                 type=SearchFieldDataType.String,
             ),
@@ -144,22 +175,28 @@ class AzureSearch(ISearch):
         async with SearchIndexClient(
             # Deployment
             endpoint=self._config.endpoint,
-            index_name=self._config.index,
+            index_name=self._index_name,
             # Index configuration
             fields=fields,
             vector_search=vector_search,
+            # Performance
+            transport=await azure_transport(),
             # Authentication
-            credential=AzureKeyCredential(self._config.api_key),
+            credential=AzureKeyCredential(self._config.api_key)
+            if self._config.api_key
+            else await credential(),
         ) as client:
             try:
                 await client.create_index(
                     SearchIndex(
                         fields=fields,
-                        name=self._config.index,
+                        name=self._index_name,
                         vector_search=vector_search,
                     )
                 )
-                logger.info('Created Search "%s"', self._config.index)
+                logger.info('Created Search "%s"', self._index_name)
+            except ResourceExistsError:
+                pass
             except HttpResponseError as e:
                 if not e.error or not e.error.code == "ResourceNameAlreadyInUse":
                     raise e
@@ -168,9 +205,13 @@ class AzureSearch(ISearch):
         self._client = SearchClient(
             # Deployment
             endpoint=self._config.endpoint,
-            index_name=self._config.index,
+            index_name=self._index_name,
+            # Performance
+            transport=await azure_transport(),
             # Authentication
-            credential=AzureKeyCredential(self._config.api_key),
+            credential=AzureKeyCredential(self._config.api_key)
+            if self._config.api_key
+            else await credential(),
         )
         return self
 

@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from json import JSONDecodeError, loads
 from os import walk
-from os.path import abspath, dirname, join
+from os.path import dirname, join
 from typing import Any
 from uuid import uuid4
 
@@ -16,7 +16,7 @@ from aiofiles.os import makedirs, path, remove, rmdir
 from pydantic import BaseModel, Field
 
 from app.helpers.logging import logger
-from app.helpers.resources import local_disk_cache_path
+from app.helpers.resources import file_lock, local_disk_cache_path
 from app.models.message import Message
 from app.persistence.iblob import (
     BlobAlreadyExistsError,
@@ -34,9 +34,8 @@ class BlobConfig(BaseModel):
     name: str
     path: str
 
-    @property
-    def working_path(self) -> str:
-        return abspath(join(self.path, self.name))
+    async def working_path(self) -> str:
+        return await path.abspath(join(self.path, self.name))
 
 
 class LeaseModel(BaseModel):
@@ -51,11 +50,7 @@ class LocalDiskBlob(IBlob):
         self,
         config: BlobConfig,
     ) -> None:
-        logger.info(
-            'Local Disk Blob "%s" is configured at "%s"',
-            config.name,
-            config.working_path,
-        )
+        logger.info('Local Disk Blob "%s" is configured', config.name)
         logger.warning(
             "Local disk Blob is configured, it is not recommended for production. Prefer a redundant / high availability service (not like a computer / VM)."
         )
@@ -68,13 +63,14 @@ class LocalDiskBlob(IBlob):
         lease_duration: int,
     ) -> AsyncGenerator[str, None]:
         # Skip if the blob doesn't exist
-        if not await path.exists(join(self._config.working_path, blob)):
+        working_path = await self._config.working_path()
+        if not await path.exists(join(working_path, blob)):
             raise BlobNotFoundError(f'Blob "{blob}" not found')
 
-        lease_file = self._lease_path(blob)
+        lease_file = await self._lease_path(blob)
 
-        # Ensure only this worker accesses the lease
-        async with self._file_lock(lease_file):
+        # Ensure only one worker is updating the lease
+        async with file_lock(lease_file):
             # Skip if the lease file already exists and is not expired
             if await path.exists(lease_file):
                 try:
@@ -132,13 +128,14 @@ class LocalDiskBlob(IBlob):
         overwrite: bool,
         lease_id: str | None = None,
     ) -> None:
-        blob_path = join(self._config.working_path, blob)
+        working_path = await self._config.working_path()
+        blob_path = join(working_path, blob)
 
         # Skip if the blob exists and overwrite is not set
         if await path.exists(blob_path) and not overwrite:
             raise BlobAlreadyExistsError(f'Blob "{blob}" already exists')
 
-        lease_file = self._lease_path(blob)
+        lease_file = await self._lease_path(blob)
 
         # If the blob is not locked
         if not await path.exists(lease_file):
@@ -204,10 +201,13 @@ class LocalDiskBlob(IBlob):
         self,
         blob: str,
     ) -> str:
-        blob_path = join(self._config.working_path, blob)
+        working_path = await self._config.working_path()
+        blob_path = join(working_path, blob)
+
         # Skip if the blob doesn't exist
         if not await path.exists(blob_path):
             raise BlobNotFoundError(f'Blob "{blob}" not found')
+
         # Read the data from the file
         async with open(
             file=blob_path,
@@ -215,12 +215,26 @@ class LocalDiskBlob(IBlob):
         ) as f:
             return (await f.read()).decode(self.encoding)
 
+    async def list_blobs(
+        self,
+        starts_with: str | None = None,
+    ) -> AsyncGenerator[tuple[str, int], None]:
+        working_path = await self._config.working_path()
+
+        # List all files in the working path
+        for _, _, file_names in walk(top=working_path):
+            for file_name in file_names:
+                if starts_with is None or file_name.startswith(starts_with):
+                    yield (file_name, 0)
+
     async def delete_container(
         self,
     ) -> None:
+        working_path = await self._config.working_path()
+
         # Delete iteratively all files in the working path
         for root_name, dir_names, file_names in walk(
-            top=self._config.working_path,
+            top=working_path,
             topdown=False,
         ):
             for file_name in file_names:
@@ -229,38 +243,9 @@ class LocalDiskBlob(IBlob):
                 await rmdir(join(root_name, dir_name))
         logger.info('Deleted Local Disk Blob "%s"', self._config.name)
 
-    @asynccontextmanager
-    async def _file_lock(self, file_path: str) -> AsyncGenerator[None, None]:
-        full_path = abspath(file_path)
-        lock_file = f"{full_path}.lock"
-
-        # Create the directory if it doesn't exist
-        await makedirs(dirname(full_path), exist_ok=True)
-
-        # Wait until the lock file is removed
-        while await path.exists(lock_file):  # noqa: ASYNC110
-            await asyncio.sleep(0.1)
-
-        # Create the empty lock file
-        async with open(
-            file=lock_file,
-            mode="wb",
-        ) as _:
-            pass
-
-        try:
-            # Return to the caller
-            yield
-
-        finally:
-            try:
-                # Remove the lock file
-                await remove(lock_file)
-            except FileNotFoundError:
-                pass
-
-    def _lease_path(self, blob: str) -> str:
-        return abspath(join(self._config.working_path, f"{blob}.lease"))
+    async def _lease_path(self, blob: str) -> str:
+        working_path = await self._config.working_path()
+        return await path.abspath(join(working_path, f"{blob}.lease"))
 
     async def __aenter__(self) -> "LocalDiskBlob":
         return self
@@ -274,9 +259,10 @@ class QueueConfig(BaseModel):
     table: str = "queue"
     timeout: int = 30
 
-    @property
-    def db_path(self) -> str:
-        return abspath(join(local_disk_cache_path(), "queues", f"{self.name}.db"))
+    async def db_path(self) -> str:
+        return await path.abspath(
+            join(await local_disk_cache_path(), "queues", f"{self.name}.db")
+        )
 
 
 class LocalDiskQueue(IQueue):
@@ -395,28 +381,15 @@ class LocalDiskQueue(IQueue):
                     f'Message with id "{message.message_id}" not found'
                 )
 
-    async def delete_queue(
+    async def create_queue(
         self,
-    ) -> None:
-        await remove(self._config.db_path)
-        logger.info('Deleted Local Disk Queue "%s"', self._config.name)
-
-    @asynccontextmanager
-    async def _use_connection(self) -> AsyncGenerator[aiosqlite.Connection, None]:
-        # Connect and return the connection
-        async with aiosqlite.connect(
-            database=self._config.db_path,
-            timeout=self._config.timeout,  # Wait for 30 secs before giving up
-        ) as connection:
-            yield connection
-
-    async def __aenter__(self) -> "LocalDiskQueue":
-        file_path = self._config.db_path
+    ) -> bool:
+        file_path = await self._config.db_path()
         first_run = not await path.exists(file_path)
 
         # Skip if the database is already initialized
         if not first_run:
-            return self
+            return False
 
         # Create the directory if it doesn't exist
         await makedirs(dirname(file_path), exist_ok=True)
@@ -450,6 +423,25 @@ class LocalDiskQueue(IQueue):
             # Commit as other workers might be waiting for the table to be created
             await connection.commit()
 
+        return True
+
+    async def delete_queue(
+        self,
+    ) -> None:
+        await remove(await self._config.db_path())
+        logger.info('Deleted Local Disk Queue "%s"', self._config.name)
+
+    @asynccontextmanager
+    async def _use_connection(self) -> AsyncGenerator[aiosqlite.Connection, None]:
+        # Connect and return the connection
+        async with aiosqlite.connect(
+            database=await self._config.db_path(),
+            timeout=self._config.timeout,  # Wait for 30 secs before giving up
+        ) as connection:
+            yield connection
+
+    async def __aenter__(self) -> "LocalDiskQueue":
+        await self.create_queue()
         return self
 
     async def __aexit__(self, *exc: Any) -> None:

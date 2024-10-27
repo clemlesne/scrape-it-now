@@ -14,6 +14,10 @@ on:
       - hotfix/*
       - main
 
+env:
+  # See: https://github.com/upx/upx/releases
+  UPX_VERSION: "4.2.4"
+
 jobs:
   init:
     name: Init
@@ -40,6 +44,9 @@ jobs:
 
   test:
     name: Test
+    permissions:
+      id-token: write
+      contents: read
     runs-on: ubuntu-22.04
     needs:
       - init
@@ -59,7 +66,26 @@ jobs:
           cache: pip
           python-version: "3.12"
 
-      - name: Install dependencies
+      - name: Login to Azure
+        uses: Azure/login@v2.2.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+
+      - name: Cache pytest
+        uses: actions/cache@v4.0.2
+        with:
+          key: pytest-${{ github.head_ref || github.ref_name }}-${{ hashFiles('requirements-dev.txt') }}
+          path: .pytest_cache
+
+      - name: Cache Ruff
+        uses: actions/cache@v4.0.2
+        with:
+          key: ruff-${{ github.head_ref || github.ref_name }}-${{ hashFiles('requirements-dev.txt') }}
+          path: .ruff_cache
+
+      - name: Set up dependencies
         run: make install-deps
 
       - name: Configure environment variables
@@ -70,7 +96,9 @@ jobs:
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4.3.6
+        if: always()
         with:
+          compression-level: 9
           name: test-results
           path: test-reports/*
 
@@ -88,13 +116,16 @@ jobs:
       matrix:
         # TODO: Build for musl (Alpine Linux)
         os:
-          # Last 2 versions of macOS
+          # All versions of macOS supported by GitHub Actions
+          - macos-12
           - macos-13
           - macos-14
-          # Last 2 versions of Ubuntu
+          - macos-15
+          # All versions of Ubuntu supported by GitHub Actions
+          - ubuntu-20.04
           - ubuntu-22.04
           - ubuntu-24.04
-          # Last 2 versions of Windows
+          # All versions of Windows supported by GitHub Actions
           - windows-2019
           - windows-2022
     steps:
@@ -111,16 +142,24 @@ jobs:
           cache: pip
           python-version: "3.12"
 
-      - name: Install make (Windows)
+      - name: Set up make (Windows)
         if: runner.os == 'Windows'
-        run: choco install make
+        run: |
+          choco install make
+          make --version
 
-      - name: Install dependencies
+      - name: Set up UPX (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          choco install upx --version ${{ env.UPX_VERSION }}
+          upx --version
+
+      - name: Set up dependencies
         run: |
           python3 -m pip install --upgrade pip wheel setuptools
           make install-deps
 
-      - name: Install dependencies (Windows)
+      - name: Set up dependencies (Windows)
         if: runner.os == 'Windows'
         run: |
           python3 -m pip install pywin32-ctypes pefile
@@ -147,6 +186,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4.3.6
         with:
+          compression-level: 9
           name: binary-${{ matrix.os }}
           path: dist/*
 
@@ -185,6 +225,7 @@ jobs:
       - name: Upload results to release
         uses: actions/upload-artifact@v4.3.6
         with:
+          compression-level: 9
           name: sbom
           path: sbom-reports/*
 

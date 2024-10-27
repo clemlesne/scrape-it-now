@@ -839,9 +839,10 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
 
         try:
             res = await page.goto(
-                url_clean.geturl(),
                 referer=referrer,
                 timeout=BROWSER_TIMEOUT_MS,
+                url=url_clean.geturl(),
+                wait_until="load",  # Wait for "load" event, compatible with PWA apps
             )
         except TimeoutError:  # TODO: Retry maybe a few times for timeout errors?
             return _generic_error(

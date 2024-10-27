@@ -6,6 +6,8 @@ from threading import Thread
 
 from app.helpers.logging import logger
 
+DEFAULT_WORKERS_COUNT = int((cpu_count() or 4) / 2)
+
 
 def run_workers(
     count: int,

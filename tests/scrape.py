@@ -17,7 +17,7 @@ from app.persistence.iblob import (
     Provider as BlobProvider,
 )
 from app.persistence.iqueue import Provider as QueueProvider
-from app.scrape import _queue, _scrape_page
+from app.scrape import BROWSER_TIMEOUT_MS, _queue, _scrape_page
 
 DEFAULT_TIMEZONE = "Europe/Moscow"
 DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
@@ -246,9 +246,11 @@ async def test_scrape_page_timeout(browser: Browser) -> None:
     took_time = end_time - start_time
 
     # Check timeout duration
-    assert took_time > timedelta(seconds=59) and took_time < timedelta(
-        seconds=65
-    ), "Timeout should be around 1 min"
+    assert took_time > timedelta(
+        seconds=(BROWSER_TIMEOUT_MS / 1000) - 1
+    ) and took_time < timedelta(
+        seconds=(BROWSER_TIMEOUT_MS / 1000) + 5
+    ), f"Timeout should be around {BROWSER_TIMEOUT_MS/1000} secs"
 
     # Check page is not None
     assert page is not None, "Page should not be None"

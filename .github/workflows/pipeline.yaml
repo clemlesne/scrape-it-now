@@ -44,6 +44,9 @@ jobs:
 
   test:
     name: Test
+    permissions:
+      id-token: write
+      contents: read
     runs-on: ubuntu-22.04
     needs:
       - init
@@ -62,6 +65,13 @@ jobs:
         with:
           cache: pip
           python-version: "3.12"
+
+      - name: Login to Azure
+        uses: Azure/login@v2.2.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
 
       - name: Cache pytest
         uses: actions/cache@v4.0.2

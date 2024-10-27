@@ -4,13 +4,14 @@ import random
 import re
 import string
 import sys
-from os import cpu_count, environ as env
+from os import environ as env
 from platform import python_version
 
 import click
 
 from app.helpers.logging import enable_debug_logging, logger
 from app.helpers.monitoring import VERSION
+from app.helpers.threading import DEFAULT_WORKERS_COUNT
 from app.index import run as index_backend_run
 from app.persistence.iblob import Provider as BlobProvider
 from app.persistence.iqueue import Provider as QueueProvider
@@ -215,11 +216,11 @@ def scrape() -> None:
 @click.option(
     "--processes",
     "-p",
-    default=int((cpu_count() or 4) / 2),
+    default=DEFAULT_WORKERS_COUNT,
     envvar="PROCESSES",
     help="Number of processes to use for scraping.",
     required=True,
-    type=int,
+    type=click.IntRange(min=1),
 )
 @click.option(
     "--job-name",
@@ -448,10 +449,11 @@ def index() -> None:
 @click.option(
     "--processes",
     "-p",
-    default=int((cpu_count() or 4) / 2),
+    default=DEFAULT_WORKERS_COUNT,
     envvar="PROCESSES",
+    help="Number of processes to use for indexing.",
     required=True,
-    type=int,
+    type=click.IntRange(min=1),
 )
 @click.option(
     "--azure-search-api-key",

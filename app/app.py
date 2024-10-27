@@ -451,6 +451,7 @@ def index() -> None:
     "-p",
     default=DEFAULT_WORKERS_COUNT,
     envvar="PROCESSES",
+    help="Number of processes to use for indexing.",
     required=True,
     type=int,
 )

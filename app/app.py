@@ -286,7 +286,7 @@ async def scrape_run(  # noqa: PLR0913
         width, height = v.split("x")
         viewports_parsed.append((int(width), int(height)))
     if viewports_parsed:
-        logger.info("Viewports: %s", viewports_parsed)
+        logger.debug("Parsed viewports: %s", viewports_parsed)
 
     # Parse whitelist
     whitelist_parsed: dict[re.Pattern, list[re.Pattern]] = {}

@@ -40,7 +40,7 @@ class AzureQueueStorage(IQueue):
         self,
         config: Config,
     ) -> None:
-        logger.info('Azure Queue Storage "%s" is configured', config.name)
+        logger.debug('Azure Queue Storage "%s" is configured', config.name)
         self._config = config
 
     @retry(
@@ -104,7 +104,7 @@ class AzureQueueStorage(IQueue):
     ) -> bool:
         try:
             await self._client.create_queue()
-            logger.info('Created Queue Storage "%s"', self._config.name)
+            logger.debug('Created Queue Storage "%s"', self._config.name)
             return True
         except ResourceExistsError:
             pass

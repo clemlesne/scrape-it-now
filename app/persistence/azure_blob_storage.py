@@ -45,7 +45,7 @@ class AzureBlobStorage(IBlob):
         self,
         config: Config,
     ) -> None:
-        logger.info('Azure Blob Storage "%s" is configured', config.name)
+        logger.debug('Azure Blob Storage "%s" is configured', config.name)
         self._config = config
 
     @asynccontextmanager
@@ -193,7 +193,7 @@ class AzureBlobStorage(IBlob):
         # Create if it does not exist
         try:
             await self._client.create_container()
-            logger.info('Created Blob Storage "%s"', self._config.name)
+            logger.debug('Created Blob Storage "%s"', self._config.name)
         except ResourceExistsError:
             pass
         return self

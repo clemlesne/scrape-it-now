@@ -56,7 +56,7 @@ class AzureSearch(ISearch):
         self,
         config: Config,
     ) -> None:
-        logger.info(
+        logger.debug(
             'Azure Search "%s" is configured (schema v%i)',
             config.index,
             self._schema_version,
@@ -194,7 +194,7 @@ class AzureSearch(ISearch):
                         vector_search=vector_search,
                     )
                 )
-                logger.info('Created Search "%s"', self._index_name)
+                logger.debug('Created Search "%s"', self._index_name)
             except ResourceExistsError:
                 pass
             except HttpResponseError as e:

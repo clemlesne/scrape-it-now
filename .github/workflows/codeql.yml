@@ -28,15 +28,15 @@ jobs:
             language: python
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.1.7
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v3.27.0
         with:
           build-mode: ${{ matrix.build-mode }}
           languages: ${{ matrix.language }}
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v3.27.0
         with:
           category: "/language:${{matrix.language}}"

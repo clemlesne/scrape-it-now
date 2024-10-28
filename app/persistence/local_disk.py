@@ -50,7 +50,7 @@ class LocalDiskBlob(IBlob):
         self,
         config: BlobConfig,
     ) -> None:
-        logger.info('Local Disk Blob "%s" is configured', config.name)
+        logger.debug('Local Disk Blob "%s" is configured', config.name)
         logger.warning(
             "Local disk Blob is configured, it is not recommended for production. Prefer a redundant / high availability service (not like a computer / VM)."
         )
@@ -272,7 +272,7 @@ class LocalDiskQueue(IQueue):
         self,
         config: QueueConfig,
     ) -> None:
-        logger.info('Local Disk Queue "%s" is configured', config.name)
+        logger.debug('Local Disk Queue "%s" is configured', config.name)
         logger.warning(
             "Local Disk Queue is configured, it is not recommended for production. Prefer a redundant / high availability service (not like a computer / VM)."
         )
@@ -418,7 +418,7 @@ class LocalDiskQueue(IQueue):
                     )
                     """
             )
-            logger.info('Created Local Disk Queue "%s"', self._config.table)
+            logger.debug('Created Local Disk Queue "%s"', self._config.table)
 
             # Commit as other workers might be waiting for the table to be created
             await connection.commit()

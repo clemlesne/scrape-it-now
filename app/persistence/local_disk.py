@@ -301,6 +301,9 @@ class LocalDiskQueue(IQueue):
         # Load messages
         messages: list[Message] = []
 
+        logger.debug('Processing new messages from "%s"', self._config.name)
+
+        # Fetch all visible messages
         async with (
             self._use_connection() as connection,
             connection.execute(
@@ -320,6 +323,7 @@ class LocalDiskQueue(IQueue):
                 delete_token = "".join(
                     random.choices(string.ascii_lowercase + string.digits, k=12)
                 )
+                # Convert to Message
                 messages.append(
                     Message(
                         content=row[1],
@@ -332,6 +336,7 @@ class LocalDiskQueue(IQueue):
 
         # Yield messages
         for message in messages:
+            # Confirm message has not been picked by another worker
             async with (
                 self._use_connection() as connection,
                 connection.execute(
@@ -354,6 +359,8 @@ class LocalDiskQueue(IQueue):
                 # If message not updated, race condition, skip, it should has been deleted or picked by another worker
                 if cursor.rowcount == 0:
                     continue
+
+            logger.debug('Received "%s"', message.content)
             # Return the message
             yield message
 

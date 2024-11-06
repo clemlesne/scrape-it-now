@@ -81,6 +81,9 @@ async def _process_one(  # noqa: PLR0913
         logger.warning("%s cannot be parsed", short_name)
         return
 
+    # Log the processing
+    logger.info('Processing "%s"', result.url)
+
     # Skip if no content
     if not result.content:
         logger.info("%s is empty", short_name)
@@ -494,10 +497,8 @@ async def _worker(  # noqa: PLR0913
             max_messages=32,
             visibility_timeout=32 * 10,  # 10 secs per message
         ):
-            logger.debug("Processing new messages")
             async for message in messages:
                 blob_name = message.content
-                logger.info('Processing "%s"', blob_name)
 
                 try:
                     await _process_one(

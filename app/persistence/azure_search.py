@@ -10,8 +10,8 @@ from azure.core.exceptions import (
 from azure.search.documents.aio import SearchClient
 from azure.search.documents.indexes.aio import SearchIndexClient
 from azure.search.documents.indexes.models import (
-    AzureOpenAIParameters,
     AzureOpenAIVectorizer,
+    AzureOpenAIVectorizerParameters,
     HnswAlgorithmConfiguration,
     LexicalAnalyzerName,
     SearchableField,
@@ -160,8 +160,8 @@ class AzureSearch(ISearch):
             ],
             vectorizers=[
                 AzureOpenAIVectorizer(
-                    name="vectorizer-default",
-                    azure_open_ai_parameters=AzureOpenAIParameters(
+                    vectorizer_name="vectorizer-default",
+                    azure_open_ai_parameters=AzureOpenAIVectorizerParameters(
                         api_key=self._config.azure_openai_api_key,
                         deployment_id=self._config.azure_openai_embedding_deployment,
                         model_name=self._config.azure_openai_embedding_model,

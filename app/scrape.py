@@ -541,11 +541,22 @@ async def _worker(  # noqa: PLR0913
             total_processed = 0
             total_queued = 0
 
-            # Iterate over the messages
-            logger.debug("Processing new messages")
             async for message in messages:
-                # Parse the message
-                current_item = ScrapedQueuedModel.model_validate_json(message.content)
+                # Validate the data
+                try:
+                    current_item = ScrapedQueuedModel.model_validate_json(
+                        message.content
+                    )
+                except ValidationError:
+                    # TODO: Implement a dead-letter queue
+                    logger.warning("%s cannot be parsed, it will be deleted", message)
+                    try:
+                        await in_queue.delete_message(message)
+                    except MessageNotFoundError:
+                        pass
+                    return
+
+                # Log the processing
                 logger.info(
                     'Processing "%s" (%i)',
                     current_item.url,

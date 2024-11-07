@@ -1569,6 +1569,10 @@ tqdm==4.67.0 \
     --hash=sha256:0cd8af9d56911acab92182e88d763100d4788bdf421d251616040cc4d44863be \
     --hash=sha256:fe5a6f95e6fe0b9755e9469b77b9c3cf850048224ecaa8293d7d2d31f97d869a
     # via openai
+truststore==0.10.0 \
+    --hash=sha256:5da347c665714fdfbd46f738c823fe9f0d8775e41ac5fb94f325749091187896 \
+    --hash=sha256:b3798548e421ffe2ca2a6217cca49e7a17baf40b72d86a5505dc7d701e77d15b
+    # via scrape-it-now (pyproject.toml)
 typing-extensions==4.12.2 \
     --hash=sha256:04e5ca0351e0f3f85c6853954072df659d0d13fac324d0072316b67d7794700d \
     --hash=sha256:1a7ead55c7e559dd4dee8856e3a88b41225abfe1ce8df57b7c13915fe121ffb8

@@ -91,10 +91,10 @@ Example output:
 ❯ Start scraping job 7yz91ma
 Queued 71/71 links for referrer https://www.google.com/search (1)
 Started 5 workers
-Browser chromium launched
-...
+Started browser chromium
 Queued 15/28 links for referrer https://www.nytimes.com/2024/08/15/business/economy/kamala-harris-inflation-price-gouging.html (2)
 Scraped https://www.nytimes.com/2024/08/15/business/economy/kamala-harris-inflation-price-gouging.html (2)
+...
 ```
 
 Most frequent options are:

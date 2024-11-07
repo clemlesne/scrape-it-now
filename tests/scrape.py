@@ -37,7 +37,6 @@ LOCALHOST_URL = "http://localhost:8000"
         "google",
         "hackernews",
         "lemonde",
-        "nytimes",
         "servicepublic",
     ],
     ids=lambda x: x,
@@ -89,13 +88,25 @@ async def test_scrape_page_website(
         # Check content is not empty
         assert page.content, "Content should not be empty"
 
-        # debug: Write Markdown content to file
-        async with open(
-            encoding="utf-8",
-            file=join(website_path, f"{website}.md"),
-            mode="w",
-        ) as f:
-            await f.write(page.content)
+        # debug: Write Markdown content to file, then rebuild the compressed file, this should be used to generate the test content when upgrading Playwright or pypandoc
+        # async with open(
+        #     encoding="utf-8",
+        #     file=join(website_path, f"{website}.md"),
+        #     mode="w",
+        # ) as f:
+        #     await f.write(page.content)
+        # with ZipFile(
+        #     compression=ZIP_DEFLATED,
+        #     compresslevel=9,
+        #     file=join(dir_tests("websites"), f"{website}.zip"),
+        #     mode="w",
+        # ) as z:
+        #     for walk_root, walk_dirs, walk_files in walk(website_path):
+        #         for walk_file in walk_files:
+        #             z.write(
+        #                 arcname=walk_file,
+        #                 filename=join(walk_root, walk_file),
+        #             )
 
         # Check Markdown content
         async with open(

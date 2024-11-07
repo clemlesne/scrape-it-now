@@ -101,7 +101,6 @@ async def test_scrape_page_website(
         async with open(
             encoding="utf-8",
             file=join(website_path, f"{website}.md"),
-            mode="r",
         ) as f:
             expected = await f.read()
             assert page.content == expected.strip(), "Markdown content should match"
@@ -198,7 +197,6 @@ async def test_scrape_page_paragraphs(browser: Browser) -> None:
     async with open(
         encoding="utf-8",
         file=join(dir_tests("websites"), "paragraphs.html.md"),
-        mode="r",
     ) as f:
         expected = await f.read()
         assert page.content == expected.strip(), "Content should match"
@@ -228,7 +226,6 @@ async def test_scrape_page_images(browser: Browser) -> None:
 
         async with open(
             file=join(dir_tests("websites"), "images", "banana.jpg"),
-            mode="r",
         ) as f:
             expected = await f.read()
             assert body == expected, "Content should match"

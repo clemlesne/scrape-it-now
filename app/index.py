@@ -84,7 +84,7 @@ async def _process_one(  # noqa: PLR0913
         return
 
     # Log the processing
-    logger.info('Processing "%s"', result.url)
+    logger.info('Processing "%s" (%s)', result.url, short_name)
 
     # Skip if no content
     if not result.content:

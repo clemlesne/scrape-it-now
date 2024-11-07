@@ -415,3 +415,9 @@ Implementation:
 ### Use proxies for anonymity
 
 Proxies are not implemented in the application. Network security cannot be achieved from the application level. Use a VPN (e.g. your, third-party) or a proxy service (e.g. residential procies, Tor) to ensure anonymity and configure the system firewall to limit the application network access to it.
+
+### Bundle with a container
+
+As the application is packaged as a binary, it can easily be bundled with a container. At every start, the application will download the dependencies (browser, etc.) and cache them. You can pre-download them by running the command `scrape-it-now scrape install`.
+
+A good technique for performance would also to parallelize the scraping and indexing jobs by running multiple containers of each. This can be achieved with [KEDA](https://keda.sh), by configuring a [queue scaler](https://keda.sh/docs/2.16/scalers/azure-storage-queue).

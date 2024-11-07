@@ -3,6 +3,7 @@ import math
 from http import HTTPStatus
 from os import environ as env
 
+import aiojobs
 import tiktoken
 from openai import (
     APIConnectionError,
@@ -40,6 +41,7 @@ from app.models.scraped import ScrapedUrlModel
 from app.persistence.iblob import BlobNotFoundError, IBlob, Provider as BlobProvider
 from app.persistence.iqueue import (
     IQueue,
+    Message as QueueMessage,
     MessageNotFoundError,
     Provider as QueueProvider,
 )
@@ -74,7 +76,7 @@ async def _process_one(  # noqa: PLR0913
     # Extract the short name for logging
     short_name = file_name.split("/")[-1].split(".")[0][:7]
 
-    # Validate the data
+    # Validate the message
     try:
         result = ScrapedUrlModel.model_validate_json(result_raw)
     except ValidationError:
@@ -458,6 +460,8 @@ async def _worker(  # noqa: PLR0913
     queue_provider: QueueProvider,
     search_provider: SearchProvider,
 ) -> None:
+    queue_fetch_max = 32
+
     # Init clients
     async with (
         blob_client(
@@ -491,38 +495,68 @@ async def _worker(  # noqa: PLR0913
             index=index_index_name(job),
             provider=search_provider,
         ) as search,
+        aiojobs.Scheduler(
+            limit=int(
+                queue_fetch_max / 2
+            ),  # Limit the number of concurrent messages to half of the queue fetch max
+        ) as scheduler,
     ):
+        logger.debug("Runing %i concurrent tasks per worker", scheduler.limit)
+
         # Process the queue
         while messages := queue.receive_messages(
-            max_messages=32,
-            visibility_timeout=32 * 10,  # 10 secs per message
+            max_messages=queue_fetch_max,
+            visibility_timeout=queue_fetch_max * 5,  # 5 secs per message
         ):
             async for message in messages:
-                blob_name = message.content
-
-                try:
-                    await _process_one(
+                await scheduler.spawn(
+                    _worker_single_message(
+                        azure_openai_embedding_deployment=azure_openai_embedding_deployment,
+                        azure_openai_embedding_dimensions=azure_openai_embedding_dimensions,
                         blob=blob,
-                        embedding_deployment=azure_openai_embedding_deployment,
-                        embedding_dimensions=azure_openai_embedding_dimensions,
-                        file_name=blob_name,
+                        message=message,
                         openai=openai,
+                        queue=queue,
                         search=search,
                     )
-
-                    try:
-                        await queue.delete_message(message)
-                    except MessageNotFoundError:  # Race condition, message has already been deleted by another worker, pass silently to the next message, as it has already been processed
-                        continue
-
-                except Exception:
-                    # TODO: Add a dead-letter queue
-                    # TODO: Add a retry mechanism
-                    # TODO: Narrow the exception type
-                    logger.error("Error processing %s", blob_name, exc_info=True)
+                )
 
             # Wait 3 sec to avoid spamming the queue if it is empty
             await asyncio.sleep(3)
+
+
+# TODO: Simplify, this is too complex
+async def _worker_single_message(  # noqa: PLR0913
+    azure_openai_embedding_deployment: str,
+    azure_openai_embedding_dimensions: int,
+    blob: IBlob,
+    message: QueueMessage,
+    openai: AsyncAzureOpenAI,
+    queue: IQueue,
+    search: ISearch,
+) -> None:
+    blob_name = message.content
+
+    try:
+        await _process_one(
+            blob=blob,
+            embedding_deployment=azure_openai_embedding_deployment,
+            embedding_dimensions=azure_openai_embedding_dimensions,
+            file_name=blob_name,
+            openai=openai,
+            search=search,
+        )
+
+        try:
+            await queue.delete_message(message)
+        except MessageNotFoundError:  # Race condition, message has already been deleted by another worker, pass silently to the next message, as it has already been processed
+            return
+
+    except Exception:
+        # TODO: Add a dead-letter queue
+        # TODO: Add a retry mechanism
+        # TODO: Narrow the exception type
+        logger.error("Error processing %s", blob_name, exc_info=True)
 
 
 async def _force_requeue(

@@ -150,7 +150,7 @@ class AzureSearch(ISearch):
                 VectorSearchProfile(
                     algorithm_configuration_name="algorithm-default",
                     name="profile-default",
-                    vectorizer="vectorizer-default",
+                    vectorizer_name="vectorizer-default",
                 ),
             ],
             algorithms=[
@@ -161,11 +161,11 @@ class AzureSearch(ISearch):
             vectorizers=[
                 AzureOpenAIVectorizer(
                     vectorizer_name="vectorizer-default",
-                    azure_open_ai_parameters=AzureOpenAIVectorizerParameters(
+                    parameters=AzureOpenAIVectorizerParameters(
                         api_key=self._config.azure_openai_api_key,
-                        deployment_id=self._config.azure_openai_embedding_deployment,
+                        deployment_name=self._config.azure_openai_embedding_deployment,
                         model_name=self._config.azure_openai_embedding_model,
-                        resource_uri=self._config.azure_openai_endpoint,
+                        resource_url=self._config.azure_openai_endpoint,
                     ),
                 )
             ],

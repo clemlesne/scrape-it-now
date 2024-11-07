@@ -1359,7 +1359,7 @@ async def _install_pandoc() -> None:
 
     # Fix version is necesssary to have reproducible builds
     # See: https://github.com/jgm/pandoc/releases
-    version = "3.2.1"
+    version = "3.5"
 
     # Get location of Pandoc driver
     install_path = await pandoc_install_path(version)

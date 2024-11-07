@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from os import environ as env, walk
 from os.path import join
 from uuid import uuid4
-from zipfile import ZipFile
+from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
 from aiofiles import open
@@ -89,13 +89,25 @@ async def test_scrape_page_website(
         # Check content is not empty
         assert page.content, "Content should not be empty"
 
-        # debug: Write Markdown content to file
+        # debug: Write Markdown content to file, then rebuild the compressed file
         async with open(
             encoding="utf-8",
             file=join(website_path, f"{website}.md"),
             mode="w",
         ) as f:
             await f.write(page.content)
+        with ZipFile(
+            compression=ZIP_DEFLATED,
+            compresslevel=9,
+            file=join(dir_tests("websites"), f"{website}.zip"),
+            mode="w",
+        ) as z:
+            for walk_root, walk_dirs, walk_files in walk(website_path):
+                for walk_file in walk_files:
+                    z.write(
+                        arcname=walk_file,
+                        filename=join(walk_root, walk_file),
+                    )
 
         # Check Markdown content
         async with open(

@@ -37,6 +37,7 @@ def run_workers(
     # Run
     for thread in threads:
         thread.start()
+    logger.debug("Started %i workers", len(threads))
 
     # Wait
     try:

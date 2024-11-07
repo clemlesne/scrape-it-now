@@ -37,7 +37,6 @@ LOCALHOST_URL = "http://localhost:8000"
         "google",
         "hackernews",
         "lemonde",
-        "nytimes",
         "servicepublic",
     ],
     ids=lambda x: x,

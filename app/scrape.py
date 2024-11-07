@@ -9,6 +9,7 @@ from mimetypes import guess_extension
 from os import environ as env
 from urllib.parse import ParseResult, urlparse
 
+import aiojobs
 from playwright._impl._driver import compute_driver_executable, get_driver_env
 from playwright.async_api import (
     Browser,
@@ -55,6 +56,7 @@ from app.persistence.iblob import (
 )
 from app.persistence.iqueue import (
     IQueue,
+    Message as QueueMessage,
     MessageNotFoundError,
     Provider as QueueProvider,
 )
@@ -502,6 +504,8 @@ async def _worker(  # noqa: PLR0913
     viewports: list[ViewportSize],
     whitelist: dict[re.Pattern, list[re.Pattern]],
 ) -> None:
+    queue_fetch_max = 32
+
     # Init clients
     async with (
         blob_client(
@@ -527,68 +531,34 @@ async def _worker(  # noqa: PLR0913
             queue=index_queue_name(job),
         ) as out_queue,
         async_playwright() as p,
+        aiojobs.Scheduler(
+            limit=int(
+                queue_fetch_max / 2
+            ),  # Limit the number of concurrent messages to half of the queue fetch max
+        ) as scheduler,
     ):
+        logger.debug("Runing %i concurrent tasks per worker", scheduler.limit)
+
+        # Get a browser instance
         browser_type: BrowserType = getattr(p, BROWSER_NAME)
-        browser_usage = 0
-        browser: Browser | None = None
+        browser = await _get_broswer(browser_type)
+        logger.debug("Started browser %s", browser_type.name)
 
         # Process the queue
         while messages := in_queue.receive_messages(
-            max_messages=32,
-            visibility_timeout=32 * 5,  # 5 secs per message
+            max_messages=queue_fetch_max,
+            visibility_timeout=queue_fetch_max * 5,  # 5 secs per message
         ):
-            total_network_used_mb = 0.0
-            total_processed = 0
-            total_queued = 0
-
             async for message in messages:
-                # Validate the data
-                try:
-                    current_item = ScrapedQueuedModel.model_validate_json(
-                        message.content
-                    )
-                except ValidationError:
-                    # TODO: Implement a dead-letter queue
-                    logger.warning("%s cannot be parsed, it will be deleted", message)
-                    try:
-                        await in_queue.delete_message(message)
-                    except MessageNotFoundError:
-                        pass
-                    return
-
-                # Log the processing
-                logger.info(
-                    'Processing "%s" (%i)',
-                    current_item.url,
-                    current_item.depth,
-                )
-
-                # Get a browser instance
-                # Limit the usage of the browser to 100 scrapings, to avoid memory leaks. Restart the browser after that. Memory leaks have been observed in both macOS and Ubuntu, with over 150 GB of memory used after an hour.
-                # TODO: Create an issue in the Playwright repository to investigate the memory leak
-                if not browser:  # First start
-                    browser = await _get_broswer(browser_type)
-                    logger.debug("Started browser %s", browser_type.name)
-                elif browser_usage < 100:  # noqa: PLR2004
-                    browser_usage += 1
-                else:  # Restart
-                    await browser.close()
-                    browser = await _get_broswer(browser_type)
-                    logger.info(
-                        "Restarted browser %s after %i iterations",
-                        browser_type.name,
-                        browser_usage,
-                    )
-                    browser_usage = 0
-
-                try:
-                    processed, queued, network_used_mb = await _process_one(
+                # Process the message
+                await scheduler.spawn(
+                    _worker_single_message(
                         blob=blob,
                         browser=browser,
                         cache_refresh=cache_refresh,
-                        current_item=current_item,
                         in_queue=in_queue,
                         max_depth=max_depth,
+                        message=message,
                         out_queue=out_queue,
                         save_images=save_images,
                         save_screenshot=save_screenshot,
@@ -597,39 +567,88 @@ async def _worker(  # noqa: PLR0913
                         viewports=viewports,
                         whitelist=whitelist,
                     )
-
-                    try:
-                        await in_queue.delete_message(message)
-                    except MessageNotFoundError:  # Race condition, message has already been deleted by another worker, pass silently to the next message, as it has already been processed
-                        continue
-
-                    # Update counters
-                    total_network_used_mb += network_used_mb
-                    total_processed += processed
-                    total_queued += queued
-
-                except Exception:
-                    # TODO: Add a dead-letter queue
-                    # TODO: Add a retry mechanism
-                    # TODO: Narrow the exception type
-                    logger.error(
-                        "Error processing %s (%i)",
-                        current_item.url,
-                        current_item.depth,
-                        exc_info=True,
-                    )
-
-            # Update job state if data was processed
-            if total_network_used_mb > 0 or total_processed > 0 or total_queued > 0:
-                await _update_job_state(
-                    blob=blob,
-                    network_used_mb=total_network_used_mb,
-                    processed=total_processed,
-                    queued=total_queued,
                 )
 
             # Wait 3 sec to avoid spamming the queue if it is empty
             await asyncio.sleep(3)
+
+
+# TODO: Simplify, this is too complex
+async def _worker_single_message(  # noqa: PLR0913
+    blob: IBlob,
+    browser: Browser,
+    cache_refresh: timedelta,
+    in_queue: IQueue,
+    max_depth: int,
+    message: QueueMessage,
+    out_queue: IQueue,
+    save_images: bool,
+    save_screenshot: bool,
+    timezones: list[str],
+    user_agents: list[str],
+    viewports: list[ViewportSize],
+    whitelist: dict[re.Pattern, list[re.Pattern]],
+) -> None:
+    # Validate the message
+    try:
+        current_item = ScrapedQueuedModel.model_validate_json(message.content)
+    except ValidationError:
+        # TODO: Implement a dead-letter queue
+        logger.warning("%s cannot be parsed, it will be deleted", message)
+        try:
+            await in_queue.delete_message(message)
+        except MessageNotFoundError:
+            pass
+        return
+
+    # Log the processing
+    logger.info(
+        'Processing "%s" (%i)',
+        current_item.url,
+        current_item.depth,
+    )
+
+    try:
+        processed, queued, network_used_mb = await _process_one(
+            blob=blob,
+            browser=browser,
+            cache_refresh=cache_refresh,
+            current_item=current_item,
+            in_queue=in_queue,
+            max_depth=max_depth,
+            out_queue=out_queue,
+            save_images=save_images,
+            save_screenshot=save_screenshot,
+            timezones=timezones,
+            user_agents=user_agents,
+            viewports=viewports,
+            whitelist=whitelist,
+        )
+
+        try:
+            await in_queue.delete_message(message)
+        except MessageNotFoundError:  # Race condition, message has already been deleted by another worker, pass silently to the next message, as it has already been processed
+            return
+
+        # Update job state if data was processed
+        if network_used_mb > 0 or processed > 0 or queued > 0:
+            await _update_job_state(
+                blob=blob,
+                network_used_mb=network_used_mb,
+                processed=processed,
+                queued=queued,
+            )
+
+    except Exception:
+        # TODO: Add a dead-letter queue
+        # TODO: Add a retry mechanism
+        # TODO: Narrow the exception type
+        logger.error(
+            "Error processing %s (%i)",
+            current_item.url,
+            current_item.depth,
+            exc_info=True,
+        )
 
 
 def _ads_pattern() -> re.Pattern | None:

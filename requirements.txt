@@ -109,6 +109,10 @@ aiohttp==3.10.10 \
     --hash=sha256:fe2fb38c2ed905a2582948e2de560675e9dfbee94c6d5ccdb1301c6d0a5bf092 \
     --hash=sha256:ffe595f10566f8276b76dc3a11ae4bb7eba1aac8ddd75811736a15b0d5311414
     # via scrape-it-now (pyproject.toml)
+aiojobs==1.3.0 \
+    --hash=sha256:03074c884b3dc388b8d798c0de24ec17d72b2799018497fda8062c0431a494b5 \
+    --hash=sha256:1f9f36179b6d50796c4fc9e8851fdae10f38d6c2f64412a91e2c4eff73054ce0
+    # via scrape-it-now (pyproject.toml)
 aiosignal==1.3.1 \
     --hash=sha256:54cd96e15e1649b75d6c87526a6ff0b6c1b0dd3459f43d9ca11d48c339b68cfc \
     --hash=sha256:f8376fb07dd1e86a584e4fcdec80b36b7f81aac666ebc724e2c090300dd83b17

@@ -90,11 +90,11 @@ Example output:
 ```bash
 ❯ Start scraping job 7yz91ma
 Queued 71/71 links for referrer https://www.google.com/search (1)
-3 workers started
-Browser chromium launched
-...
+Started 5 workers
+Started browser chromium
 Queued 15/28 links for referrer https://www.nytimes.com/2024/08/15/business/economy/kamala-harris-inflation-price-gouging.html (2)
 Scraped https://www.nytimes.com/2024/08/15/business/economy/kamala-harris-inflation-price-gouging.html (2)
+...
 ```
 
 Most frequent options are:
@@ -206,12 +206,11 @@ Example output:
 
 ```bash
 ❯ Start indexing job 7yz91ma
-5 workers started
+Started 5 workers
+Processing "https://www.nytimes.com/2024/08/15/business/economy/kamala-harris-inflation-price-gouging.html" (a4914bf)
+a4914bf chunked into 6 parts
+a4914bf is indexed
 ...
-434b227 chunked into 6 parts
-434b227 is indexed
-f001b3e chunked into 86 parts
-f001b3e is already indexed
 ```
 
 Most frequent options are:

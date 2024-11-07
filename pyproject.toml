@@ -17,17 +17,18 @@ dependencies = [
   "azure-storage-queue~=12.11",
   "click~=8.1",
   "openai~=1.42",
-  "opentelemetry-instrumentation-aiohttp-client~=0.0",
-  "opentelemetry-instrumentation-httpx~=0.0",
-  "opentelemetry-instrumentation-openai~=0.0",
-  "opentelemetry-instrumentation-redis~=0.0",
-  "opentelemetry-instrumentation-sqlite3~=0.0",
+  "opentelemetry-instrumentation-aiohttp-client~=0.0a0",
+  "opentelemetry-instrumentation-httpx~=0.0a0",
+  "opentelemetry-instrumentation-openai~=0.0a0",
+  "opentelemetry-instrumentation-redis~=0.0a0",
+  "opentelemetry-instrumentation-sqlite3~=0.0a0",
   "playwright~=1.46",
   "pydantic~=2.8",
   "pypandoc~=1.13",
   "python-dotenv~=1.0",
   "tenacity~=9.0",
   "tiktoken~=0.7",
+  "truststore~=0.10",
 ]
 
 [project.optional-dependencies]
@@ -69,9 +70,6 @@ pep621_dev_dependency_groups = ["dev"]
 DEP002 = [
   "aiodns",  # Async DNS resolver for aiohttp
   "aiohttp",  # Async HTTP client for Azure SDKs
-]
-DEP003 = [
-  "certifi",  # Patch for CA certificates when built with PyInstaller
 ]
 
 [tool.ruff]

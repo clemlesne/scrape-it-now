@@ -66,13 +66,20 @@ class AzureQueueStorage(IQueue):
         max_messages: int,
         visibility_timeout: int,
     ) -> AsyncGenerator[Message, None]:
+        logger.debug('Processing new messages from "%s"', self._config.name)
+
+        # Fetch all visible messages
         messages = self._client.receive_messages(
             max_messages=max_messages,
             visibility_timeout=visibility_timeout,
         )
+        # Consuming
         async for message in messages:
+            content = self._unescape(message.content)
+            logger.debug('Received "%s"', content)
+            # Convert to Message
             yield Message(
-                content=self._unescape(message.content),
+                content=content,
                 delete_token=message.pop_receipt,
                 dequeue_count=message.dequeue_count,
                 message_id=message.id,

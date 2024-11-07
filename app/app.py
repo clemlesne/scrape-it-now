@@ -4,7 +4,6 @@ import random
 import re
 import string
 import sys
-from os import environ as env
 from platform import python_version
 
 import click
@@ -17,7 +16,11 @@ from app.persistence.iblob import Provider as BlobProvider
 from app.persistence.iqueue import Provider as QueueProvider
 from app.persistence.isearch import Provider as SearchProvider
 from app.persistence.local_disk import BLOB_DEFAULT_PATH
-from app.scrape import run as scrape_backend_run, state as scrape_backend_state
+from app.scrape import (
+    install as scrape_backend_install,
+    run as scrape_backend_run,
+    state as scrape_backend_state,
+)
 
 
 def run_in_async(func):
@@ -100,6 +103,16 @@ def scrape() -> None:
     Scrape a website to get its content.
     """
     pass
+
+
+@scrape.command("install")
+@common_params
+@run_in_async
+async def scrape_install() -> None:
+    """
+    Install all dependencies required for the scraper.
+    """
+    await scrape_backend_install()
 
 
 @click.option(
@@ -568,14 +581,12 @@ def _job_name(job_name: str | None) -> str:
     )
 
 
-if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):  # Running in PyInstaller
-    import certifi
+# If running in PyInstaller
+if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+    # Make sure all SSL certificates come from the system truststore
+    import truststore
 
-    # Path the bundle with certifi
-    # See: https://github.com/Azure/azure-iot-sdk-python/issues/991#issuecomment-1118235694
-    # See: https://github.com/pyinstaller/pyinstaller/issues/7229#issuecomment-1309406736
-    # See: https://github.com/pyinstaller/pyinstaller/issues/6352#issuecomment-962499220
-    env["SSL_CERT_FILE"] = certifi.where()
+    truststore.inject_into_ssl()
 
     # Run the CLI
     cli(sys.argv[1:])

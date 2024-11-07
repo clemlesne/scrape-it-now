@@ -541,11 +541,22 @@ async def _worker(  # noqa: PLR0913
             total_processed = 0
             total_queued = 0
 
-            # Iterate over the messages
-            logger.debug("Processing new messages")
             async for message in messages:
-                # Parse the message
-                current_item = ScrapedQueuedModel.model_validate_json(message.content)
+                # Validate the data
+                try:
+                    current_item = ScrapedQueuedModel.model_validate_json(
+                        message.content
+                    )
+                except ValidationError:
+                    # TODO: Implement a dead-letter queue
+                    logger.warning("%s cannot be parsed, it will be deleted", message)
+                    try:
+                        await in_queue.delete_message(message)
+                    except MessageNotFoundError:
+                        pass
+                    return
+
+                # Log the processing
                 logger.info(
                     'Processing "%s" (%i)',
                     current_item.url,
@@ -1163,16 +1174,8 @@ async def run(  # noqa: PLR0913
 ) -> None:
     logger.info("Start scraping job %s", job)
 
-    # Install Playwright
-    async with async_playwright() as p:
-        browser_type = getattr(p, BROWSER_NAME)
-
-        await asyncio.gather(
-            # Install Playwright
-            _install_browser(browser_type),
-            # Install Pandoc
-            _install_pandoc(),
-        )
+    # Make sure the dependencies are installed
+    await install()
 
     # Parse cache_refresh
     cache_refresh_parsed = timedelta(hours=cache_refresh)
@@ -1276,15 +1279,25 @@ async def state(  # noqa: PLR0913
         return model
 
 
-async def _install_browser(
-    browser_type: BrowserType,
-    with_deps: bool = False,
-) -> None:
+async def install() -> None:
+    """
+    Install browser and Pandoc dependencies.
+    """
+    logger.info("Installing dependencies if needed, this may take a few minutes")
+    await asyncio.gather(
+        _install_browser(),
+        _install_pandoc(),
+    )
+
+
+async def _install_browser() -> None:
     """
     Install Playwright selected browser.
 
     Download is persisted in the application cache directory. If requested, also install system dependencies requested by the framework. Those requires root permissions on Linux systems as the system package manager will be called.
     """
+    logger.debug("Installing Playwright dependency")
+
     # Add installation path to the environment
     # See: https://playwright.dev/docs/browsers#hermetic-install
     env["PLAYWRIGHT_BROWSERS_PATH"] = await browsers_install_path()
@@ -1295,9 +1308,7 @@ async def _install_browser(
     # Ensure only one worker is installing the browser
     async with file_lock(driver_executable):
         # Build the command arguments
-        args = [driver_executable, driver_cli, "install", browser_type.name]
-        if with_deps:
-            args.append("--with-deps")
+        args = [driver_executable, driver_cli, "install", BROWSER_NAME]
 
         # Run
         proc = await asyncio.create_subprocess_shell(
@@ -1344,6 +1355,8 @@ async def _install_pandoc() -> None:
 
     Download is persisted in the application cache directory.
     """
+    logger.debug("Installing Pandoc dependency")
+
     # Fix version is necesssary to have reproducible builds
     # See: https://github.com/jgm/pandoc/releases
     version = "3.2.1"

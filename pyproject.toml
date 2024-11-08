@@ -4,7 +4,7 @@ dynamic = ["version"]
 license = {file = "LICENSE"}
 name = "scrape-it-now"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = [
   "aiodns~=3.2",
   "aiofiles~=24.1",
@@ -75,7 +75,7 @@ DEP002 = [
 ]
 
 [tool.ruff]
-target-version = "py312"
+target-version = "py313"
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
@@ -84,4 +84,4 @@ combine-as-imports = true
 docstring-code-format = true
 
 [tool.pyright]
-pythonVersion = "3.12"
+pythonVersion = "3.13"

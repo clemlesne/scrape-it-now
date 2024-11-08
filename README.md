@@ -46,7 +46,7 @@ For configuring the CLI (including authentication to the backend services), use 
 
 ### From sources
 
-Application must be run with Python 3.12 or later. If this version is not installed, an easy way to install it is [pyenv](https://github.com/pyenv/pyenv).
+Application must be run with Python 3.13 or later. If this version is not installed, an easy way to install it is [pyenv](https://github.com/pyenv/pyenv).
 
 ```bash
 # Download the source code

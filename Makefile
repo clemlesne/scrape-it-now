@@ -107,7 +107,6 @@ build:
 		--icon resources/logo.ico \
 		--name scrape-it-now \
 		--onefile \
-		--optimize 2 \
 		app/app.py
 
 lint:

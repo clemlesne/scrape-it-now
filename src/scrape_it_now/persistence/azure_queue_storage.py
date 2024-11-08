@@ -17,11 +17,11 @@ from tenacity import (
     wait_random_exponential,
 )
 
-from app.helpers.http import azure_transport
-from app.helpers.identity import credential
-from app.helpers.logging import logger
-from app.models.message import Message
-from app.persistence.iqueue import IQueue, MessageNotFoundError
+from scrape_it_now.helpers.http import azure_transport
+from scrape_it_now.helpers.identity import credential
+from scrape_it_now.helpers.logging import logger
+from scrape_it_now.models.message import Message
+from scrape_it_now.persistence.iqueue import IQueue, MessageNotFoundError
 
 
 class Config(BaseModel):

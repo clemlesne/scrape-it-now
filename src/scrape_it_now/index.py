@@ -22,35 +22,39 @@ from tenacity import (
     wait_random_exponential,
 )
 
-from app.helpers.logging import logger
-from app.helpers.persistence import (
+from scrape_it_now.helpers.logging import logger
+from scrape_it_now.helpers.persistence import (
     blob_client,
     openai_client,
     queue_client,
     search_client,
 )
-from app.helpers.resources import (
+from scrape_it_now.helpers.resources import (
     dir_resources,
     index_index_name,
     index_queue_name,
     scrape_container_name,
 )
-from app.helpers.threading import run_workers
-from app.models.indexed import IndexedIngestModel
-from app.models.scraped import ScrapedUrlModel
-from app.persistence.iblob import BlobNotFoundError, IBlob, Provider as BlobProvider
-from app.persistence.iqueue import (
+from scrape_it_now.helpers.threading import run_workers
+from scrape_it_now.models.indexed import IndexedIngestModel
+from scrape_it_now.models.scraped import ScrapedUrlModel
+from scrape_it_now.persistence.iblob import (
+    BlobNotFoundError,
+    IBlob,
+    Provider as BlobProvider,
+)
+from scrape_it_now.persistence.iqueue import (
     IQueue,
     Message as QueueMessage,
     MessageNotFoundError,
     Provider as QueueProvider,
 )
-from app.persistence.isearch import (
+from scrape_it_now.persistence.isearch import (
     DocumentNotFoundError,
     ISearch,
     Provider as SearchProvider,
 )
-from app.scrape import scraped_blob_prefix
+from scrape_it_now.scrape import scraped_blob_prefix
 
 
 async def _process_one(  # noqa: PLR0913
@@ -392,10 +396,6 @@ async def run(  # noqa: PLR0913
     search_provider: SearchProvider,
 ) -> None:
     logger.info("Start indexing job %s", job)
-
-    # Patch Tiktoken
-    # See: https://stackoverflow.com/a/76107077
-    env["TIKTOKEN_CACHE_DIR"] = dir_resources("tiktoken")
 
     if force:
         # Init clients

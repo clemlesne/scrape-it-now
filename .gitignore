@@ -737,6 +737,7 @@ FodyWeavers.xsd
 scraping-results/
 
 # Tests
+sbom-reports/
 scraping-test/
 test-reports/
 

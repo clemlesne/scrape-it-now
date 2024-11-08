@@ -5,9 +5,12 @@ from os import environ as env
 
 import pytest
 
-from app.helpers.logging import logger
-from app.helpers.persistence import queue_client
-from app.persistence.iqueue import MessageNotFoundError, Provider as QueueProvider
+from scrape_it_now.helpers.logging import logger
+from scrape_it_now.helpers.persistence import queue_client
+from scrape_it_now.persistence.iqueue import (
+    MessageNotFoundError,
+    Provider as QueueProvider,
+)
 
 
 @pytest.mark.parametrize(

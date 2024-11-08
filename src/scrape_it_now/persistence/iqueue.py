@@ -3,7 +3,7 @@ from collections.abc import AsyncGenerator
 from enum import Enum, unique
 from typing import Any
 
-from app.models.message import Message
+from scrape_it_now.models.message import Message
 
 
 class MessageNotFoundError(Exception):

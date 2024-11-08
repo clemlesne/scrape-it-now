@@ -2,8 +2,8 @@ from collections.abc import Awaitable, Callable
 
 from azure.identity.aio import DefaultAzureCredential, get_bearer_token_provider
 
-from app.helpers.http import azure_transport
-from app.helpers.threading import asyncio_cache
+from scrape_it_now.helpers.http import azure_transport
+from scrape_it_now.helpers.threading import asyncio_cache
 
 
 @asyncio_cache

@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field
 
-from app.helpers.resources import hash_url
+from scrape_it_now.helpers.resources import hash_url
 
 
 class UrlAbstractModel(BaseModel):

@@ -13,14 +13,14 @@ from aiofiles.os import remove, rmdir
 from isodate import UTC
 from playwright.async_api import Browser, ViewportSize
 
-from app.helpers.persistence import blob_client, queue_client
-from app.helpers.resources import dir_tests
-from app.models.scraped import ScrapedImageModel, ScrapedQueuedModel
-from app.persistence.iblob import (
+from scrape_it_now.helpers.persistence import blob_client, queue_client
+from scrape_it_now.helpers.resources import dir_tests
+from scrape_it_now.models.scraped import ScrapedImageModel, ScrapedQueuedModel
+from scrape_it_now.persistence.iblob import (
     Provider as BlobProvider,
 )
-from app.persistence.iqueue import Provider as QueueProvider
-from app.scrape import BROWSER_TIMEOUT_MS, _queue, _scrape_page
+from scrape_it_now.persistence.iqueue import Provider as QueueProvider
+from scrape_it_now.scrape import BROWSER_TIMEOUT_MS, _queue, _scrape_page
 
 DEFAULT_TIMEZONE = "Europe/Moscow"
 DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"

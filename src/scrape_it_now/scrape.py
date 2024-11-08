@@ -31,9 +31,9 @@ from tenacity import (
     wait_random_exponential,
 )
 
-from app.helpers.logging import logger
-from app.helpers.persistence import blob_client, queue_client
-from app.helpers.resources import (
+from scrape_it_now.helpers.logging import logger
+from scrape_it_now.helpers.persistence import blob_client, queue_client
+from scrape_it_now.helpers.resources import (
     browsers_install_path,
     dir_resources,
     file_lock,
@@ -43,18 +43,22 @@ from app.helpers.resources import (
     scrape_container_name,
     scrape_queue_name,
 )
-from app.helpers.threading import run_workers
-from app.helpers.trie import Trie
-from app.models.scraped import ScrapedImageModel, ScrapedQueuedModel, ScrapedUrlModel
-from app.models.state import StateJobModel, StateScrapedModel
-from app.persistence.iblob import (
+from scrape_it_now.helpers.threading import run_workers
+from scrape_it_now.helpers.trie import Trie
+from scrape_it_now.models.scraped import (
+    ScrapedImageModel,
+    ScrapedQueuedModel,
+    ScrapedUrlModel,
+)
+from scrape_it_now.models.state import StateJobModel, StateScrapedModel
+from scrape_it_now.persistence.iblob import (
     BlobNotFoundError,
     IBlob,
     LeaseAlreadyExistsError,
     LeaseNotFoundError,
     Provider as BlobProvider,
 )
-from app.persistence.iqueue import (
+from scrape_it_now.persistence.iqueue import (
     IQueue,
     Message as QueueMessage,
     MessageNotFoundError,

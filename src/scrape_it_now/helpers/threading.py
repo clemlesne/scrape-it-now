@@ -6,7 +6,7 @@ from threading import Thread, current_thread
 
 from structlog.contextvars import bind_contextvars
 
-from app.helpers.logging import logger
+from scrape_it_now.helpers.logging import logger
 
 DEFAULT_WORKERS_COUNT = int((cpu_count() or 4) / 2)
 

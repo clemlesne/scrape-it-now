@@ -14,16 +14,10 @@ on:
       - hotfix/*
       - main
 
-env:
-  # See: https://github.com/upx/upx/releases
-  UPX_VERSION: "4.2.4"
-
 jobs:
   init:
     name: Init
-    runs-on: ubuntu-22.04
-    permissions:
-      contents: read
+    runs-on: ubuntu-24.04
     outputs:
       VERSION: ${{ steps.version.outputs.version }}
       VERSION_FULL: ${{ steps.version.outputs.version_full }}
@@ -46,16 +40,21 @@ jobs:
     name: Test
     permissions:
       id-token: write
-      contents: read
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - init
     strategy:
       fail-fast: false
       matrix:
+        # Run all test suites
         step:
-          - test-static
-          - test-unit
+          - static
+          - unit
+        # Run on all supported Python versions
+        python-version:
+          - '3.11'
+          - '3.12'
+          - '3.13'
     steps:
       - name: Checkout
         uses: actions/checkout@v4.1.7
@@ -64,7 +63,7 @@ jobs:
         uses: actions/setup-python@v5.1.1
         with:
           cache: pip
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: Login to Azure
         uses: Azure/login@v2.2.0
@@ -88,51 +87,31 @@ jobs:
       - name: Set up dependencies
         run: make install-deps
 
+      # See: https://github.com/ungoogled-software/ungoogled-chromium/issues/2804#issuecomment-2081611387
+      - name: Configure AppArmor profile
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
       - name: Configure environment variables
         run: echo "${{ secrets.DOTENV_UNIT_TESTS }}" > .env
 
       - name: Run tests
-        run: make ${{ matrix.step }} version_full=${{ needs.init.outputs.VERSION_FULL }}
+        run: make test-${{ matrix.step }} version_full=${{ needs.init.outputs.VERSION_FULL }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4.3.6
         if: always()
         with:
           compression-level: 9
-          name: test-results
+          name: test-${{ matrix.step }}-${{ matrix.python-version }}
           path: test-reports/*
 
-  build-app:
-    name: Build & archive app
-    permissions:
-      contents: write
-      packages: write
-    runs-on: ${{ matrix.os }}
+  build-wheels:
+    name: Build wheels
+    runs-on: ubuntu-24.04
     needs:
       - init
-      - test
-    strategy:
-      fail-fast: false
-      matrix:
-        # TODO: Build for musl (Alpine Linux)
-        os:
-          # All versions of macOS supported by GitHub Actions
-          - macos-12
-          - macos-13
-          - macos-14
-          - macos-15
-          # All versions of Ubuntu supported by GitHub Actions
-          - ubuntu-20.04
-          - ubuntu-22.04
-          - ubuntu-24.04
-          # All versions of Windows supported by GitHub Actions
-          - windows-2019
-          - windows-2022
     steps:
-      - name: Configure Git (Windows)
-        if: runner.os == 'Windows'
-        run: git config --system core.longpaths true
-
       - name: Checkout
         uses: actions/checkout@v4.1.2
 
@@ -140,63 +119,55 @@ jobs:
         uses: actions/setup-python@v5.1.1
         with:
           cache: pip
-          python-version: "3.12"
+          python-version: "3.13"
 
-      - name: Set up make (Windows)
-        if: runner.os == 'Windows'
+      - name: Set up build dependencies
         run: |
-          choco install make
-          make --version
+          python3 -m pip install --upgrade pip build
 
-      - name: Set up UPX (Windows)
-        if: runner.os == 'Windows'
+      - name: Write version
         run: |
-          choco install upx --version ${{ env.UPX_VERSION }}
-          upx --version
+          version=$(echo "${{ needs.init.outputs.VERSION }}" | sed 's/-/\.a/' | cut -d'.' -f1-4)
+          echo '__version__ = "'${version}'"' > src/scrape_it_now/__init__.py
 
-      - name: Set up dependencies
+      - name: Build wheels
         run: |
-          python3 -m pip install --upgrade pip wheel setuptools
-          make install-deps
-
-      - name: Set up dependencies (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          python3 -m pip install pywin32-ctypes pefile
-
-      - name: Write version (Linux)
-        if: runner.os == 'Linux' || runner.os == 'macOS'
-        run: echo '__version__ = "${{ needs.init.outputs.VERSION_FULL }}"' > app/__init__.py
-
-      - name: Write version (Windows)
-        if: runner.os == 'Windows'
-        run: echo '__version__ = "${{ needs.init.outputs.VERSION_FULL }}"' > app\__init__.py
-
-      - name: Build to binary
-        run: make build
-
-      - name: Rename binary (Linux)
-        if: runner.os == 'Linux' || runner.os == 'macOS'
-        run: mv dist/scrape-it-now dist/scrape-it-now-${{ needs.init.outputs.VERSION }}-${{ matrix.os }}
-
-      - name: Rename binary (Windows)
-        if: runner.os == 'Windows'
-        run: mv dist\scrape-it-now.exe dist\scrape-it-now-${{ needs.init.outputs.VERSION }}-${{ matrix.os }}.exe
+          make build
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4.3.6
         with:
           compression-level: 9
-          name: binary-${{ matrix.os }}
-          path: dist/*
+          name: wheels
+          path: dist/*.whl
+
+  attest-binaries:
+    name: Attest binaries
+    permissions:
+      attestations: write
+      id-token: write
+    runs-on: ubuntu-24.04
+    needs:
+      - build-wheels
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4.1.8
+        with:
+          merge-multiple: true
+          path: dist
+          pattern: wheels
+
+      - name: Generate attestations for binaries
+        uses: actions/attest-build-provenance@v1.4.4
+        with:
+          subject-path: dist/*
 
   attest-dependencies:
-    name: Attest - Dependencies
+    name: Attest dependencies
     permissions:
       contents: write
-    runs-on: ubuntu-22.04
-    needs:
-      - test
+      id-token: write
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4.1.7
@@ -207,20 +178,35 @@ jobs:
           directoryExclusionList: docs
 
   attest-sbom:
-    name: Attest - SBOM
-    runs-on: ubuntu-22.04
+    name: Attest SBOM
+    permissions:
+      attestations: write
+      id-token: write
+    runs-on: ubuntu-24.04
     needs:
+      - build-wheels
       - init
-      - test
     steps:
       - name: Checkout
         uses: actions/checkout@v4.1.7
 
-      - name: Init Syft
+      - name: Download artifacts
+        uses: actions/download-artifact@v4.1.8
+        with:
+          merge-multiple: true
+          path: dist
+          pattern: wheels
+
+      - name: Set up Syft
         uses: anchore/sbom-action/download-syft@v0.16.1
 
-      - name: Run attestation
+      - name: Run scan
         run: make sbom version_full=${{ needs.init.outputs.VERSION_FULL }}
+
+      - name: Generate attestations for SBOM
+        uses: actions/attest-build-provenance@v1.4.4
+        with:
+          subject-path: sbom-reports/*
 
       - name: Upload results to release
         uses: actions/upload-artifact@v4.3.6
@@ -229,30 +215,82 @@ jobs:
           name: sbom
           path: sbom-reports/*
 
+  publish-testpypi:
+    name: Publish to TestPyPI
+    # The env "testpypi" has a protection rule which requires to be on the "main" or "develop" branches, which are both protected
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/scrape-it-now
+    permissions:
+      id-token: write
+    runs-on: ubuntu-24.04
+    needs:
+      - attest-binaries
+      - attest-dependencies
+      - attest-sbom
+      - test
+    if: (github.ref == 'refs/heads/main') || (github.ref == 'refs/heads/develop')
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4.1.8
+        with:
+          merge-multiple: true
+          path: dist
+          pattern: wheels
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@v1.12.2
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  publish-pypi:
+    name: Publish to PyPI
+    # The env "pypi" has a protection rule which requires to be on the "main" branch, which is protected
+    environment:
+      name: pypi
+      url: https://pypi.org/p/scrape-it-now
+    permissions:
+      id-token: write
+    runs-on: ubuntu-24.04
+    needs:
+      # Always publish first to TestPyPI as a safety precaution
+      - publish-testpypi
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4.1.8
+        with:
+          merge-multiple: true
+          path: dist
+          pattern: wheels
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@v1.12.2
+
   publish-release:
     name: Publish release
     permissions:
       contents: write
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
+      - attest-binaries
       - attest-dependencies
       - attest-sbom
-      - build-app
       - init
-    # Only publish on non-scheduled default branch
-    if: (github.event_name != 'schedule') && (github.ref == 'refs/heads/main')
+      - test
+    if: github.ref == 'refs/heads/main'
     steps:
       - name: Download artifacts
         id: download
         uses: actions/download-artifact@v4.1.8
         with:
           merge-multiple: true
-          path: artifacts
+          path: dist
 
       - name: Publish
         uses: softprops/action-gh-release@v2.0.8
         with:
-          files: artifacts/*
+          files: dist/*
           generate_release_notes: true
           make_latest: true
           name: scrape-it-now v${{ needs.init.outputs.VERSION }}

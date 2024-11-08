@@ -3,20 +3,23 @@ from contextlib import asynccontextmanager
 
 from openai import AsyncAzureOpenAI
 
-from app.helpers.identity import token
-from app.persistence.azure_blob_storage import (
+from scrape_it_now.helpers.identity import token
+from scrape_it_now.persistence.azure_blob_storage import (
     AzureBlobStorage,
     Config as AzureBlobStorageConfig,
 )
-from app.persistence.azure_queue_storage import (
+from scrape_it_now.persistence.azure_queue_storage import (
     AzureQueueStorage,
     Config as AzureQueueStorageConfig,
 )
-from app.persistence.azure_search import AzureSearch, Config as AzureSearchConfig
-from app.persistence.iblob import IBlob, Provider as BlobProvider
-from app.persistence.iqueue import IQueue, Provider as QueueProvider
-from app.persistence.isearch import ISearch, Provider as SearchProvider
-from app.persistence.local_disk import (
+from scrape_it_now.persistence.azure_search import (
+    AzureSearch,
+    Config as AzureSearchConfig,
+)
+from scrape_it_now.persistence.iblob import IBlob, Provider as BlobProvider
+from scrape_it_now.persistence.iqueue import IQueue, Provider as QueueProvider
+from scrape_it_now.persistence.isearch import ISearch, Provider as SearchProvider
+from scrape_it_now.persistence.local_disk import (
     BlobConfig as LocalDiskBlobConfig,
     LocalDiskBlob,
     LocalDiskQueue,

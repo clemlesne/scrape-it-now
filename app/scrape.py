@@ -689,8 +689,25 @@ def _filter_routes(
             "font",
             "stylesheet",
         }:
-            logger.debug("Blocked resource type %s", route.request.resource_type)
-            await route.abort("blockedbyclient")
+            logger.debug(
+                'Blocked resource type %s at "%s"',
+                route.request.resource_type,
+                route.request.url,
+            )
+            # Return a random reason to lower the risk of fingerprinting
+            await route.abort(
+                random.choice(
+                    [
+                        "aborted",
+                        "addressunreachable",
+                        "blockedbyclient",
+                        "connectionfailed",
+                        "failed",
+                        "namenotresolved",
+                        "timedout",
+                    ]
+                )
+            )
             return
 
         url_clean = _clean_url(route.request.url).geturl()
@@ -698,14 +715,22 @@ def _filter_routes(
         # Check if the request is to a known ad domain
         if pattern := _ads_pattern():
             if pattern.search(url_clean) is not None:
-                logger.debug("Blocked ad %s", url_clean)
+                logger.debug(
+                    'Blocked ad at "%s"',
+                    url_clean,
+                )
+                # Return the same reason as any ad removal extension (like uBlock Origin)
                 await route.abort("blockedbyclient")
                 return
 
-        # Remove client hints
+        # Remove client headers that could be used for fingerprinting
         headers = route.request.headers
         for header in list(headers.keys()):
-            if header.startswith("sec-ch-"):
+            if (
+                header.startswith("device-")
+                or header.startswith("sec-ch-")
+                or header.startswith("x-")
+            ):
                 del headers[header]
 
         # Continue the request

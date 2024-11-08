@@ -83,7 +83,7 @@ def cli() -> None:
     """
     🛰️ Scrape It Now!
 
-    A website to scrape? There's a simple way.
+    Web scraper made for AI and simplicity in mind. It runs as a CLI that can be parallelized and outputs high-quality markdown content.
     """
     pass
 
@@ -581,8 +581,12 @@ def _job_name(job_name: str | None) -> str:
     )
 
 
-# If running in PyInstaller
-if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+def cli_wrapper():
+    """
+    Wrapper to run the CLI with a project script entrypoint.
+
+    This is the main entrypoint for the CLI. It is used to inject the system truststore into the SSL context.
+    """
     # Make sure all SSL certificates come from the system truststore
     import truststore
 

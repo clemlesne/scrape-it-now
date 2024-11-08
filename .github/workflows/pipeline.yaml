@@ -14,16 +14,10 @@ on:
       - hotfix/*
       - main
 
-env:
-  # See: https://github.com/upx/upx/releases
-  UPX_VERSION: "4.2.4"
-
 jobs:
   init:
     name: Init
-    runs-on: ubuntu-22.04
-    permissions:
-      contents: read
+    runs-on: ubuntu-24.04
     outputs:
       VERSION: ${{ steps.version.outputs.version }}
       VERSION_FULL: ${{ steps.version.outputs.version_full }}
@@ -46,8 +40,7 @@ jobs:
     name: Test
     permissions:
       id-token: write
-      contents: read
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - init
     strategy:
@@ -56,6 +49,9 @@ jobs:
         step:
           - test-static
           # - test-unit
+        python-version:
+          - '3.12'
+          - '3.13'
     steps:
       - name: Checkout
         uses: actions/checkout@v4.1.7
@@ -102,11 +98,8 @@ jobs:
           name: test-results
           path: test-reports/*
 
-  build-app:
-    name: Build & archive app
-    permissions:
-      contents: write
-      packages: write
+  build-wheels:
+    name: Build wheels
     runs-on: ${{ matrix.os }}
     needs:
       - init
@@ -114,25 +107,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # TODO: Build for musl (Alpine Linux)
-        os:
-          # All versions of macOS supported by GitHub Actions
-          - macos-12
-          - macos-13
-          - macos-14
-          - macos-15
-          # All versions of Ubuntu supported by GitHub Actions
-          - ubuntu-20.04
-          - ubuntu-22.04
-          - ubuntu-24.04
-          # All versions of Windows supported by GitHub Actions
-          - windows-2019
-          - windows-2022
+        os: [ubuntu-24.04, windows-2022, macos-15]
     steps:
-      - name: Configure Git (Windows)
-        if: runner.os == 'Windows'
-        run: git config --system core.longpaths true
-
       - name: Checkout
         uses: actions/checkout@v4.1.2
 
@@ -142,27 +118,22 @@ jobs:
           cache: pip
           python-version: "3.13"
 
+      - name: Set up QEMU
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v3.2.0
+        with:
+          platforms: all
+
       - name: Set up make (Windows)
         if: runner.os == 'Windows'
         run: |
           choco install make
           make --version
 
-      - name: Set up UPX (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          choco install upx --version ${{ env.UPX_VERSION }}
-          upx --version
-
       - name: Set up dependencies
         run: |
           python3 -m pip install --upgrade pip wheel setuptools
           make install-deps
-
-      - name: Set up dependencies (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          python3 -m pip install pywin32-ctypes pefile
 
       - name: Write version (Linux)
         if: runner.os == 'Linux' || runner.os == 'macOS'
@@ -175,26 +146,79 @@ jobs:
       - name: Build to binary
         run: make build
 
-      - name: Rename binary (Linux)
-        if: runner.os == 'Linux' || runner.os == 'macOS'
-        run: mv dist/scrape-it-now dist/scrape-it-now-${{ needs.init.outputs.VERSION }}-${{ matrix.os }}
-
-      - name: Rename binary (Windows)
-        if: runner.os == 'Windows'
-        run: mv dist\scrape-it-now.exe dist\scrape-it-now-${{ needs.init.outputs.VERSION }}-${{ matrix.os }}.exe
-
       - name: Upload artifacts
         uses: actions/upload-artifact@v4.3.6
         with:
           compression-level: 9
-          name: binary-${{ matrix.os }}
-          path: dist/*
+          name: wheels-${{ matrix.os }}-${{ strategy.job-index }}
+          path: dist/*.whl
 
-  attest-dependencies:
-    name: Attest - Dependencies
+  publish-testpypi:
+    name: Publish to TestPyPI
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/scrape-it-now
+    permissions:
+      id-token: write
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4.1.8
+        with:
+          merge-multiple: true
+          path: dist
+          pattern: wheels-*
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@v1.12.2
+        with:
+          repository-url: https://test.pypi.org/legacy
+
+  publish-pypi:
+    name: Publish to PyPI
+    environment:
+      name: pypi
+      url: https://pypi.org/p/scrape-it-now
+    permissions:
+      id-token: write
+    runs-on: ubuntu-24.04
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4.1.8
+        with:
+          merge-multiple: true
+          path: dist
+          pattern: wheels-*
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@v1.12.2
+
+  attest-binaries:
+    name: Attest binaries
     permissions:
       contents: write
-    runs-on: ubuntu-22.04
+      id-token: write
+    runs-on: ubuntu-24.04
+    needs:
+      - build-wheels
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: wheels-*
+
+      - name: Generate attestations
+        uses: actions/attest-build-provenance@v1.4.4
+        with:
+          subject-path: dist/*
+
+  attest-dependencies:
+    name: Attest dependencies
+    permissions:
+      contents: write
+      id-token: write
+    runs-on: ubuntu-24.04
     needs:
       - test
     steps:
@@ -207,8 +231,8 @@ jobs:
           directoryExclusionList: docs
 
   attest-sbom:
-    name: Attest - SBOM
-    runs-on: ubuntu-22.04
+    name: Attest SBOM
+    runs-on: ubuntu-24.04
     needs:
       - init
       - test
@@ -233,14 +257,14 @@ jobs:
     name: Publish release
     permissions:
       contents: write
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
+      - attest-binaries
       - attest-dependencies
       - attest-sbom
-      - build-app
+      - build-wheels
       - init
-    # Only publish on non-scheduled default branch
-    if: (github.event_name != 'schedule') && (github.ref == 'refs/heads/main')
+    if: github.ref == 'refs/heads/main'
     steps:
       - name: Download artifacts
         id: download

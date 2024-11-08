@@ -11,7 +11,6 @@ Web scraper made for AI and simplicity in mind. It runs as a CLI that can be par
 Shared:
 
 - 🏗️ Decoupled architecture with [Azure Queue Storage](https://learn.microsoft.com/en-us/azure/storage/queues) or local [sqlite](https://sqlite.org)
-- 🔧 Executable as a CLI with a [standalone binary](http://github.com/clemlesne/scrape-it-now/releases/latest)
 - ⚙️ Idempotent operations that can be run in parallel
 - 💾 Scraped content is stored in [Azure Blob Storage](https://learn.microsoft.com/en-us/azure/storage/blobs) or local disk
 
@@ -38,11 +37,16 @@ Indexer:
 
 ## Installation
 
-### From binary
+### From PyPI
 
-[Download the latest release from the releases page](http://github.com/clemlesne/scrape-it-now/releases/latest). Binaries are available for Linux, macOS and Windows.
+```bash
+# Install the package
+python3 -m pip install scrape-it-now
+# Run the CLI
+scrape-it-now --help
+```
 
-For configuring the CLI (including authentication to the backend services), use environment variables, a `.env` file or command line options.
+To configure the CLI (including authentication to the backend services), use environment variables, a `.env` file or command line options.
 
 ### From sources
 
@@ -421,6 +425,6 @@ Proxies are not implemented in the application. Network security cannot be achie
 
 ### Bundle with a container
 
-As the application is packaged as a binary, it can easily be bundled with a container. At every start, the application will download the dependencies (browser, etc.) and cache them. You can pre-download them by running the command `scrape-it-now scrape install`.
+As the application is packaged to PyPi, it can easily be bundled with a container. At every start, the application will download the dependencies (browser, etc.) and cache them. You can pre-download them by running the command `scrape-it-now scrape install`.
 
 A good technique for performance would also to parallelize the scraping and indexing jobs by running multiple containers of each. This can be achieved with [KEDA](https://keda.sh), by configuring a [queue scaler](https://keda.sh/docs/2.16/scalers/azure-storage-queue).

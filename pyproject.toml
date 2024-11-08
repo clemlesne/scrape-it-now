@@ -1,10 +1,31 @@
 [project]
-description = "A website to scrape? There's a simple way."
+authors = [
+  {name = "Clémence Lesné", email = "clemence@lesne.pro"}
+]
+maintainers = [
+  {name = "Clémence Lesné", email = "clemence@lesne.pro"}
+]
+description = "Web scraper made for AI and simplicity in mind. It runs as a CLI that can be parallelized and outputs high-quality markdown content."
+keywords = ["web", "scraper", "markdown", "ai", "parallel", "cli", "automation", "data-extraction", "web-crawling", "content-indexing"]
+classifiers = [
+  # How mature is the project?
+  "Development Status :: 4 - Beta",
+  # For who the project is intended for
+  "Intended Audience :: Developers",
+  "Topic :: Internet :: WWW/HTTP :: Dynamic Content :: Content Management System",
+  "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
+  "Topic :: System :: Archiving :: Backup",
+  "Topic :: Text Processing :: Markup :: Markdown",
+  "Topic :: Utilities",
+  # Supported Python versions
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
 dynamic = ["version"]
 license = {file = "LICENSE"}
 name = "scrape-it-now"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
   "aiodns~=3.2",
   "aiofiles~=24.1",
@@ -35,6 +56,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+  "cibuildwheel~=2.21",  # Build wheels for all platforms
   "deptry~=0.19",  # Dependency tree testing
   "pip-tools~=7.4",  # Compile requirements.txt from pyproject.toml
   "pyinstaller~=6.11",  # Create standalone executable
@@ -46,8 +68,18 @@ dev = [
   "ruff~=0.6",  # Linter
 ]
 
+[project.urls]
+Documentation = "https://github.com/clemlesne/scrape-it-now"
+Homepage = "https://github.com/clemlesne/scrape-it-now"
+Issues = "https://github.com/clemlesne/scrape-it-now/issues"
+Repository = "https://github.com/clemlesne/scrape-it-now"
+
 [project.scripts]
-scrape-it-now = "app.app:cli"
+scrape-it-now = "app.app:cli_wrapper"
+
+[build-system]
+requires = ["setuptools~=75.3"]
+build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 py-modules = [
@@ -75,7 +107,7 @@ DEP002 = [
 ]
 
 [tool.ruff]
-target-version = "py313"
+target-version = "py312"
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
@@ -84,4 +116,4 @@ combine-as-imports = true
 docstring-code-format = true
 
 [tool.pyright]
-pythonVersion = "3.13"
+pythonVersion = "3.12"

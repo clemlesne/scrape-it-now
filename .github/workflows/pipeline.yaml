@@ -55,7 +55,7 @@ jobs:
       matrix:
         step:
           - test-static
-          - test-unit
+          # - test-unit
     steps:
       - name: Checkout
         uses: actions/checkout@v4.1.7

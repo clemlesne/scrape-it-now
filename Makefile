@@ -102,6 +102,7 @@ build:
 	pyinstaller \
 		--add-data resources:resources \
 		--clean \
+		--debug all \
 		--hidden-import=tiktoken_ext \
 		--hidden-import=tiktoken_ext.openai_public \
 		--icon resources/logo.ico \

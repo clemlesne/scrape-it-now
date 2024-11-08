@@ -389,7 +389,7 @@ async def scrape_status(  # noqa: PLR0913
         return
 
     # Log state
-    logger.info(state.model_dump_json())
+    click.echo(state.model_dump_json())
 
 
 @cli.group

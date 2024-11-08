@@ -85,15 +85,17 @@ export QUEUE_PROVIDER=local_disk
 scrape-it-now scrape run https://nytimes.com
 ```
 
-Example output:
+Example:
 
 ```bash
-❯ Start scraping job 7yz91ma
-Queued 71/71 links for referrer https://www.google.com/search (1)
-Started 5 workers
-Started browser chromium
-Queued 15/28 links for referrer https://www.nytimes.com/2024/08/15/business/economy/kamala-harris-inflation-price-gouging.html (2)
-Scraped https://www.nytimes.com/2024/08/15/business/economy/kamala-harris-inflation-price-gouging.html (2)
+❯ scrape-it-now scrape run https://nytimes.com
+2024-11-08T13:18:49.169320Z [info     ] Start scraping job lydmtyz
+2024-11-08T13:18:49.169392Z [info     ] Installing dependencies if needed, this may take a few minutes
+2024-11-08T13:18:52.542422Z [info     ] Queued 1/1 URLs
+2024-11-08T13:18:58.509221Z [info     ] Start processing https://nytimes.com depth=1 process=scrape-lydmtyz-4 task=63dce50
+2024-11-08T13:19:04.173198Z [info     ] Loaded 154554 ads and trackers process=scrape-lydmtyz-4
+2024-11-08T13:19:16.393045Z [info     ] Queued 310/311 URLs            depth=1 process=scrape-lydmtyz-4 task=63dce50
+2024-11-08T13:19:16.393323Z [info     ] Scraped                        depth=1 process=scrape-lydmtyz-4 task=63dce50
 ...
 ```
 
@@ -137,10 +139,11 @@ export BLOB_PROVIDER=local_disk
 scrape-it-now scrape status [job_name]
 ```
 
-Example output:
+Example:
 
 ```bash
-❯ {"created_at":"2024-08-16T15:33:06.602922Z","last_updated":"2024-08-16T16:17:51.571136Z","network_used_mb":5.650620460510254,"processed":1263,"queued":3120}
+❯ scrape-it-now scrape status lydmtyz
+{"created_at":"2024-11-08T13:18:52.839060Z","last_updated":"2024-11-08T13:19:16.528370Z","network_used_mb":2.6666793823242188,"processed":1,"queued":311}
 ```
 
 Most frequent options are:
@@ -202,14 +205,14 @@ export QUEUE_PROVIDER=local_disk
 scrape-it-now index run [job_name]
 ```
 
-Example output:
+Example:
 
 ```bash
-❯ Start indexing job 7yz91ma
-Started 5 workers
-Processing "https://www.nytimes.com/2024/08/15/business/economy/kamala-harris-inflation-price-gouging.html" (a4914bf)
-a4914bf chunked into 6 parts
-a4914bf is indexed
+❯ scrape-it-now index run lydmtyz
+2024-11-08T13:20:37.129411Z [info     ] Start indexing job lydmtyz
+2024-11-08T13:20:38.945954Z [info     ] Start processing https://nytimes.com process=index-lydmtyz-4 task=63dce50
+2024-11-08T13:20:39.162692Z [info     ] Chunked into 7 parts           process=index-lydmtyz-4 task=63dce50
+2024-11-08T13:20:42.407391Z [info     ] Indexed 7 chunks               process=index-lydmtyz-4 task=63dce50
 ...
 ```
 

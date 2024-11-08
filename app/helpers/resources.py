@@ -3,6 +3,7 @@ import hashlib
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
+from functools import lru_cache
 from os.path import dirname, join
 from pathlib import Path
 
@@ -55,6 +56,7 @@ def index_index_name(job_name: str) -> str:
     return job_name
 
 
+@lru_cache(maxsize=512)
 def hash_url(url: str) -> str:
     """
     Hash a URL to a unique identifier.

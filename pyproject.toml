@@ -27,6 +27,7 @@ dependencies = [
   "pydantic~=2.8",
   "pypandoc~=1.13",
   "python-dotenv~=1.0",
+  "structlog~=24.4",
   "tenacity~=9.0",
   "tiktoken~=0.7",
   "truststore~=0.10",

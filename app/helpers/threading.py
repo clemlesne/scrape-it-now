@@ -2,7 +2,9 @@ import asyncio
 from collections.abc import Awaitable, Callable
 from functools import wraps
 from os import cpu_count
-from threading import Thread
+from threading import Thread, current_thread
+
+from structlog.contextvars import bind_contextvars
 
 from app.helpers.logging import logger
 
@@ -26,7 +28,7 @@ def run_workers(
     # Build the threads
     threads: list[Thread] = [
         Thread(
-            args=(func(**kwargs),),
+            args=(_worker_wrapper(func, **kwargs),),
             daemon=True,
             name=f"{name}-{i}",
             target=asyncio.run,
@@ -45,6 +47,16 @@ def run_workers(
             thread.join()
     except KeyboardInterrupt:
         pass
+
+
+async def _worker_wrapper(func: Callable[..., Awaitable], **kwargs) -> None:
+    # Enhance logging for each worker
+    bind_contextvars(
+        # Calling it "process" because it's the vulgarized term in the CLI options
+        process=current_thread().name,
+    )
+    # Run the function
+    await func(**kwargs)
 
 
 def asyncio_cache(func):

@@ -30,10 +30,10 @@ from tenacity import (
     wait_random_exponential,
 )
 
-from app.helpers.http import azure_transport
-from app.helpers.identity import credential
-from app.helpers.logging import logger
-from app.persistence.isearch import DocumentNotFoundError, ISearch
+from scrape_it_now.helpers.http import azure_transport
+from scrape_it_now.helpers.identity import credential
+from scrape_it_now.helpers.logging import logger
+from scrape_it_now.persistence.isearch import DocumentNotFoundError, ISearch
 
 
 class Config(BaseModel):

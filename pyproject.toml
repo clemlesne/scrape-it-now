@@ -1,10 +1,36 @@
 [project]
-description = "A website to scrape? There's a simple way."
+authors = [
+  {name = "Clémence Lesné", email = "clemence@lesne.pro"}
+]
+maintainers = [
+  {name = "Clémence Lesné", email = "clemence@lesne.pro"}
+]
+description = "Web scraper made for AI and simplicity in mind. It runs as a CLI that can be parallelized and outputs high-quality markdown content."
+keywords = ["web", "scraper", "markdown", "ai", "parallel", "cli", "automation", "data-extraction", "web-crawling", "content-indexing"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: MacOS",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: OS Independent",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: POSIX",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Internet :: WWW/HTTP :: Dynamic Content :: Content Management System",
+  "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
+  "Topic :: System :: Archiving :: Backup",
+  "Topic :: Text Processing :: Markup :: Markdown",
+  "Topic :: Utilities",
+  "Typing :: Typed",
+]
 dynamic = ["version"]
 license = {file = "LICENSE"}
 name = "scrape-it-now"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 dependencies = [
   "aiodns~=3.2",
   "aiofiles~=24.1",
@@ -27,6 +53,7 @@ dependencies = [
   "pydantic~=2.8",
   "pypandoc~=1.13",
   "python-dotenv~=1.0",
+  "structlog~=24.4",
   "tenacity~=9.0",
   "tiktoken~=0.7",
   "truststore~=0.10",
@@ -45,23 +72,39 @@ dev = [
   "ruff~=0.6",  # Linter
 ]
 
-[project.scripts]
-scrape-it-now = "app.app:cli"
+[project.urls]
+Homepage = "https://github.com/clemlesne/scrape-it-now"
+Issues = "https://github.com/clemlesne/scrape-it-now/issues"
+Repository = "https://github.com/clemlesne/scrape-it-now"
 
-[tool.setuptools]
-py-modules = [
-  "app",
-]
+[project.scripts]
+scrape-it-now = "scrape_it_now.cli:main"
+
+[build-system]
+requires = ["setuptools~=75.3"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.dynamic]
+version = {attr = "scrape_it_now.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+scrape_it_now = ["resources/*"]
 
 [tool.pip-tools]
 generate-hashes = true
 strip-extras = true
 
 [tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope="function"
 asyncio_mode = "auto"
 junit_suite_name = "scrape-it-now"
 log_file = "test-reports/last-logs.txt"
 log_file_level = "INFO"
+pythonpath = ["src"]
+testpaths = ["tests"]
 
 [tool.deptry]
 ignore_notebooks = true
@@ -74,7 +117,7 @@ DEP002 = [
 ]
 
 [tool.ruff]
-target-version = "py312"
+target-version = "py311"
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
@@ -83,4 +126,4 @@ combine-as-imports = true
 docstring-code-format = true
 
 [tool.pyright]
-pythonVersion = "3.12"
+pythonVersion = "3.11"

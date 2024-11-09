@@ -6,9 +6,9 @@ from uuid import uuid4
 
 import pytest
 
-from app.helpers.logging import logger
-from app.helpers.persistence import blob_client
-from app.persistence.iblob import (
+from scrape_it_now.helpers.logging import logger
+from scrape_it_now.helpers.persistence import blob_client
+from scrape_it_now.persistence.iblob import (
     BlobAlreadyExistsError,
     BlobNotFoundError,
     LeaseAlreadyExistsError,

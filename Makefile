@@ -43,7 +43,7 @@ upgrade:
 	git submodule update --init --recursive
 
 	@echo "➡️ Upgrading pip..."
-	python3 -m pip install --upgrade pip wheel setuptools
+	python3 -m pip install --upgrade pip wheel setuptools build
 
 	@echo "➡️ Upgrading pip-tools..."
 	python3 -m pip install --upgrade pip-tools
@@ -62,7 +62,7 @@ upgrade:
 		pyproject.toml
 
 	@echo "➡️ Updating DNS blocklist..."
-	curl -sSfL https://blocklistproject.github.io/Lists/alt-version/ads-nl.txt > resources/ads-nl.txt
+	curl -sSfL https://blocklistproject.github.io/Lists/alt-version/ads-nl.txt > src/scrape_it_now/resources/ads-nl.txt
 
 test:
 	$(MAKE) test-static
@@ -70,7 +70,7 @@ test:
 
 test-static:
 	@echo "➡️ Test dependencies issues (deptry)..."
-	python3 -m deptry .
+	python3 -m deptry src
 
 	@echo "➡️ Test code smells (Ruff)..."
 	python3 -m ruff check --select I,PL,RUF,UP,ASYNC,A,DTZ,T20,ARG,PERF
@@ -99,16 +99,7 @@ dev:
 
 build:
 	@echo "➡️ Building app..."
-	pyinstaller \
-		--add-data resources:resources \
-		--clean \
-		--hidden-import=tiktoken_ext \
-		--hidden-import=tiktoken_ext.openai_public \
-		--icon resources/logo.ico \
-		--name scrape-it-now \
-		--onefile \
-		--optimize 2 \
-		app/app.py
+	python3 -m build
 
 lint:
 	@echo "➡️ Fix with formatter..."
@@ -122,4 +113,4 @@ sbom:
 	syft scan \
 		--source-version $(version_full)  \
 		--output spdx-json=./sbom-reports/$(version_full).json \
-		.
+		dist

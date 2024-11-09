@@ -3,6 +3,7 @@ import hashlib
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
+from functools import lru_cache
 from os.path import dirname, join
 from pathlib import Path
 
@@ -15,7 +16,7 @@ def dir_tests(sub: str) -> str:
     """
     Get the absolute path to the tests folder.
     """
-    return str(Path(__file__).parent.parent.parent.joinpath("tests", sub).absolute())
+    return str(Path(__file__).parent.parent.parent.parent.joinpath("tests", sub).absolute())
 
 
 def dir_resources(sub: str) -> str:
@@ -23,7 +24,7 @@ def dir_resources(sub: str) -> str:
     Get the absolute path to the resources folder.
     """
     return str(
-        Path(__file__).parent.parent.parent.joinpath("resources", sub).absolute()
+        Path(__file__).parent.parent.joinpath("resources", sub).absolute()
     )
 
 
@@ -55,6 +56,7 @@ def index_index_name(job_name: str) -> str:
     return job_name
 
 
+@lru_cache(maxsize=512)
 def hash_url(url: str) -> str:
     """
     Hash a URL to a unique identifier.

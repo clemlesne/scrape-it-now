@@ -13,6 +13,7 @@ from openai import (
 )
 from openai.types import CreateEmbeddingResponse
 from pydantic import ValidationError
+from structlog.contextvars import bind_contextvars
 from tenacity import (
     retry,
     retry_any,
@@ -21,36 +22,39 @@ from tenacity import (
     wait_random_exponential,
 )
 
-from app.helpers.logging import logger
-from app.helpers.persistence import (
+from scrape_it_now.helpers.logging import logger
+from scrape_it_now.helpers.persistence import (
     blob_client,
     openai_client,
     queue_client,
     search_client,
 )
-from app.helpers.resources import (
+from scrape_it_now.helpers.resources import (
     dir_resources,
-    hash_url,
     index_index_name,
     index_queue_name,
     scrape_container_name,
 )
-from app.helpers.threading import run_workers
-from app.models.indexed import IndexedIngestModel
-from app.models.scraped import ScrapedUrlModel
-from app.persistence.iblob import BlobNotFoundError, IBlob, Provider as BlobProvider
-from app.persistence.iqueue import (
+from scrape_it_now.helpers.threading import run_workers
+from scrape_it_now.models.indexed import IndexedIngestModel
+from scrape_it_now.models.scraped import ScrapedUrlModel
+from scrape_it_now.persistence.iblob import (
+    BlobNotFoundError,
+    IBlob,
+    Provider as BlobProvider,
+)
+from scrape_it_now.persistence.iqueue import (
     IQueue,
     Message as QueueMessage,
     MessageNotFoundError,
     Provider as QueueProvider,
 )
-from app.persistence.isearch import (
+from scrape_it_now.persistence.isearch import (
     DocumentNotFoundError,
     ISearch,
     Provider as SearchProvider,
 )
-from app.scrape import scraped_blob_prefix
+from scrape_it_now.scrape import scraped_blob_prefix
 
 
 async def _process_one(  # noqa: PLR0913
@@ -68,41 +72,43 @@ async def _process_one(  # noqa: PLR0913
     """
     try:
         # Read scraped content
-        result_raw = await blob.download_blob(file_name)
+        task_raw = await blob.download_blob(file_name)
     except BlobNotFoundError:
         logger.warning("%s not found in the blob storage", file_name)
         return
 
-    # Extract the short name for logging
-    short_name = file_name.split("/")[-1].split(".")[0][:7]
-
     # Validate the message
     try:
-        result = ScrapedUrlModel.model_validate_json(result_raw)
+        task = ScrapedUrlModel.model_validate_json(task_raw)
     except ValidationError:
-        logger.warning("%s cannot be parsed", short_name)
+        logger.warning("%s cannot be parsed", file_name)
         return
 
+    # Enhance logging for each task
+    bind_contextvars(
+        task=task.model_short_id,
+    )
+    logger.info("Start processing %s", task.url)
+
     # Log the processing
-    logger.info('Processing "%s" (%s)', result.url, short_name)
 
     # Skip if no content
-    if not result.content:
-        logger.info("%s is empty", short_name)
+    if not task.content:
+        logger.info("Empty content, abort")
         return
 
     # Skip if an error occured
-    if result.status >= HTTPStatus.MULTIPLE_CHOICES:
-        logger.info("%s data is invalid (code %i)", short_name, result.status)
+    if task.status >= HTTPStatus.MULTIPLE_CHOICES:
+        logger.info("Invalid status code %i", task.status)
         return
 
     # Chunk to small markdown files
     chunks = _markdown_chunk(
         max_tokens=800,
-        text=result.content,
+        text=task.content,
     )
-    doc_ids = [f"{hash_url(result.url)}-{i}" for i in range(len(chunks))]
-    logger.info("%s chunked into %i parts", short_name, len(chunks))
+    doc_ids = [f"{task.model_id}-{i}" for i in range(len(chunks))]
+    logger.info("Chunked into %i parts", len(chunks))
 
     # Check if the document is already indexed
     try:
@@ -112,7 +118,7 @@ async def _process_one(  # noqa: PLR0913
                 for doc_id in doc_ids
             ]
         )
-        logger.info("%s is already indexed", short_name)
+        logger.info("Already indexed, abort")
         return
     except DocumentNotFoundError:  # If a chunk is not found, it is not indexed, thus we can re-process the document
         pass
@@ -135,10 +141,10 @@ async def _process_one(  # noqa: PLR0913
         IndexedIngestModel(
             chunck_number=chunck_number,
             content=chunck_content,
-            created_at=result.created_at,
+            created_at=task.created_at,
             indexed_id=doc_id,
-            title=result.title,
-            url=result.url,
+            title=task.title,
+            url=task.url,
             vectors=embedding.embedding,
         )
         for doc_id, chunck_content, chunck_number, embedding in zip(
@@ -151,7 +157,7 @@ async def _process_one(  # noqa: PLR0913
         models=models,
         search=search,
     )
-    logger.info("%s is indexed", short_name)
+    logger.info("Indexed %i chunks", len(models))
 
 
 async def _index_to_store(
@@ -391,10 +397,6 @@ async def run(  # noqa: PLR0913
 ) -> None:
     logger.info("Start indexing job %s", job)
 
-    # Patch Tiktoken
-    # See: https://stackoverflow.com/a/76107077
-    env["TIKTOKEN_CACHE_DIR"] = dir_resources("tiktoken")
-
     if force:
         # Init clients
         async with (
@@ -553,10 +555,7 @@ async def _worker_single_message(  # noqa: PLR0913
             return
 
     except Exception:
-        # TODO: Add a dead-letter queue
-        # TODO: Add a retry mechanism
-        # TODO: Narrow the exception type
-        logger.error("Error processing %s", blob_name, exc_info=True)
+        logger.exception("Error processing")
 
 
 async def _force_requeue(

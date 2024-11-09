@@ -7,7 +7,7 @@ from aiohttp import (
 )
 from azure.core.pipeline.transport._aiohttp import AioHttpTransport
 
-from app.helpers.threading import asyncio_cache
+from scrape_it_now.helpers.threading import asyncio_cache
 
 _cookie_jar: DummyCookieJar | None = None
 

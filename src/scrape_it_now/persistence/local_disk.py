@@ -15,17 +15,17 @@ from aiofiles import open
 from aiofiles.os import makedirs, path, remove, rmdir
 from pydantic import BaseModel, Field
 
-from app.helpers.logging import logger
-from app.helpers.resources import file_lock, local_disk_cache_path
-from app.models.message import Message
-from app.persistence.iblob import (
+from scrape_it_now.helpers.logging import logger
+from scrape_it_now.helpers.resources import file_lock, local_disk_cache_path
+from scrape_it_now.models.message import Message
+from scrape_it_now.persistence.iblob import (
     BlobAlreadyExistsError,
     BlobNotFoundError,
     IBlob,
     LeaseAlreadyExistsError,
     LeaseNotFoundError,
 )
-from app.persistence.iqueue import IQueue, MessageNotFoundError
+from scrape_it_now.persistence.iqueue import IQueue, MessageNotFoundError
 
 BLOB_DEFAULT_PATH = "scraping-results"
 

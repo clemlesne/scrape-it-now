@@ -3,7 +3,7 @@ from collections.abc import AsyncGenerator
 import pytest
 from playwright.async_api import Browser, async_playwright
 
-from app.scrape import BROWSER_NAME, _get_broswer, install
+from scrape_it_now.scrape import BROWSER_NAME, _get_broswer, install
 
 
 @pytest.fixture

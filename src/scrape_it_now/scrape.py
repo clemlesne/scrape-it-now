@@ -3,7 +3,6 @@ import random
 import re
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
-from functools import lru_cache
 from http import HTTPStatus
 from mimetypes import guess_extension
 from os import environ as env
@@ -24,6 +23,7 @@ from playwright.async_api import (
 )
 from pydantic import ValidationError
 from pypandoc import convert_text, ensure_pandoc_installed
+from structlog.contextvars import bind_contextvars
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -31,9 +31,9 @@ from tenacity import (
     wait_random_exponential,
 )
 
-from app.helpers.logging import logger
-from app.helpers.persistence import blob_client, queue_client
-from app.helpers.resources import (
+from scrape_it_now.helpers.logging import logger
+from scrape_it_now.helpers.persistence import blob_client, queue_client
+from scrape_it_now.helpers.resources import (
     browsers_install_path,
     dir_resources,
     file_lock,
@@ -43,18 +43,22 @@ from app.helpers.resources import (
     scrape_container_name,
     scrape_queue_name,
 )
-from app.helpers.threading import run_workers
-from app.helpers.trie import Trie
-from app.models.scraped import ScrapedImageModel, ScrapedQueuedModel, ScrapedUrlModel
-from app.models.state import StateJobModel, StateScrapedModel
-from app.persistence.iblob import (
+from scrape_it_now.helpers.threading import run_workers
+from scrape_it_now.helpers.trie import Trie
+from scrape_it_now.models.scraped import (
+    ScrapedImageModel,
+    ScrapedQueuedModel,
+    ScrapedUrlModel,
+)
+from scrape_it_now.models.state import StateJobModel, StateScrapedModel
+from scrape_it_now.persistence.iblob import (
     BlobNotFoundError,
     IBlob,
     LeaseAlreadyExistsError,
     LeaseNotFoundError,
     Provider as BlobProvider,
 )
-from app.persistence.iqueue import (
+from scrape_it_now.persistence.iqueue import (
     IQueue,
     Message as QueueMessage,
     MessageNotFoundError,
@@ -138,7 +142,7 @@ async def _queue(  # noqa: PLR0913
         # Test previous attempts
         try:
             # Load from the validity cache
-            previous_raw = await blob.download_blob(_state_blob_prefix(_item_id(url)))
+            previous_raw = await blob.download_blob(_state_blob_prefix(hash_url(url)))
             previous = StateScrapedModel.model_validate_json(previous_raw)
 
             # Skip if the previous attempt is too recent
@@ -155,7 +159,7 @@ async def _queue(  # noqa: PLR0913
         await asyncio.gather(
             # Update the validity cache
             blob.upload_blob(
-                blob=_state_blob_prefix(_item_id(url)),
+                blob=_state_blob_prefix(hash_url(url)),
                 data=state_bytes,
                 length=len(state_bytes),
                 overwrite=True,
@@ -174,11 +178,9 @@ async def _queue(  # noqa: PLR0913
     # Add the links to the queue
     res = await asyncio.gather(*[_add(url) for url in urls])
     logger.info(
-        "Queued %i/%i links for referrer %s (%i)",
+        "Queued %i/%i URLs",
         sum(res),
         len(urls),
-        referrer,
-        new_depth,
     )
 
     # Return the number of URLs queued
@@ -189,12 +191,12 @@ async def _process_one(  # noqa: PLR0913
     blob: IBlob,
     browser: Browser,
     cache_refresh: timedelta,
-    current_item: ScrapedQueuedModel,
     in_queue: IQueue,
     max_depth: int,
     out_queue: IQueue,
     save_images: bool,
     save_screenshot: bool,
+    task: ScrapedQueuedModel,
     timezones: list[str],
     user_agents: list[str],
     viewports: list[ViewportSize],
@@ -206,8 +208,7 @@ async def _process_one(  # noqa: PLR0913
     Returns the number of processed URLs, queued URLs, and total network used.
     """
     queued_urls = 0
-    current_id = _item_id(current_item.url)
-    blob_prefix = scraped_blob_prefix(current_id)
+    blob_prefix = scraped_blob_prefix(task.model_id)
     page_blob_name = f"{blob_prefix}.json"
 
     # Check if the URL has already been processed
@@ -220,54 +221,40 @@ async def _process_one(  # noqa: PLR0913
         # Skip if previous attempt encountered a server error
         if cache_page.status >= HTTPStatus.INTERNAL_SERVER_ERROR:
             logger.info(
-                "Loaded %s (%i) from cache, but server error",
-                cache_page.url,
-                current_item.depth,
+                "Loaded from cache, but server error",
             )
             raise BlobNotFoundError
 
         # Skip if the cache has no validity date
         if not cache_page.valid_until:
-            logger.info(
-                "Loaded %s (%i) from cache, no validity date",
-                cache_page.url,
-                current_item.depth,
-            )
+            logger.info("Loaded from cache, no validity date")
             raise BlobNotFoundError
 
         # Skip if the cache is explicitly marked as expired
         if cache_page.valid_until and cache_page.valid_until < datetime.now(UTC):
-            logger.info(
-                "Loaded %s (%i) from cache, but expired",
-                cache_page.url,
-                current_item.depth,
-            )
+            logger.info("Loaded from cache, but expired")
             raise BlobNotFoundError
 
         # Add the links to the queue
         queued_urls = await _queue(
             blob=blob,
             cache_refresh=cache_refresh,
-            deph=current_item.depth,
-            item_id=current_id,
+            deph=task.depth,
             in_queue=in_queue,
+            item_id=task.model_id,
             max_depth=max_depth,
             referrer=cache_page.url,
             urls=set(cache_page.links),
             whitelist=whitelist,
         )
 
-        logger.info(
-            "Loaded %s (%i) from cache",
-            cache_page.url,
-            current_item.depth,
-        )
+        logger.info("Loaded from cache")
 
         # Return the number of processed URLs, queued URLs, and total network used
         return (0, queued_urls, 0.0)
 
     except (BlobNotFoundError, ValidationError):
-        logger.debug("Cache miss for %s", current_item.url)
+        logger.debug("Cache miss")
 
     async def _image_callback(
         body: bytes,
@@ -290,7 +277,7 @@ async def _process_one(  # noqa: PLR0913
             )
             return
 
-        name_prefix = f"{blob_prefix}/{_item_id(image.url)}"
+        name_prefix = f"{blob_prefix}/{hash_url(image.url)}"
         image_content_blob_name = f"{name_prefix}{extension}"
         image_model_blob_name = f"{name_prefix}.json"
         model_bytes = image.model_dump_json().encode(blob.encoding)
@@ -330,12 +317,12 @@ async def _process_one(  # noqa: PLR0913
         browser=browser,
         image_callback=_image_callback,
         previous_etag=cache_page.etag if cache_page else None,
-        referrer=current_item.referrer,
+        referrer=task.referrer,
         save_images=save_images,
         save_screenshot=save_screenshot,
         screenshot_callback=_screenshot_callback,
         timezones=timezones,
-        url=current_item.url,
+        url=task.url,
         user_agents=user_agents,
         viewports=viewports,
     )
@@ -346,15 +333,15 @@ async def _process_one(  # noqa: PLR0913
         queued_urls = await _queue(
             blob=blob,
             cache_refresh=cache_refresh,
-            deph=current_item.depth,
-            item_id=current_id,
+            deph=task.depth,
+            item_id=task.model_id,
             in_queue=in_queue,
             max_depth=max_depth,
             referrer=cache_page.url,
             urls=set(cache_page.links),
             whitelist=whitelist,
         )
-        logger.info("Used cache for %s (%i)", cache_page.url, current_item.depth)
+        logger.info("Used cache")
         # Return the number of processed URLs, queued URLs, and total network used
         return (0, queued_urls, 0.0)
 
@@ -372,13 +359,13 @@ async def _process_one(  # noqa: PLR0913
             overwrite=True,
         ),
         # Mark current file to be processed for chunking
-        out_queue.send_message(f"{scraped_blob_prefix(current_id)}.json"),
+        out_queue.send_message(f"{scraped_blob_prefix(task.model_id)}.json"),
         # Add the links to the queue
         _queue(
             blob=blob,
             cache_refresh=cache_refresh,
-            deph=current_item.depth,
-            item_id=current_id,
+            deph=task.depth,
+            item_id=task.model_id,
             in_queue=in_queue,
             max_depth=max_depth,
             referrer=new_page.url,
@@ -388,13 +375,8 @@ async def _process_one(  # noqa: PLR0913
     )
 
     # Return the number of processed URLs, queued URLs, and total network used
-    logger.info("Scraped %s (%i)", new_page.url, current_item.depth)
+    logger.info("Scraped")
     return (1, queued_urls, new_page.network_used_mb)
-
-
-@lru_cache(maxsize=512)
-def _item_id(url: str) -> str:
-    return hash_url(url)
 
 
 def _state_blob_prefix(item_id: str) -> str:
@@ -591,7 +573,7 @@ async def _worker_single_message(  # noqa: PLR0913
 ) -> None:
     # Validate the message
     try:
-        current_item = ScrapedQueuedModel.model_validate_json(message.content)
+        task = ScrapedQueuedModel.model_validate_json(message.content)
     except ValidationError:
         # TODO: Implement a dead-letter queue
         logger.warning("%s cannot be parsed, it will be deleted", message)
@@ -601,24 +583,24 @@ async def _worker_single_message(  # noqa: PLR0913
             pass
         return
 
-    # Log the processing
-    logger.info(
-        'Processing "%s" (%i)',
-        current_item.url,
-        current_item.depth,
+    # Enhance logging for each task
+    bind_contextvars(
+        depth=task.depth,
+        task=task.model_short_id,
     )
+    logger.info("Start processing %s", task.url)
 
     try:
         processed, queued, network_used_mb = await _process_one(
             blob=blob,
             browser=browser,
             cache_refresh=cache_refresh,
-            current_item=current_item,
             in_queue=in_queue,
             max_depth=max_depth,
             out_queue=out_queue,
             save_images=save_images,
             save_screenshot=save_screenshot,
+            task=task,
             timezones=timezones,
             user_agents=user_agents,
             viewports=viewports,
@@ -643,12 +625,7 @@ async def _worker_single_message(  # noqa: PLR0913
         # TODO: Add a dead-letter queue
         # TODO: Add a retry mechanism
         # TODO: Narrow the exception type
-        logger.error(
-            "Error processing %s (%i)",
-            current_item.url,
-            current_item.depth,
-            exc_info=True,
-        )
+        logger.exception("Error processing")
 
 
 def _ads_pattern() -> re.Pattern | None:
@@ -716,8 +693,25 @@ def _filter_routes(
             "font",
             "stylesheet",
         }:
-            logger.debug("Blocked resource type %s", route.request.resource_type)
-            await route.abort("blockedbyclient")
+            logger.debug(
+                'Blocked resource type %s at "%s"',
+                route.request.resource_type,
+                route.request.url,
+            )
+            # Return a random reason to lower the risk of fingerprinting
+            await route.abort(
+                random.choice(
+                    [
+                        "aborted",
+                        "addressunreachable",
+                        "blockedbyclient",
+                        "connectionfailed",
+                        "failed",
+                        "namenotresolved",
+                        "timedout",
+                    ]
+                )
+            )
             return
 
         url_clean = _clean_url(route.request.url).geturl()
@@ -725,14 +719,22 @@ def _filter_routes(
         # Check if the request is to a known ad domain
         if pattern := _ads_pattern():
             if pattern.search(url_clean) is not None:
-                logger.debug("Blocked ad %s", url_clean)
+                logger.debug(
+                    'Blocked ad at "%s"',
+                    url_clean,
+                )
+                # Return the same reason as any ad removal extension (like uBlock Origin)
                 await route.abort("blockedbyclient")
                 return
 
-        # Remove client hints
+        # Remove client headers that could be used for fingerprinting
         headers = route.request.headers
         for header in list(headers.keys()):
-            if header.startswith("sec-ch-"):
+            if (
+                header.startswith("device-")
+                or header.startswith("sec-ch-")
+                or header.startswith("x-")
+            ):
                 del headers[header]
 
         # Continue the request
@@ -1232,7 +1234,7 @@ async def run(  # noqa: PLR0913
             blob=blob,
             cache_refresh=cache_refresh_parsed,
             deph=model.depth,
-            item_id=_item_id(model.referrer),
+            item_id=hash_url(model.referrer),
             in_queue=in_queue,
             max_depth=max_depth,
             referrer=model.referrer,

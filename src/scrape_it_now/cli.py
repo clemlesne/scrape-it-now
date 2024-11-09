@@ -8,15 +8,15 @@ from platform import python_version
 
 import click
 
-from app.helpers.logging import enable_debug_logging, logger
-from app.helpers.monitoring import VERSION
-from app.helpers.threading import DEFAULT_WORKERS_COUNT
-from app.index import run as index_backend_run
-from app.persistence.iblob import Provider as BlobProvider
-from app.persistence.iqueue import Provider as QueueProvider
-from app.persistence.isearch import Provider as SearchProvider
-from app.persistence.local_disk import BLOB_DEFAULT_PATH
-from app.scrape import (
+from scrape_it_now.helpers.logging import enable_debug_logging, logger
+from scrape_it_now.helpers.monitoring import VERSION
+from scrape_it_now.helpers.threading import DEFAULT_WORKERS_COUNT
+from scrape_it_now.index import run as index_backend_run
+from scrape_it_now.persistence.iblob import Provider as BlobProvider
+from scrape_it_now.persistence.iqueue import Provider as QueueProvider
+from scrape_it_now.persistence.isearch import Provider as SearchProvider
+from scrape_it_now.persistence.local_disk import BLOB_DEFAULT_PATH
+from scrape_it_now.scrape import (
     install as scrape_backend_install,
     run as scrape_backend_run,
     state as scrape_backend_state,
@@ -83,7 +83,7 @@ def cli() -> None:
     """
     🛰️ Scrape It Now!
 
-    A website to scrape? There's a simple way.
+    Web scraper made for AI and simplicity in mind. It runs as a CLI that can be parallelized and outputs high-quality markdown content.
     """
     pass
 
@@ -389,7 +389,7 @@ async def scrape_status(  # noqa: PLR0913
         return
 
     # Log state
-    logger.info(state.model_dump_json())
+    click.echo(state.model_dump_json())
 
 
 @cli.group
@@ -581,8 +581,12 @@ def _job_name(job_name: str | None) -> str:
     )
 
 
-# If running in PyInstaller
-if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+def main() -> None:
+    """
+    Wrapper to run the CLI with a project script entrypoint.
+
+    This is the main entrypoint for the CLI. It is used to inject the system truststore into the SSL context.
+    """
     # Make sure all SSL certificates come from the system truststore
     import truststore
 

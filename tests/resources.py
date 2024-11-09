@@ -4,7 +4,7 @@ from pathlib import Path
 
 from aiofiles.os import path
 
-from app.helpers.resources import file_lock
+from scrape_it_now.helpers.resources import file_lock
 
 
 async def test_lock_file_exists(tmp_path: Path) -> None:

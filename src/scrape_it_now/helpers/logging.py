@@ -8,7 +8,8 @@ from structlog import (
     get_logger as structlog_get_logger,
     make_filtering_bound_logger,
 )
-from structlog.dev import ConsoleRenderer, better_traceback
+from structlog.contextvars import merge_contextvars
+from structlog.dev import ConsoleRenderer
 from structlog.processors import (
     StackInfoRenderer,
     TimeStamper,
@@ -24,6 +25,8 @@ configure_once(
     logger_factory=PrintLoggerFactory(click.get_text_stream("stdout")),
     wrapper_class=make_filtering_bound_logger(INFO),
     processors=[
+        # Add contextvars support
+        merge_contextvars,
         # Add log level
         add_log_level,
         # Enable %s-style formatting
@@ -36,9 +39,7 @@ configure_once(
         # Decode Unicode to str
         UnicodeDecoder(),
         # Pretty printing in a terminal session
-        ConsoleRenderer(
-            exception_formatter=better_traceback,
-        ),
+        ConsoleRenderer(),
     ],
 )
 

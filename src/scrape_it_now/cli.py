@@ -94,7 +94,7 @@ def version() -> None:
     """
     Print the version.
     """
-    logger.info("Scrape It Now! v%s (Python v%s)", VERSION, python_version())
+    click.echo(f"Scrape It Now! v{VERSION} (Python v{python_version()})")
 
 
 @cli.group

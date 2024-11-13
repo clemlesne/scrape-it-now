@@ -14,6 +14,13 @@ on:
       - hotfix/*
       - main
 
+env:
+  CONTAINER_NAME: ${{ github.repository }}
+  CONTAINER_REGISTRY_GHCR: ghcr.io
+  CONTAINER_PLATFORMS: linux/amd64,linux/arm64/v8
+  # https://github.com/docker/buildx/releases
+  BUILDX_VERSION: 0.17.1
+
 jobs:
   init:
     name: Init
@@ -132,7 +139,7 @@ jobs:
 
       - name: Build wheels
         run: |
-          make build
+          make build-wheel
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4.3.6
@@ -157,7 +164,7 @@ jobs:
           path: dist
           pattern: wheels
 
-      - name: Generate attestations for binaries
+      - name: Generate attestations
         uses: actions/attest-build-provenance@v1.4.4
         with:
           subject-path: dist/*
@@ -203,7 +210,7 @@ jobs:
       - name: Run scan
         run: make sbom version_full=${{ needs.init.outputs.VERSION_FULL }}
 
-      - name: Generate attestations for SBOM
+      - name: Generate attestations
         uses: actions/attest-build-provenance@v1.4.4
         with:
           subject-path: sbom-reports/*
@@ -214,6 +221,86 @@ jobs:
           compression-level: 9
           name: sbom
           path: sbom-reports/*
+
+  build-image:
+    name: Build & publish image
+    needs:
+      - init
+    runs-on: ubuntu-24.04
+    permissions:
+      attestations: write
+      id-token: write
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.1.2
+
+      - name: Configure Git
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+
+      - name: Setup QEMU
+        id: setup-qemu
+        uses: docker/setup-qemu-action@v3.0.0
+        with:
+          platforms: ${{ env.CONTAINER_PLATFORMS }}
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3.3.0
+        with:
+          version: v${{ env.BUILDX_VERSION }}
+
+      - name: Login to registry
+        uses: docker/login-action@v3.1.0
+        with:
+          registry: ${{ env.CONTAINER_REGISTRY_GHCR }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Write version
+        run: |
+          version=$(echo "${{ needs.init.outputs.VERSION }}" | sed 's/-/\.a/' | cut -d'.' -f1-4)
+          echo '__version__ = "'${version}'"' > src/scrape_it_now/__init__.py
+
+      - name: Container meta
+        id: meta
+        uses: docker/metadata-action@v5.5.1
+        with:
+          images: ${{ env.CONTAINER_REGISTRY_GHCR }}/${{ env.CONTAINER_NAME }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=ref,event=pr
+            type=schedule
+            type=schedule,pattern={{date 'YYYYMMDD'}}
+            type=semver,pattern={{version}},value=${{ needs.init.outputs.VERSION_FULL }}
+            type=sha
+          labels: |
+            org.opencontainers.image.documentation=https://github.com/${{ env.CONTAINER_NAME }}
+            org.opencontainers.image.vendor=${{ github.actor }}
+
+      - name: Build/push container
+        id: build
+        uses: docker/build-push-action@v5.3.0
+        with:
+          cache-from: type=gha
+          cache-to: type=gha
+          context: .
+          file: cicd/Dockerfile
+          labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=registry,oci-mediatypes=true,compression=estargz,compression-level=9,force-compression=true
+          platforms: ${{ env.CONTAINER_PLATFORMS }}
+          push: true
+          sbom: true
+          tags: ${{ steps.meta.outputs.tags }}
+
+      - name: Generate attestations
+        uses: actions/attest-build-provenance@v1.4.4
+        with:
+          push-to-registry: true
+          subject-digest: ${{ steps.build.outputs.digest }}
+          subject-name: ${{ env.CONTAINER_REGISTRY_GHCR }}/${{ env.CONTAINER_NAME }}
 
   publish-testpypi:
     name: Publish to TestPyPI
@@ -276,6 +363,7 @@ jobs:
       - attest-binaries
       - attest-dependencies
       - attest-sbom
+      - build-image
       - init
       - test
     if: github.ref == 'refs/heads/main'

@@ -8,7 +8,9 @@ default_location := swedencentral
 openai_location := swedencentral
 search_location := westeurope
 # Container configuration
-container_name := ghcr.io/microsoft/scrape-it-now
+container_name := ghcr.io/clemlesne/scrape-it-now
+docker := docker
+image_version := main
 # Bicep outputs
 api_url ?= $(shell az deployment sub show --name $(name) | yq '.properties.outputs["apiUrl"].value')
 blob_account_name ?= $(shell az deployment sub show --name $(name) | yq '.properties.outputs["blobAccountName"].value')
@@ -97,9 +99,18 @@ dev:
 	python3 -m pip install --editable .
 	@echo "Now you can run 'scrape-it-now' CLI!"
 
-build:
+build-wheel:
 	@echo "➡️ Building app..."
 	python3 -m build
+
+build-container:
+	DOCKER_BUILDKIT=1 $(docker) build \
+		--build-arg VERSION=$(version_full) \
+		--file cicd/Dockerfile \
+		--platform linux/amd64,linux/arm64 \
+		--tag $(container_name):$(version_small) \
+		--tag $(container_name):latest \
+		.
 
 lint:
 	@echo "➡️ Fix with formatter..."

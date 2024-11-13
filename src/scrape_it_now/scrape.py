@@ -1318,11 +1318,12 @@ async def _install_browser(with_deps: bool) -> None:
 
     Download is persisted in the application cache directory. If requested, also install system dependencies requested by the framework. Those requires root permissions on Linux systems as the system package manager will be called.
     """
-    logger.debug("Installing Playwright dependency")
-
     # Add installation path to the environment
     # See: https://playwright.dev/docs/browsers#hermetic-install
-    env["PLAYWRIGHT_BROWSERS_PATH"] = await browsers_install_path()
+    install_path = await browsers_install_path()
+    env["PLAYWRIGHT_BROWSERS_PATH"] = install_path
+
+    logger.debug('Installing Playwright dependency in "%s"', install_path)
 
     # Get location of Playwright driver
     driver_executable, driver_cli = compute_driver_executable()
@@ -1379,14 +1380,14 @@ async def _install_pandoc() -> None:
 
     Download is persisted in the application cache directory.
     """
-    logger.debug("Installing Pandoc dependency")
-
     # Fix version is necesssary to have reproducible builds
     # See: https://github.com/jgm/pandoc/releases
     version = "3.5"
 
     # Get location of Pandoc driver
     install_path = await pandoc_install_path(version)
+
+    logger.debug('Installing Pandoc dependency in "%s"', install_path)
 
     # Ensure only one worker is installing Pandoc
     async with file_lock(install_path):

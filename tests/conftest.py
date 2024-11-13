@@ -14,7 +14,8 @@ async def browser() -> AsyncGenerator[Browser, None]:
     async with async_playwright() as p:
         browser_type = getattr(p, BROWSER_NAME)
         # Make sure the browser and pandoc are installed
-        await install()
+        # Note: This can install system packages, run it with enough permissions
+        await install(True)
 
     # Restart context to reload PATH to the newly installed binaries
     async with async_playwright() as p:

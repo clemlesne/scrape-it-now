@@ -1196,7 +1196,8 @@ async def run(  # noqa: PLR0913
     logger.info("Start scraping job %s", job)
 
     # Make sure the dependencies are installed
-    await install()
+    # Note: To install system deps, use the "scrape install" command
+    await install(False)
 
     # Parse cache_refresh
     cache_refresh_parsed = timedelta(hours=cache_refresh)
@@ -1300,18 +1301,18 @@ async def state(  # noqa: PLR0913
         return model
 
 
-async def install() -> None:
+async def install(with_deps: bool) -> None:
     """
     Install browser and Pandoc dependencies.
     """
     logger.info("Installing dependencies if needed, this may take a few minutes")
     await asyncio.gather(
-        _install_browser(),
+        _install_browser(with_deps),
         _install_pandoc(),
     )
 
 
-async def _install_browser() -> None:
+async def _install_browser(with_deps: bool) -> None:
     """
     Install Playwright selected browser.
 
@@ -1330,6 +1331,8 @@ async def _install_browser() -> None:
     async with file_lock(driver_executable):
         # Build the command arguments
         args = [driver_executable, driver_cli, "install", BROWSER_NAME]
+        if with_deps:
+            args.append("--with-deps")
 
         # Run
         proc = await asyncio.create_subprocess_shell(

@@ -99,7 +99,7 @@ jobs:
         run: make test-${{ matrix.step }} version_full=${{ needs.init.outputs.VERSION_FULL }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4.3.6
+        uses: actions/upload-artifact@v4.4.3
         if: always()
         with:
           compression-level: 9
@@ -135,7 +135,7 @@ jobs:
           make build
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4.3.6
+        uses: actions/upload-artifact@v4.4.3
         with:
           compression-level: 9
           name: wheels
@@ -209,7 +209,7 @@ jobs:
           subject-path: sbom-reports/*
 
       - name: Upload results to release
-        uses: actions/upload-artifact@v4.3.6
+        uses: actions/upload-artifact@v4.4.3
         with:
           compression-level: 9
           name: sbom

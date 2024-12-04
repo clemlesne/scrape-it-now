@@ -59,11 +59,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4.1.7
 
-      - name: Set up Python
-        uses: actions/setup-python@v5.1.1
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4.2.0
         with:
-          cache: pip
-          python-version: "3.13"
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+          version: "0.5.x"
 
       - name: Login to Azure
         uses: Azure/login@v2.2.0
@@ -115,15 +116,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4.1.2
 
-      - name: Set up Python
-        uses: actions/setup-python@v5.1.1
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4.2.0
         with:
-          cache: pip
+          enable-cache: true
           python-version: "3.13"
-
-      - name: Set up build dependencies
-        run: |
-          python3 -m pip install --upgrade pip build
+          version: "0.5.x"
 
       - name: Write version
         run: |
@@ -161,21 +159,6 @@ jobs:
         uses: actions/attest-build-provenance@v1.4.4
         with:
           subject-path: dist/*
-
-  attest-dependencies:
-    name: Attest dependencies
-    permissions:
-      contents: write
-      id-token: write
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4.1.7
-
-      - name: Run attestation
-        uses: advanced-security/component-detection-dependency-submission-action@v0.0.2
-        with:
-          directoryExclusionList: docs
 
   attest-sbom:
     name: Attest SBOM
@@ -226,7 +209,6 @@ jobs:
     runs-on: ubuntu-24.04
     needs:
       - attest-binaries
-      - attest-dependencies
       - attest-sbom
       - test
     if: (github.ref == 'refs/heads/main') || (github.ref == 'refs/heads/develop')
@@ -274,7 +256,6 @@ jobs:
     runs-on: ubuntu-24.04
     needs:
       - attest-binaries
-      - attest-dependencies
       - attest-sbom
       - init
       - test

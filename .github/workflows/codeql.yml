@@ -18,7 +18,7 @@ jobs:
       contents: read
       packages: read
       security-events: write
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 360
     strategy:
       fail-fast: false

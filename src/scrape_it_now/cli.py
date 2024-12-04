@@ -105,14 +105,21 @@ def scrape() -> None:
     pass
 
 
+@click.option(
+    "--with-deps",
+    "-wd",
+    envvar="WITH_DEPS",
+    help="Install system dependencies required for the scraper. Be warning to run this command with enough permissions.",
+    is_flag=True,
+)
 @scrape.command("install")
 @common_params
 @run_in_async
-async def scrape_install() -> None:
+async def scrape_install(with_deps: bool) -> None:
     """
     Install all dependencies required for the scraper.
     """
-    await scrape_backend_install()
+    await scrape_backend_install(with_deps)
 
 
 @click.option(

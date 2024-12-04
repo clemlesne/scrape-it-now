@@ -17,7 +17,7 @@ from playwright.async_api import (
     Error as PlaywrightError,
     Locator,
     Route,
-    TimeoutError,
+    TimeoutError as PlaywrightTimeoutError,
     ViewportSize,
     async_playwright,
 )
@@ -879,7 +879,9 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
             )
             # Wait for 5 secs, to make sure the page is fully loaded
             await page.wait_for_timeout(5000)
-        except TimeoutError:  # TODO: Retry maybe a few times for timeout errors?
+        except (
+            PlaywrightTimeoutError
+        ):  # TODO: Retry maybe a few times for timeout errors?
             return _generic_error(
                 etag=previous_etag,
                 message="Timeout while loading",
@@ -1062,7 +1064,7 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
                     timeout=BROWSER_TIMEOUT_MS,
                 )
             except (
-                TimeoutError
+                PlaywrightTimeoutError
             ):  # TODO: Is those timeouts normal? They happen quite often
                 logger.debug("Timeout for selecting href attribute", exc_info=True)
                 return
@@ -1106,7 +1108,7 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
                     element.get_attribute("name"),
                     element.get_attribute("content"),
                 )
-            except TimeoutError:
+            except PlaywrightTimeoutError:
                 logger.debug("Timeout for selecting meta tag attributes", exc_info=True)
                 return
             if not name:
@@ -1196,7 +1198,8 @@ async def run(  # noqa: PLR0913
     logger.info("Start scraping job %s", job)
 
     # Make sure the dependencies are installed
-    await install()
+    # Note: To install system deps, use the "scrape install" command
+    await install(False)
 
     # Parse cache_refresh
     cache_refresh_parsed = timedelta(hours=cache_refresh)
@@ -1300,28 +1303,29 @@ async def state(  # noqa: PLR0913
         return model
 
 
-async def install() -> None:
+async def install(with_deps: bool) -> None:
     """
     Install browser and Pandoc dependencies.
     """
     logger.info("Installing dependencies if needed, this may take a few minutes")
     await asyncio.gather(
-        _install_browser(),
+        _install_browser(with_deps),
         _install_pandoc(),
     )
 
 
-async def _install_browser() -> None:
+async def _install_browser(with_deps: bool) -> None:
     """
     Install Playwright selected browser.
 
     Download is persisted in the application cache directory. If requested, also install system dependencies requested by the framework. Those requires root permissions on Linux systems as the system package manager will be called.
     """
-    logger.debug("Installing Playwright dependency")
-
     # Add installation path to the environment
     # See: https://playwright.dev/docs/browsers#hermetic-install
-    env["PLAYWRIGHT_BROWSERS_PATH"] = await browsers_install_path()
+    install_path = await browsers_install_path()
+    env["PLAYWRIGHT_BROWSERS_PATH"] = install_path
+
+    logger.debug('Installing Playwright dependency in "%s"', install_path)
 
     # Get location of Playwright driver
     driver_executable, driver_cli = compute_driver_executable()
@@ -1330,6 +1334,8 @@ async def _install_browser() -> None:
     async with file_lock(driver_executable):
         # Build the command arguments
         args = [driver_executable, driver_cli, "install", BROWSER_NAME]
+        if with_deps:
+            args.append("--with-deps")
 
         # Run
         proc = await asyncio.create_subprocess_shell(
@@ -1376,14 +1382,14 @@ async def _install_pandoc() -> None:
 
     Download is persisted in the application cache directory.
     """
-    logger.debug("Installing Pandoc dependency")
-
     # Fix version is necesssary to have reproducible builds
     # See: https://github.com/jgm/pandoc/releases
     version = "3.5"
 
     # Get location of Pandoc driver
     install_path = await pandoc_install_path(version)
+
+    logger.debug('Installing Pandoc dependency in "%s"', install_path)
 
     # Ensure only one worker is installing Pandoc
     async with file_lock(install_path):

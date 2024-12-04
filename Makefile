@@ -25,41 +25,28 @@ brew:
 	@echo "➡️ Installing Syft..."
 	brew install syft
 
+	@echo "➡️ Installing uv..."
+	brew install uv
+
 install:
+	@echo "➡️ Installing venv..."
+	uv venv --python 3.13
+
 	$(MAKE) install-deps
 
 	@echo "➡️ Installing Playwright dependencies..."
-	python3 -m playwright install chrome --with-deps
+	uv run playwright install chrome --with-deps
 
 install-deps:
-	@echo "➡️ Installing pip-tools..."
-	python3 -m pip install pip-tools
-
 	@echo "➡️ Syncing dependencies..."
-	pip-sync --pip-args "--no-deps" requirements-dev.txt
+	uv sync --extra dev
 
 upgrade:
 	@echo "➡️ Updating Git submodules..."
 	git submodule update --init --recursive
 
-	@echo "➡️ Upgrading pip..."
-	python3 -m pip install --upgrade pip wheel setuptools build
-
-	@echo "➡️ Upgrading pip-tools..."
-	python3 -m pip install --upgrade pip-tools
-
-	@echo "➡️ Compiling app requirements..."
-	pip-compile \
-		--output-file requirements.txt \
-		--upgrade \
-		pyproject.toml
-
-	@echo "➡️ Compiling dev requirements..."
-	pip-compile \
-		--extra dev \
-		--output-file requirements-dev.txt \
-		--upgrade \
-		pyproject.toml
+	@echo "➡️ Compiling requirements..."
+	uv lock --upgrade
 
 	@echo "➡️ Updating DNS blocklist..."
 	curl -sSfL https://blocklistproject.github.io/Lists/alt-version/ads-nl.txt > src/scrape_it_now/resources/ads-nl.txt
@@ -70,13 +57,13 @@ test:
 
 test-static:
 	@echo "➡️ Test dependencies issues (deptry)..."
-	python3 -m deptry src
+	uv run deptry src
 
 	@echo "➡️ Test code smells (Ruff)..."
-	python3 -m ruff check --select I,PL,RUF,UP,ASYNC,A,DTZ,T20,ARG,PERF
+	uv run ruff check --select I,PL,RUF,UP,ASYNC,A,DTZ,T20,ARG,PERF
 
 	@echo "➡️ Test types (Pyright)..."
-	python3 -m pyright .
+	uv run pyright .
 
 test-unit:
 	bash cicd/test-unit-ci.sh
@@ -87,26 +74,26 @@ test-static-server:
 
 test-unit-run:
 	@echo "➡️ Unit tests (Pytest)..."
-	python3 -m pytest \
+	uv run pytest \
 		--junit-xml=test-reports/$(version_full).xml \
 		--maxprocesses=4 \
 		-n=logical \
 		tests/*.py
 
 dev:
-	python3 -m pip install --editable .
+	uv pip install --editable .
 	@echo "Now you can run 'scrape-it-now' CLI!"
 
 build:
 	@echo "➡️ Building app..."
-	python3 -m build
+	uv build
 
 lint:
 	@echo "➡️ Fix with formatter..."
-	python3 -m ruff format
+	uv run ruff format
 
 	@echo "➡️ Lint with linter..."
-	python3 -m ruff check --select I,PL,RUF,UP,ASYNC,A,DTZ,T20,ARG,PERF --fix
+	uv run ruff check --select I,PL,RUF,UP,ASYNC,A,DTZ,T20,ARG,PERF --fix
 
 sbom:
 	@echo "🔍 Generating SBOM..."

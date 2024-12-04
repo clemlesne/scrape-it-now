@@ -23,7 +23,7 @@ class Trie:
         """
         ref = self.data
         for char in word:
-            ref[char] = char in ref and ref[char] or {}
+            ref[char] = (char in ref and ref[char]) or {}
             ref = ref[char]
         ref[""] = 1
 

@@ -62,7 +62,6 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "deptry~=0.19",  # Dependency tree testing
-  "pip-tools~=7.4",  # Compile requirements.txt from pyproject.toml
   "pyinstaller~=6.11",  # Create standalone executable
   "pyright~=1.1",  # Static type checker
   "pytest-asyncio~=0.23",  # Pytest plugin for async tests
@@ -92,10 +91,6 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 scrape_it_now = ["resources/*"]
-
-[tool.pip-tools]
-generate-hashes = true
-strip-extras = true
 
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope="function"

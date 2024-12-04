@@ -8,7 +8,7 @@ from uuid import uuid4
 from zipfile import ZipFile
 
 import pytest
-from aiofiles import open
+from aiofiles import open  # noqa: A004
 from aiofiles.os import remove, rmdir
 from isodate import UTC
 from playwright.async_api import Browser, ViewportSize

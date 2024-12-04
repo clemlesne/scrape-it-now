@@ -11,7 +11,7 @@ from typing import Any
 from uuid import uuid4
 
 import aiosqlite
-from aiofiles import open
+from aiofiles import open  # noqa: A004
 from aiofiles.os import makedirs, path, remove, rmdir
 from pydantic import BaseModel, Field
 

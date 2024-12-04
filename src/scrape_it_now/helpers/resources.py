@@ -8,7 +8,7 @@ from os.path import dirname, join
 from pathlib import Path
 
 import click
-from aiofiles import open
+from aiofiles import open  # noqa: A004
 from aiofiles.os import makedirs, path, remove
 
 

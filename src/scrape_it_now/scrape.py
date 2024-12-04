@@ -17,7 +17,7 @@ from playwright.async_api import (
     Error as PlaywrightError,
     Locator,
     Route,
-    TimeoutError,
+    TimeoutError as PlaywrightTimeoutError,
     ViewportSize,
     async_playwright,
 )
@@ -879,7 +879,9 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
             )
             # Wait for 5 secs, to make sure the page is fully loaded
             await page.wait_for_timeout(5000)
-        except TimeoutError:  # TODO: Retry maybe a few times for timeout errors?
+        except (
+            PlaywrightTimeoutError
+        ):  # TODO: Retry maybe a few times for timeout errors?
             return _generic_error(
                 etag=previous_etag,
                 message="Timeout while loading",
@@ -1062,7 +1064,7 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
                     timeout=BROWSER_TIMEOUT_MS,
                 )
             except (
-                TimeoutError
+                PlaywrightTimeoutError
             ):  # TODO: Is those timeouts normal? They happen quite often
                 logger.debug("Timeout for selecting href attribute", exc_info=True)
                 return
@@ -1106,7 +1108,7 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
                     element.get_attribute("name"),
                     element.get_attribute("content"),
                 )
-            except TimeoutError:
+            except PlaywrightTimeoutError:
                 logger.debug("Timeout for selecting meta tag attributes", exc_info=True)
                 return
             if not name:

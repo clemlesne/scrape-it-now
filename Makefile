@@ -30,7 +30,7 @@ brew:
 
 install:
 	@echo "➡️ Installing venv..."
-	uv venv --python 3.13
+	uv venv --python 3.13 --allow-existing
 
 	$(MAKE) install-deps
 

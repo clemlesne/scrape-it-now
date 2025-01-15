@@ -374,6 +374,11 @@ def _count_tokens(content: str) -> int:
 
 
 async def run(  # noqa: PLR0913
+    aws_access_key_id: str | None,
+    aws_s3_endpoint: str | None,
+    aws_secret_access_key: str | None,
+    aws_sqs_endpoint: str | None,
+    aws_sqs_region: str | None,
     azure_openai_api_key: str | None,
     azure_openai_embedding_deployment: str,
     azure_openai_embedding_dimensions: int,
@@ -399,6 +404,9 @@ async def run(  # noqa: PLR0913
         # Init clients
         async with (
             blob_client(
+                aws_access_key_id=aws_access_key_id,
+                aws_s3_endpoint=aws_s3_endpoint,
+                aws_secret_access_key=aws_secret_access_key,
                 azure_storage_access_key=azure_storage_access_key,
                 azure_storage_account_name=azure_storage_account_name,
                 azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
@@ -407,6 +415,10 @@ async def run(  # noqa: PLR0913
                 provider=blob_provider,
             ) as blob,
             queue_client(
+                aws_access_key_id=aws_access_key_id,
+                aws_secret_access_key=aws_secret_access_key,
+                aws_sqs_endpoint=aws_sqs_endpoint,
+                aws_sqs_region=aws_sqs_region,
                 azure_storage_access_key=azure_storage_access_key,
                 azure_storage_account_name=azure_storage_account_name,
                 azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
@@ -420,6 +432,11 @@ async def run(  # noqa: PLR0913
             )
 
     run_workers(
+        aws_access_key_id=aws_access_key_id,
+        aws_s3_endpoint=aws_s3_endpoint,
+        aws_secret_access_key=aws_secret_access_key,
+        aws_sqs_endpoint=aws_sqs_endpoint,
+        aws_sqs_region=aws_sqs_region,
         azure_openai_api_key=azure_openai_api_key,
         azure_openai_embedding_deployment=azure_openai_embedding_deployment,
         azure_openai_embedding_dimensions=azure_openai_embedding_dimensions,
@@ -443,6 +460,11 @@ async def run(  # noqa: PLR0913
 
 
 async def _worker(  # noqa: PLR0913
+    aws_access_key_id: str | None,
+    aws_s3_endpoint: str | None,
+    aws_secret_access_key: str | None,
+    aws_sqs_endpoint: str | None,
+    aws_sqs_region: str | None,
     azure_openai_api_key: str | None,
     azure_openai_embedding_deployment: str,
     azure_openai_embedding_dimensions: int,
@@ -465,6 +487,9 @@ async def _worker(  # noqa: PLR0913
     # Init clients
     async with (
         blob_client(
+            aws_access_key_id=aws_access_key_id,
+            aws_s3_endpoint=aws_s3_endpoint,
+            aws_secret_access_key=aws_secret_access_key,
             azure_storage_access_key=azure_storage_access_key,
             azure_storage_account_name=azure_storage_account_name,
             azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
@@ -478,6 +503,10 @@ async def _worker(  # noqa: PLR0913
             openai_api_version=openai_api_version,
         ) as openai,
         queue_client(
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+            aws_sqs_endpoint=aws_sqs_endpoint,
+            aws_sqs_region=aws_sqs_region,
             azure_storage_access_key=azure_storage_access_key,
             azure_storage_account_name=azure_storage_account_name,
             azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,

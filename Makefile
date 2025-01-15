@@ -72,6 +72,16 @@ test-static-server:
 	@echo "➡️ Starting local static server..."
 	python3 -m http.server -d ./tests/websites 8000
 
+test-aws-mock:
+	@echo "➡️ Starting AWS mock stack..."
+	docker run \
+		--interactive \
+		--rm \
+		-p 127.0.0.1:4510-4559:4510-4559 \
+		-p 127.0.0.1:4566:4566 \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		localstack/localstack
+
 test-unit-run:
 	@echo "➡️ Unit tests (Pytest)..."
 	uv run pytest \

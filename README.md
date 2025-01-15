@@ -11,9 +11,9 @@ Web scraper made for AI and simplicity in mind. It runs as a CLI that can be par
 
 Shared:
 
-- 🏗️ Decoupled architecture with [Azure Queue Storage](https://learn.microsoft.com/en-us/azure/storage/queues) or local [sqlite](https://sqlite.org)
+- 🏗️ Decoupled architecture with [Azure Queue Storage](https://learn.microsoft.com/en-us/azure/storage/queues), [AWS SQS](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/welcome.htm) or local [sqlite](https://sqlite.org)
 - ⚙️ Idempotent operations that can be run in parallel
-- 💾 Scraped content is stored in [Azure Blob Storage](https://learn.microsoft.com/en-us/azure/storage/blobs) or local disk
+- 💾 Scraped content is stored in [Azure Blob Storage](https://learn.microsoft.com/en-us/azure/storage/blobs), [AWS S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html) or local disk
 
 Scraper:
 
@@ -80,10 +80,26 @@ export AZURE_STORAGE_ACCOUNT_NAME=xxx
 scrape-it-now scrape run https://nytimes.com
 ```
 
+Usage with AWS S3 and AWS SQS:
+
+```bash
+# AWS dependencies
+export BLOB_PROVIDER=aws_s3
+export QUEUE_PROVIDER=aws_sqs
+# AWS configuration
+export AWS_ACCESS_KEY_ID=xxx
+export AWS_S3_ENDPOINT=my-bucket.s3.amazonaws.com
+export AWS_SECRET_ACCESS_KEY=xxx
+export AWS_SQS_ENDPOINT=sqs.eu-west-1.amazonaws.com
+export AWS_SQS_REGION=eu-west-1
+# Run the job
+scrape-it-now scrape run https://nytimes.com
+```
+
 Usage with Local Disk Blob and Local Disk Queue:
 
 ```bash
-# Local disk configuration
+# Local disk dependencies
 export BLOB_PROVIDER=local_disk
 export QUEUE_PROVIDER=local_disk
 # Run the job
@@ -104,12 +120,10 @@ Example:
 ...
 ```
 
-Most frequent options are:
+Frequent general options are:
 
 | `Options` | Description | `Environment variable` |
 |-|-|-|
-| `--azure-storage-access-key`</br>`-asak` | Azure Storage access key | `AZURE_STORAGE_ACCESS_KEY` |
-| `--azure-storage-account-name`</br>`-asan` | Azure Storage account name | `AZURE_STORAGE_ACCOUNT_NAME` |
 | `--blob-provider`</br>`-bp` | Blob provider | `BLOB_PROVIDER` |
 | `--job-name`</br>`-jn` | Job name | `JOB_NAME` |
 | `--max-depth`</br>`-md` | Maximum depth | `MAX_DEPTH` |
@@ -117,6 +131,23 @@ Most frequent options are:
 | `--save-images`</br>`-si` | Save images | `SAVE_IMAGES` |
 | `--save-screenshot`</br>`-ss` | Save screenshot | `SAVE_SCREENSHOT` |
 | `--whitelist`</br>`-w` | Whitelist | `WHITELIST` |
+
+Frequent Azure options are:
+
+| `Options` | Description | `Environment variable` |
+|-|-|-|
+| `--azure-storage-access-key`</br>`-asak` | Azure Storage access key | `AZURE_STORAGE_ACCESS_KEY` |
+| `--azure-storage-account-name`</br>`-asan` | Azure Storage account name | `AZURE_STORAGE_ACCOUNT_NAME` |
+
+Frequent AWS options are:
+
+| `Options` | Description | `Environment variable` |
+|-|-|-|
+| `--aws-access-key-id`</br>`-aaki` | AWS access key ID | `AWS_ACCESS_KEY_ID` |
+| `--aws-s3-endpoint`</br>`-ase` | AWS S3 endpoint | `AWS_S3_ENDPOINT` |
+| `--aws-secret-access-key`</br>`-asak` | AWS secret access key | `AWS_SECRET_ACCESS_KEY` |
+| `--aws-sqs-endpoint`</br>`-ase` | AWS SQS endpoint | `AWS_SQS_ENDPOINT` |
+| `--aws-sqs-region`</br>`-asr` | AWS SQS region | `AWS_SQS_REGION` |
 
 For documentation on all available options, run:
 
@@ -151,13 +182,26 @@ Example:
 {"created_at":"2024-11-08T13:18:52.839060Z","last_updated":"2024-11-08T13:19:16.528370Z","network_used_mb":2.6666793823242188,"processed":1,"queued":311}
 ```
 
-Most frequent options are:
+Frequent general options are:
+
+| `Options` | Description | `Environment variable` |
+|-|-|-|
+| `--blob-provider`</br>`-bp` | Blob provider | `BLOB_PROVIDER` |
+
+Frequent Azure options are:
 
 | `Options` | Description | `Environment variable` |
 |-|-|-|
 | `--azure-storage-access-key`</br>`-asak` | Azure Storage access key | `AZURE_STORAGE_ACCESS_KEY` |
 | `--azure-storage-account-name`</br>`-asan` | Azure Storage account name | `AZURE_STORAGE_ACCOUNT_NAME` |
-| `--blob-provider`</br>`-bp` | Blob provider | `BLOB_PROVIDER` |
+
+Frequent AWS options are:
+
+| `Options` | Description | `Environment variable` |
+|-|-|-|
+| `--aws-access-key-id`</br>`-aaki` | AWS access key ID | `AWS_ACCESS_KEY_ID` |
+| `--aws-s3-endpoint`</br>`-ase` | AWS S3 endpoint | `AWS_S3_ENDPOINT` |
+| `--aws-secret-access-key`</br>`-asak` | AWS secret access key | `AWS_SECRET_ACCESS_KEY` |
 
 For documentation on all available options, run:
 
@@ -221,7 +265,14 @@ Example:
 ...
 ```
 
-Most frequent options are:
+Frequent general options are:
+
+| `Options` | Description | `Environment variable` |
+|-|-|-|
+| `--blob-provider`</br>`-bp` | Blob provider | `BLOB_PROVIDER` |
+| `--queue-provider`</br>`-qp` | Queue provider | `QUEUE_PROVIDER` |
+
+Frequent Azure options are:
 
 | `Options` | Description | `Environment variable` |
 |-|-|-|
@@ -234,8 +285,16 @@ Most frequent options are:
 | `--azure-search-endpoint`</br>`-ase` | Azure Search endpoint | `AZURE_SEARCH_ENDPOINT` |
 | `--azure-storage-access-key`</br>`-asak` | Azure Storage access key | `AZURE_STORAGE_ACCESS_KEY` |
 | `--azure-storage-account-name`</br>`-asan` | Azure Storage account name | `AZURE_STORAGE_ACCOUNT_NAME` |
-| `--blob-provider`</br>`-bp` | Blob provider | `BLOB_PROVIDER` |
-| `--queue-provider`</br>`-qp` | Queue provider | `QUEUE_PROVIDER` |
+
+Frequent AWS options are:
+
+| `Options` | Description | `Environment variable` |
+|-|-|-|
+| `--aws-access-key-id`</br>`-aaki` | AWS access key ID | `AWS_ACCESS_KEY_ID` |
+| `--aws-s3-endpoint`</br>`-ase` | AWS S3 endpoint | `AWS_S3_ENDPOINT` |
+| `--aws-secret-access-key`</br>`-asak` | AWS secret access key | `AWS_SECRET_ACCESS_KEY` |
+| `--aws-sqs-endpoint`</br>`-ase` | AWS SQS endpoint | `AWS_SQS_ENDPOINT` |
+| `--aws-sqs-region`</br>`-asr` | AWS SQS region | `AWS_SQS_REGION` |
 
 For documentation on all available options, run:
 

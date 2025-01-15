@@ -350,6 +350,9 @@ async def test_queue_simple(
     # Init clients
     async with (
         blob_client(
+            aws_access_key_id=env["AWS_ACCESS_KEY_ID"],
+            aws_s3_endpoint=env["AWS_S3_ENDPOINT"],
+            aws_secret_access_key=env["AWS_SECRET_ACCESS_KEY"],
             azure_storage_access_key=None,
             azure_storage_account_name=env["AZURE_STORAGE_ACCOUNT_NAME"],
             azure_storage_endpoint_suffix="core.windows.net",
@@ -358,6 +361,10 @@ async def test_queue_simple(
             provider=blob_provider,
         ) as blob,
         queue_client(
+            aws_access_key_id=env["AWS_ACCESS_KEY_ID"],
+            aws_secret_access_key=env["AWS_SECRET_ACCESS_KEY"],
+            aws_sqs_endpoint=env["AWS_SQS_ENDPOINT"],
+            aws_sqs_region=env["AWS_SQS_REGION"],
             azure_storage_access_key=None,
             azure_storage_account_name=env["AZURE_STORAGE_ACCOUNT_NAME"],
             azure_storage_endpoint_suffix="core.windows.net",

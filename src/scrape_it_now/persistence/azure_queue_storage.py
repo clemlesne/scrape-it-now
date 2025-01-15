@@ -86,6 +86,12 @@ class AzureQueueStorage(IQueue):
                 visibility_timeout=message.next_visible_on,
             )
 
+    @retry(
+        reraise=True,
+        retry=retry_if_exception_type(ServiceRequestError),  # Catch for network errors
+        stop=stop_after_attempt(8),
+        wait=wait_random_exponential(multiplier=0.8, max=60),
+    )
     async def delete_message(
         self,
         message: Message,

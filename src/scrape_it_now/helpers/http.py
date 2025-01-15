@@ -9,9 +9,9 @@ from azure.core.pipeline.transport._aiohttp import AioHttpTransport
 
 from scrape_it_now.helpers.threading import asyncio_cache
 
-_cookie_jar: DummyCookieJar | None = None
 
-
+# Function is async because it requires to be located in the same async context as the session
+@asyncio_cache
 async def _aiohttp_cookie_jar() -> DummyCookieJar:
     """
     Create a cookie jar mock for AIOHTTP.
@@ -20,10 +20,7 @@ async def _aiohttp_cookie_jar() -> DummyCookieJar:
 
     Returns a `DummyCookieJar` instance.
     """
-    global _cookie_jar  # noqa: PLW0603
-    if not _cookie_jar:
-        _cookie_jar = DummyCookieJar()
-    return _cookie_jar
+    return DummyCookieJar()
 
 
 @asyncio_cache

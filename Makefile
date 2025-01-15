@@ -63,7 +63,7 @@ test-static:
 	uv run ruff check --select I,PL,RUF,UP,ASYNC,A,DTZ,T20,ARG,PERF
 
 	@echo "➡️ Test types (Pyright)..."
-	uv run pyright .
+	uv run pyright
 
 test-unit:
 	bash cicd/test-unit-ci.sh

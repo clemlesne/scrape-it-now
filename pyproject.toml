@@ -122,3 +122,7 @@ docstring-code-format = true
 
 [tool.pyright]
 pythonVersion = "3.11"
+include = [
+  "src",
+  "tests",
+]

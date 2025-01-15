@@ -4,27 +4,9 @@ from contextlib import asynccontextmanager
 from openai import AsyncAzureOpenAI
 
 from scrape_it_now.helpers.identity import token
-from scrape_it_now.persistence.azure_blob_storage import (
-    AzureBlobStorage,
-    Config as AzureBlobStorageConfig,
-)
-from scrape_it_now.persistence.azure_queue_storage import (
-    AzureQueueStorage,
-    Config as AzureQueueStorageConfig,
-)
-from scrape_it_now.persistence.azure_search import (
-    AzureSearch,
-    Config as AzureSearchConfig,
-)
 from scrape_it_now.persistence.iblob import IBlob, Provider as BlobProvider
 from scrape_it_now.persistence.iqueue import IQueue, Provider as QueueProvider
 from scrape_it_now.persistence.isearch import ISearch, Provider as SearchProvider
-from scrape_it_now.persistence.local_disk import (
-    BlobConfig as LocalDiskBlobConfig,
-    LocalDiskBlob,
-    LocalDiskQueue,
-    QueueConfig as LocalDiskQueueConfig,
-)
 
 
 @asynccontextmanager
@@ -68,6 +50,11 @@ async def search_client(  # noqa: PLR0913
     """
     # Azure AI Search
     if provider == SearchProvider.AZURE_SEARCH:
+        from scrape_it_now.persistence.azure_search import (
+            AzureSearch,
+            Config as AzureSearchConfig,
+        )
+
         # Validate arguments
         config = AzureSearchConfig(
             api_key=azure_search_api_key,  # pyright: ignore [reportArgumentType]
@@ -98,6 +85,11 @@ async def blob_client(  # noqa: PLR0913
     """
     # Azure Blob Storage
     if provider == BlobProvider.AZURE_BLOB_STORAGE:
+        from scrape_it_now.persistence.azure_blob_storage import (
+            AzureBlobStorage,
+            Config as AzureBlobStorageConfig,
+        )
+
         # Validate arguments
         config = AzureBlobStorageConfig(
             access_key=azure_storage_access_key,
@@ -111,6 +103,11 @@ async def blob_client(  # noqa: PLR0913
 
     # Local Disk Blob
     elif provider == BlobProvider.LOCAL_DISK:
+        from scrape_it_now.persistence.local_disk import (
+            BlobConfig as LocalDiskBlobConfig,
+            LocalDiskBlob,
+        )
+
         # Validate arguments
         config = LocalDiskBlobConfig(
             name=container,
@@ -134,6 +131,11 @@ async def queue_client(
     """
     # Azure Queue Storage
     if provider == QueueProvider.AZURE_QUEUE_STORAGE:
+        from scrape_it_now.persistence.azure_queue_storage import (
+            AzureQueueStorage,
+            Config as AzureQueueStorageConfig,
+        )
+
         # Validate arguments
         config = AzureQueueStorageConfig(
             access_key=azure_storage_access_key,
@@ -147,6 +149,11 @@ async def queue_client(
 
     # Local Disk Queue
     elif provider == QueueProvider.LOCAL_DISK:
+        from scrape_it_now.persistence.local_disk import (
+            LocalDiskQueue,
+            QueueConfig as LocalDiskQueueConfig,
+        )
+
         config = LocalDiskQueueConfig(
             name=queue,
         )  # pyright: ignore [reportArgumentType]

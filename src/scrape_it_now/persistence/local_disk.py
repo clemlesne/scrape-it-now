@@ -308,7 +308,7 @@ class LocalDiskQueue(IQueue):
             self._use_connection() as connection,
             connection.execute(
                 f"""
-                SELECT id, message, visibility_timeout, dequeue_count
+                SELECT id, message, dequeue_count
                 FROM {self._config.table}
                 WHERE visibility_timeout < ?
                 LIMIT ?
@@ -329,8 +329,7 @@ class LocalDiskQueue(IQueue):
                         content=row[1],
                         delete_token=delete_token,
                         message_id=str(row[0]),
-                        visibility_timeout=row[2],
-                        dequeue_count=row[3],
+                        dequeue_count=row[2],
                     )
                 )
 

@@ -83,7 +83,6 @@ class AzureQueueStorage(IQueue):
                 delete_token=message.pop_receipt,
                 dequeue_count=message.dequeue_count,
                 message_id=message.id,
-                visibility_timeout=message.next_visible_on,
             )
 
     @retry(

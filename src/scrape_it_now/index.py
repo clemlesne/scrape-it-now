@@ -1,7 +1,6 @@
 import asyncio
 import math
 from http import HTTPStatus
-from os import environ as env
 
 import aiojobs
 import tiktoken
@@ -30,7 +29,6 @@ from scrape_it_now.helpers.persistence import (
     search_client,
 )
 from scrape_it_now.helpers.resources import (
-    dir_resources,
     index_index_name,
     index_queue_name,
     scrape_container_name,

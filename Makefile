@@ -60,10 +60,10 @@ test-static:
 	uv run deptry src
 
 	@echo "➡️ Test code smells (Ruff)..."
-	uv run ruff check --select I,PL,RUF,UP,ASYNC,A,DTZ,T20,ARG,PERF
+	uv run ruff check --select I,PL,RUF,UP,ASYNC,A,DTZ,T20,ARG,PERF --ignore A005
 
 	@echo "➡️ Test types (Pyright)..."
-	uv run pyright .
+	uv run pyright
 
 test-unit:
 	bash cicd/test-unit-ci.sh
@@ -71,6 +71,16 @@ test-unit:
 test-static-server:
 	@echo "➡️ Starting local static server..."
 	python3 -m http.server -d ./tests/websites 8000
+
+test-aws-mock:
+	@echo "➡️ Starting AWS mock stack..."
+	docker run \
+		--interactive \
+		--rm \
+		-p 127.0.0.1:4510-4559:4510-4559 \
+		-p 127.0.0.1:4566:4566 \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		localstack/localstack
 
 test-unit-run:
 	@echo "➡️ Unit tests (Pytest)..."
@@ -93,7 +103,7 @@ lint:
 	uv run ruff format
 
 	@echo "➡️ Lint with linter..."
-	uv run ruff check --select I,PL,RUF,UP,ASYNC,A,DTZ,T20,ARG,PERF --fix
+	uv run ruff check --select I,PL,RUF,UP,ASYNC,A,DTZ,T20,ARG,PERF --ignore A005 --fix
 
 sbom:
 	@echo "🔍 Generating SBOM..."

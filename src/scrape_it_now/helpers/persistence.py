@@ -4,6 +4,14 @@ from contextlib import asynccontextmanager
 from openai import AsyncAzureOpenAI
 
 from scrape_it_now.helpers.identity import token
+from scrape_it_now.persistence.aws_s3 import (
+    AwsS3,
+    Config as AwsS3Config,
+)
+from scrape_it_now.persistence.aws_sqs import (
+    AwsSqs,
+    Config as AwsSqsConfig,
+)
 from scrape_it_now.persistence.azure_blob_storage import (
     AzureBlobStorage,
     Config as AzureBlobStorageConfig,
@@ -86,6 +94,9 @@ async def search_client(  # noqa: PLR0913
 
 @asynccontextmanager
 async def blob_client(  # noqa: PLR0913
+    aws_access_key_id: str | None,
+    aws_s3_endpoint: str | None,
+    aws_secret_access_key: str | None,
     azure_storage_access_key: str | None,
     azure_storage_account_name: str | None,
     azure_storage_endpoint_suffix: str | None,
@@ -120,9 +131,26 @@ async def blob_client(  # noqa: PLR0913
         async with LocalDiskBlob(config) as client:
             yield client
 
+    # AWS S3
+    elif provider == BlobProvider.AWS_S3:
+        # Validate arguments
+        config = AwsS3Config(
+            access_key_id=aws_access_key_id,  # pyright: ignore [reportArgumentType]
+            endpoint=aws_s3_endpoint,  # pyright: ignore [reportArgumentType]
+            name=container,
+            secret_access_key=aws_secret_access_key,  # pyright: ignore [reportArgumentType]
+        )
+        # Init client
+        async with AwsS3(config) as client:
+            yield client
+
 
 @asynccontextmanager
-async def queue_client(
+async def queue_client(  # noqa: PLR0913
+    aws_access_key_id: str | None,
+    aws_secret_access_key: str | None,
+    aws_sqs_endpoint: str | None,
+    aws_sqs_region: str | None,
     azure_storage_access_key: str | None,
     azure_storage_account_name: str | None,
     azure_storage_endpoint_suffix: str | None,
@@ -152,4 +180,18 @@ async def queue_client(
         )  # pyright: ignore [reportArgumentType]
         # Init client
         async with LocalDiskQueue(config) as client:
+            yield client
+
+    # AWS SQS
+    elif provider == QueueProvider.AWS_SQS:
+        # Validate arguments
+        config = AwsSqsConfig(
+            access_key_id=aws_access_key_id,  # pyright: ignore [reportArgumentType]
+            endpoint=aws_sqs_endpoint,  # pyright: ignore [reportArgumentType]
+            name=queue,
+            region=aws_sqs_region,  # pyright: ignore [reportArgumentType]
+            secret_access_key=aws_secret_access_key,  # pyright: ignore [reportArgumentType]
+        )
+        # Init client
+        async with AwsSqs(config) as client:
             yield client

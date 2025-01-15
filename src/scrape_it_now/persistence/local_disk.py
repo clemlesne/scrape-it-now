@@ -8,15 +8,15 @@ from json import JSONDecodeError, loads
 from os import walk
 from os.path import dirname, join
 from typing import Any
-from uuid import uuid4
 
 import aiosqlite
 from aiofiles import open  # noqa: A004
 from aiofiles.os import makedirs, path, remove, rmdir
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from scrape_it_now.helpers.logging import logger
 from scrape_it_now.helpers.resources import file_lock, local_disk_cache_path
+from scrape_it_now.models.lease import LeaseModel
 from scrape_it_now.models.message import Message
 from scrape_it_now.persistence.iblob import (
     BlobAlreadyExistsError,
@@ -36,11 +36,6 @@ class BlobConfig(BaseModel):
 
     async def working_path(self) -> str:
         return await path.abspath(join(self.path, self.name))
-
-
-class LeaseModel(BaseModel):
-    lease_id: str = Field(default_factory=lambda: str(uuid4()))
-    until: datetime
 
 
 class LocalDiskBlob(IBlob):
@@ -308,7 +303,7 @@ class LocalDiskQueue(IQueue):
             self._use_connection() as connection,
             connection.execute(
                 f"""
-                SELECT id, message, visibility_timeout, dequeue_count
+                SELECT id, message, dequeue_count
                 FROM {self._config.table}
                 WHERE visibility_timeout < ?
                 LIMIT ?
@@ -329,8 +324,7 @@ class LocalDiskQueue(IQueue):
                         content=row[1],
                         delete_token=delete_token,
                         message_id=str(row[0]),
-                        visibility_timeout=row[2],
-                        dequeue_count=row[3],
+                        dequeue_count=row[2],
                     )
                 )
 

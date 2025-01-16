@@ -3,6 +3,7 @@ import random
 import re
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
+from functools import lru_cache
 from http import HTTPStatus
 from mimetypes import guess_extension
 from os import environ as env
@@ -1405,6 +1406,7 @@ async def _install_pandoc() -> None:
     env["PYPANDOC_PANDOC"] = install_path
 
 
+@lru_cache
 def _clean_url(url: str) -> ParseResult:
     """
     Remove query and fragment from an URL.

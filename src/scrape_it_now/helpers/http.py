@@ -7,11 +7,11 @@ from aiohttp import (
 )
 from azure.core.pipeline.transport._aiohttp import AioHttpTransport
 
-from scrape_it_now.helpers.threading import asyncio_cache
+from scrape_it_now.helpers.cache import lru_acache
 
 
 # Function is async because it requires to be located in the same async context as the session
-@asyncio_cache
+@lru_acache()
 async def _aiohttp_cookie_jar() -> DummyCookieJar:
     """
     Create a cookie jar mock for AIOHTTP.
@@ -23,7 +23,7 @@ async def _aiohttp_cookie_jar() -> DummyCookieJar:
     return DummyCookieJar()
 
 
-@asyncio_cache
+@lru_acache()
 async def aiohttp_session() -> ClientSession:
     """
     Create an AIOHTTP session.
@@ -47,7 +47,7 @@ async def aiohttp_session() -> ClientSession:
     )
 
 
-@asyncio_cache
+@lru_acache()
 async def azure_transport() -> AioHttpTransport:
     """
     Create an AIOHTTP transport, for Azure SDK.

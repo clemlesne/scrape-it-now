@@ -3,7 +3,6 @@ import hashlib
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
-from functools import lru_cache
 from os.path import dirname, join
 from pathlib import Path
 
@@ -11,7 +10,10 @@ import click
 from aiofiles import open  # noqa: A004
 from aiofiles.os import makedirs, path, remove
 
+from scrape_it_now.helpers.cache import lru_acache, lru_cache
 
+
+@lru_cache()
 def dir_tests(sub: str) -> str:
     """
     Get the absolute path to the tests folder.
@@ -21,6 +23,7 @@ def dir_tests(sub: str) -> str:
     )
 
 
+@lru_cache()
 def dir_resources(sub: str) -> str:
     """
     Get the absolute path to the resources folder.
@@ -56,7 +59,7 @@ def index_index_name(job_name: str) -> str:
     return job_name
 
 
-@lru_cache(maxsize=512)
+@lru_cache()
 def hash_url(url: str) -> str:
     """
     Hash a URL to a unique identifier.
@@ -67,6 +70,7 @@ def hash_url(url: str) -> str:
     ).hexdigest()
 
 
+@lru_acache()
 async def cache_dir() -> str:
     """
     Get the path to the cache directory.
@@ -83,6 +87,7 @@ async def cache_dir() -> str:
     return res
 
 
+@lru_acache()
 async def browsers_install_path() -> str:
     """
     Get the path to the browser executable.
@@ -90,6 +95,7 @@ async def browsers_install_path() -> str:
     return join(await cache_dir(), "browsers")
 
 
+@lru_acache()
 async def pandoc_install_path(
     version: str,
 ) -> str:
@@ -99,6 +105,7 @@ async def pandoc_install_path(
     return join(await cache_dir(), "pandoc", version)
 
 
+@lru_acache()
 async def local_disk_cache_path() -> str:
     """
     Get the path to the local disk persistence.

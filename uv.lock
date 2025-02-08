@@ -1772,7 +1772,6 @@ wheels = [
 
 [[package]]
 name = "scrape-it-now"
-version = "0.0.0+unknown"
 source = { editable = "." }
 dependencies = [
     { name = "aiodns" },

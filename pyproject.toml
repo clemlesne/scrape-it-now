@@ -1,12 +1,19 @@
 [project]
-authors = [
-  {name = "Clémence Lesné", email = "clemence@lesne.pro"}
-]
-maintainers = [
-  {name = "Clémence Lesné", email = "clemence@lesne.pro"}
-]
+authors = [{ name = "Clémence Lesné", email = "clemence@lesne.pro" }]
+maintainers = [{ name = "Clémence Lesné", email = "clemence@lesne.pro" }]
 description = "Web scraper made for AI and simplicity in mind. It runs as a CLI that can be parallelized and outputs high-quality markdown content."
-keywords = ["web", "scraper", "markdown", "ai", "parallel", "cli", "automation", "data-extraction", "web-crawling", "content-indexing"]
+keywords = [
+  "web",
+  "scraper",
+  "markdown",
+  "ai",
+  "parallel",
+  "cli",
+  "automation",
+  "data-extraction",
+  "web-crawling",
+  "content-indexing",
+]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",
@@ -27,7 +34,7 @@ classifiers = [
   "Typing :: Typed",
 ]
 dynamic = ["version"]
-license = {file = "LICENSE"}
+license = { file = "LICENSE" }
 name = "scrape-it-now"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -61,14 +68,14 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-  "deptry~=0.19",  # Dependency tree testing
-  "pyinstaller~=6.11",  # Create standalone executable
-  "pyright~=1.1",  # Static type checker
-  "pytest-asyncio~=0.23",  # Pytest plugin for async tests
-  "pytest-repeat~=0.9",  # Pytest plugin for repeating tests
-  "pytest-xdist[psutil]~=3.6",  # Pytest plugin for parallel testing
-  "pytest~=8.3",  # Testing framework
-  "ruff~=0.6",  # Linter
+  "deptry~=0.19",              # Dependency tree testing
+  "pyinstaller~=6.11",         # Create standalone executable
+  "pyright~=1.1",              # Static type checker
+  "pytest-asyncio~=0.23",      # Pytest plugin for async tests
+  "pytest-repeat~=0.9",        # Pytest plugin for repeating tests
+  "pytest-xdist[psutil]~=3.6", # Pytest plugin for parallel testing
+  "pytest~=8.3",               # Testing framework
+  "ruff~=0.6",                 # Linter
 ]
 
 [project.urls]
@@ -84,7 +91,7 @@ requires = ["setuptools~=75.3"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.dynamic]
-version = {attr = "scrape_it_now.__version__"}
+version = { attr = "scrape_it_now.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -93,7 +100,7 @@ where = ["src"]
 scrape_it_now = ["resources/*"]
 
 [tool.pytest.ini_options]
-asyncio_default_fixture_loop_scope="function"
+asyncio_default_fixture_loop_scope = "function"
 asyncio_mode = "auto"
 junit_suite_name = "scrape-it-now"
 log_file = "test-reports/last-logs.txt"
@@ -108,7 +115,7 @@ pep621_dev_dependency_groups = ["dev"]
 [tool.deptry.per_rule_ignores]
 DEP002 = [
   "aiodns",  # Async DNS resolver for aiohttp
-  "aiohttp",  # Async HTTP client for Azure SDKs
+  "aiohttp", # Async HTTP client for Azure SDKs
 ]
 
 [tool.ruff]
@@ -122,7 +129,4 @@ docstring-code-format = true
 
 [tool.pyright]
 pythonVersion = "3.11"
-include = [
-  "src",
-  "tests",
-]
+include = ["src", "tests"]

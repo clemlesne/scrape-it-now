@@ -61,11 +61,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4.1.7
 
+      - name: Setup Python
+        uses: actions/setup-python@v5.4.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
       - name: Setup uv
         uses: astral-sh/setup-uv@v4.2.0
         with:
           enable-cache: true
-          python-version: ${{ matrix.python-version }}
           version: "0.5.x"
 
       - name: Login to Azure

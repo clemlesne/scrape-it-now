@@ -44,7 +44,7 @@ class IQueue:
     @abstractmethod
     async def create_queue(
         self,
-    ) -> bool:
+    ) -> None:
         pass
 
     @abstractmethod

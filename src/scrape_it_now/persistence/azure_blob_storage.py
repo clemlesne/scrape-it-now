@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, suppress
 from typing import Any
@@ -174,10 +175,23 @@ class AzureBlobStorage(IBlob):
     async def delete_container(
         self,
     ) -> None:
-        await self._client.delete_container()
-        logger.info('Deleted Blob Storage "%s"', self._config.name)
+        # Delete the container
+        # Catch race condition to preserve idempotency
+        with suppress(ResourceNotFoundError):
+            # Delete
+            await self._client.delete_container()
+            # Wait for it to be deleted, API is eventually consistent
+            while True:
+                with suppress(ResourceNotFoundError):
+                    await self._client.get_container_properties()
+                    await asyncio.sleep(2)
+                    continue
+                # Deleted
+                break
+            logger.info('Deleted Blob Storage "%s"', self._config.name)
 
     async def __aenter__(self) -> "AzureBlobStorage":
+        # Create the client
         self._service = BlobServiceClient(
             # Deployment
             account_url=f"https://{self._config.account_name}.blob.{self._config.endpoint_suffix}",
@@ -190,11 +204,56 @@ class AzureBlobStorage(IBlob):
             # Deployment
             container=self._config.name,
         )
-        # Create if it does not exist
+
+        await self._wait_for_creation()
+        await self._wait_for_ready()
+
+        # Return instance
+        return self
+
+    async def _wait_for_ready(self) -> None:
+        """
+        Wait for the container to be ready.
+
+        API is not consistent, so we need to check if the resource is ready to be used.
+        """
+        while True:
+            # Try using it
+            try:
+                # Upload and clean a test blob
+                await self.upload_blob(
+                    blob="ping",
+                    data=b"ping",
+                    length=4,
+                    overwrite=True,
+                )
+                await self._client.delete_blob("ping")
+                # If no exception, the container is ready
+                logger.debug('Blob Storage "%s" is ready', self._config.name)
+                break
+            # If exception, the container is not ready yet
+            except Exception:
+                logger.debug("Blob Storage not ready yet, retrying", exc_info=True)
+                await asyncio.sleep(2)
+
+    async def _wait_for_creation(self) -> None:
+        """
+        Wait for the container to be created.
+
+        Loop indefinitely until the the container respond to upload/download operations. Loop indefinitely until the container is created. API is not consistent, so we need to check if the resource is created.
+        """
+        # Start creation
         with suppress(ResourceExistsError):
             await self._client.create_container()
-            logger.debug('Created Blob Storage "%s"', self._config.name)
-        return self
+
+        # Wait for it to be created, API is eventually consistent
+        while True:
+            with suppress(ResourceNotFoundError):
+                await self._client.get_container_properties()
+                logger.debug('Created Blob Storage "%s"', self._config.name)
+                # Created
+                break
+            await asyncio.sleep(2)
 
     async def __aexit__(self, *exc: Any) -> None:
         await self._service.close()

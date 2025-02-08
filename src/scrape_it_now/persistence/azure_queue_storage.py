@@ -1,3 +1,4 @@
+import asyncio
 from base64 import b64decode, b64encode
 from binascii import Error as BinasciiError
 from collections.abc import AsyncGenerator
@@ -114,12 +115,51 @@ class AzureQueueStorage(IQueue):
     )
     async def create_queue(
         self,
-    ) -> bool:
+    ) -> None:
+        await self._wait_for_creation()
+        await self._wait_for_ready()
+
+    async def _wait_for_ready(self) -> None:
+        """
+        Wait for the queue to be ready.
+
+        Loop indefinitely until the queue is respond to send/pull operations. API is not consistent, so we need to check if the resource is ready to be used.
+        """
+        while True:
+            # Try using it
+            try:
+                # Send and clean a test message
+                await self.send_message("ping")
+                async for message in self.receive_messages(
+                    max_messages=1, visibility_timeout=1
+                ):
+                    await self.delete_message(message)
+                # If no exception, the queue is ready
+                logger.debug('Queue Storage "%s" is ready', self._config.name)
+                break
+            # If exception, the queue is not ready yet
+            except Exception:
+                logger.debug("Queue not ready yet, retrying", exc_info=True)
+                await asyncio.sleep(2)
+
+    async def _wait_for_creation(self) -> None:
+        """
+        Wait for the queue to be created.
+
+        Loop indefinitely until the queue is created. API is not consistent, so we need to check if the resource is created.
+        """
+        # Start creation
         with suppress(ResourceExistsError):
             await self._client.create_queue()
-            logger.debug('Created Queue Storage "%s"', self._config.name)
-            return True
-        return False
+
+        # Wait for it to be created, API is eventually consistent
+        while True:
+            with suppress(ResourceNotFoundError):
+                await self._client.get_queue_properties()
+                logger.debug('Created Queue Storage "%s"', self._config.name)
+                # Created
+                break
+            await asyncio.sleep(2)
 
     @retry(
         reraise=True,
@@ -130,8 +170,20 @@ class AzureQueueStorage(IQueue):
     async def delete_queue(
         self,
     ) -> None:
-        await self._client.delete_queue()
-        logger.info('Deleted Queue Storage "%s"', self._config.name)
+        # Delete the queue
+        # Catch race condition to preserve idempotency
+        with suppress(ResourceNotFoundError):
+            # Delete
+            await self._client.delete_queue()
+            # Wait for it to be deleted, API is eventually consistent
+            while True:
+                with suppress(ResourceNotFoundError):
+                    await self._client.get_queue_properties()
+                    await asyncio.sleep(2)
+                    continue
+                # Deleted
+                break
+            logger.info('Deleted Queue Storage "%s"', self._config.name)
 
     def _escape(self, value: str) -> str:
         """
@@ -151,6 +203,7 @@ class AzureQueueStorage(IQueue):
             return value
 
     async def __aenter__(self) -> "AzureQueueStorage":
+        # Create the client
         self._service = QueueServiceClient(
             # Deployment
             account_url=f"https://{self._config.account_name}.queue.{self._config.endpoint_suffix}",
@@ -165,8 +218,11 @@ class AzureQueueStorage(IQueue):
             # Performance
             transport=await azure_transport(),
         )
+
         # Create if it does not exist
         await self.create_queue()
+
+        # Return instance
         return self
 
     async def __aexit__(self, *exc: Any) -> None:

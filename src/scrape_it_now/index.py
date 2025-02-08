@@ -568,32 +568,10 @@ async def _force_requeue(
     # Delete the queue
     await queue.delete_queue()
 
-    # Wait for the queue to be deleted and create it
-    deleted = False
-    while not deleted:
-        deleted = await queue.create_queue()
-        if not deleted:
-            logger.info("Queue not deleted yet, retrying in 5 secs")
-            await asyncio.sleep(5)
+    # Re-create it
+    await queue.create_queue()
 
-    # Wait for the queue to be created
-    created = False
-    while not created:
-        try:
-            # Send a test message
-            await queue.send_message("ping")
-            # Try to consume the message(s)
-            async for message in queue.receive_messages(
-                max_messages=1, visibility_timeout=1
-            ):
-                await queue.delete_message(message)
-            # If no exception, the queue is created
-            created = True
-        except Exception:  # If exception, the queue is not created yet
-            logger.info("Queue not created yet, retrying in 5 secs")
-            await asyncio.sleep(5)
-
-    # Requeue all the blobs
+    # Re-queue all the blobs
     logger.warning("Rebuilding the queue...")
     i = 0
     async for listed in blob.list_blobs(

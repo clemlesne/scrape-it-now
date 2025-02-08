@@ -386,13 +386,13 @@ class LocalDiskQueue(IQueue):
 
     async def create_queue(
         self,
-    ) -> bool:
+    ) -> None:
         file_path = await self._config.db_path()
         first_run = not await path.exists(file_path)
 
         # Skip if the database is already initialized
         if not first_run:
-            return False
+            return
 
         # Create the directory if it doesn't exist
         await makedirs(dirname(file_path), exist_ok=True)
@@ -425,8 +425,6 @@ class LocalDiskQueue(IQueue):
 
             # Commit as other workers might be waiting for the table to be created
             await connection.commit()
-
-        return True
 
     async def delete_queue(
         self,

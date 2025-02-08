@@ -1,12 +1,14 @@
 name: Pipeline
 
 on:
+  # Run on all branches and pull requests to ensure that the code is always tested
   push:
     branches:
       - develop
       - feat/*
       - hotfix/*
       - main
+  # Run on pull requests to ensure that the code is ready for merging
   pull_request:
     branches:
       - develop

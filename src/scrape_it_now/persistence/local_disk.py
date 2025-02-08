@@ -15,6 +15,7 @@ from aiofiles import open  # noqa: A004
 from aiofiles.os import makedirs, path, remove, rmdir
 from pydantic import BaseModel, Field
 
+from scrape_it_now.helpers import IS_CI
 from scrape_it_now.helpers.logging import logger
 from scrape_it_now.helpers.resources import file_lock, local_disk_cache_path
 from scrape_it_now.models.message import Message
@@ -254,7 +255,6 @@ class LocalDiskBlob(IBlob):
 class QueueConfig(BaseModel):
     name: str
     table: str = "queue"
-    timeout: int = 30
 
     async def db_path(self) -> str:
         return await path.abspath(
@@ -398,10 +398,7 @@ class LocalDiskQueue(IQueue):
         await makedirs(dirname(file_path), exist_ok=True)
 
         # Initialize the database
-        async with aiosqlite.connect(
-            database=file_path,
-            timeout=self._config.timeout,  # Wait for 30 secs before giving up
-        ) as connection:
+        async with self._use_connection() as connection:
             # Enable WAL mode to allow multiple readers and one writer
             await connection.execute(
                 """
@@ -437,7 +434,7 @@ class LocalDiskQueue(IQueue):
         # Connect and return the connection
         async with aiosqlite.connect(
             database=await self._config.db_path(),
-            timeout=self._config.timeout,  # Wait for 30 secs before giving up
+            timeout=2 * 60 if IS_CI else 30,  # 2 mins in CI, 30 secs in production
         ) as connection:
             yield connection
 

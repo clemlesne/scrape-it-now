@@ -41,6 +41,7 @@ LOCALHOST_URL = "http://localhost:8000"
     ],
     ids=lambda x: x,
 )
+@pytest.mark.benchmark
 async def test_scrape_page_website(
     website: str,
     browser: Browser,

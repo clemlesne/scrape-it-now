@@ -75,7 +75,7 @@ _ads_pattern_cache: re.Pattern | None = None
 
 # Bowser
 BROWSER_NAME = "chromium"
-BROWSER_TIMEOUT_MS = 180000  # 3 mins
+BROWSER_TIMEOUT_MS = 3 * 60 * 1000  # 3 mins
 
 
 async def _queue(  # noqa: PLR0913
@@ -1005,7 +1005,6 @@ async def _scrape_page(  # noqa: PLR0913, PLR0911, PLR0912, PLR0915
             # Convert HTML to Markdown
             full_markdown = convert_text(
                 format="html",  # Input is HTML
-                sandbox=True,  # Enable sandbox mode, we don't know what we are scraping
                 source=full_html_minus_resources,
                 to="markdown-fenced_divs-native_divs-raw_html-bracketed_spans-native_spans-link_attributes-header_attributes-inline_code_attributes",
                 verify_format=False,  # We know the format, don't verify it
@@ -1364,7 +1363,6 @@ async def _get_broswer(
     """
     # Launch the browser
     browser = await browser_type.launch(
-        chromium_sandbox=True,  # Enable the sandbox for security, we don't know what we are scraping
         timeout=BROWSER_TIMEOUT_MS,
         # See: https://github.com/microsoft/playwright/blob/99a36310570617222290c09b96a2026beb8b00f9/packages/playwright-core/src/server/chromium/chromium.ts
         args=[

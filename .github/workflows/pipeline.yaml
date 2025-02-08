@@ -59,7 +59,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4.1.7
 
-      - name: Set up uv
+      - name: Setup uv
         uses: astral-sh/setup-uv@v4.2.0
         with:
           enable-cache: true
@@ -85,7 +85,7 @@ jobs:
           key: ruff-${{ github.head_ref || github.ref_name }}-${{ hashFiles('uv.lock') }}
           path: .ruff_cache
 
-      - name: Set up dependencies
+      - name: Setup dependencies
         run: make install-deps
 
       # See: https://github.com/ungoogled-software/ungoogled-chromium/issues/2804#issuecomment-2081611387
@@ -116,7 +116,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4.1.2
 
-      - name: Set up uv
+      - name: Setup uv
         uses: astral-sh/setup-uv@v4.2.0
         with:
           enable-cache: true
@@ -180,7 +180,7 @@ jobs:
           path: dist
           pattern: wheels
 
-      - name: Set up Syft
+      - name: Setup Syft
         uses: anchore/sbom-action/download-syft@v0.16.1
 
       - name: Run scan

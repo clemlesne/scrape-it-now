@@ -118,7 +118,7 @@ async def file_lock(file_path: str, timeout: int = 60) -> AsyncGenerator[None, N
     """
     Lock a file for exclusive access.
 
-    File path is built with `.lock` appended to the file path. Timeout is in seconds. If the folder does not exist, it will be created.
+    File path is built with `.lock` appended to the file path. Timeout is in secs. If the folder does not exist, it will be created.
     """
     full_path = await path.abspath(file_path)
     lock_file = f"{full_path}.lock"

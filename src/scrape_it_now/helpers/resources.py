@@ -1,7 +1,7 @@
 import asyncio
 import hashlib
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from datetime import UTC, datetime, timedelta
 from os.path import dirname, join
 from pathlib import Path
@@ -156,8 +156,7 @@ async def file_lock(file_path: str, timeout: int = 60) -> AsyncGenerator[None, N
         yield
 
     finally:
-        try:
-            # Remove the lock file
+        # Remove the lock file
+        # Catch race condition to preserve idempotency
+        with suppress(FileNotFoundError):
             await remove(lock_file)
-        except FileNotFoundError:
-            pass

@@ -2,6 +2,7 @@ import asyncio
 import random
 import re
 from collections.abc import Awaitable, Callable
+from contextlib import suppress
 from datetime import UTC, datetime, timedelta
 from functools import lru_cache
 from http import HTTPStatus
@@ -578,10 +579,8 @@ async def _worker_single_message(  # noqa: PLR0913
     except ValidationError:
         # TODO: Implement a dead-letter queue
         logger.warning("%s cannot be parsed, it will be deleted", message)
-        try:
+        with suppress(MessageNotFoundError):
             await in_queue.delete_message(message)
-        except MessageNotFoundError:
-            pass
         return
 
     # Enhance logging for each task
@@ -1295,11 +1294,9 @@ async def state(  # noqa: PLR0913
     ) as blob:
         model = None
         # Load the state
-        try:
+        with suppress(BlobNotFoundError, ValidationError):
             state_raw = await blob.download_blob(JOB_STATE_NAME)
             model = StateJobModel.model_validate_json(state_raw)
-        except (BlobNotFoundError, ValidationError):
-            pass
         # Return model
         return model
 

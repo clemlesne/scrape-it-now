@@ -1,6 +1,7 @@
 from base64 import b64decode, b64encode
 from binascii import Error as BinasciiError
 from collections.abc import AsyncGenerator
+from contextlib import suppress
 from typing import Any
 
 from azure.core.exceptions import (
@@ -114,12 +115,10 @@ class AzureQueueStorage(IQueue):
     async def create_queue(
         self,
     ) -> bool:
-        try:
+        with suppress(ResourceExistsError):
             await self._client.create_queue()
             logger.debug('Created Queue Storage "%s"', self._config.name)
             return True
-        except ResourceExistsError:
-            pass
         return False
 
     @retry(

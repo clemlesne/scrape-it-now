@@ -1,5 +1,5 @@
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from typing import Any
 
 from azure.core.exceptions import (
@@ -191,11 +191,9 @@ class AzureBlobStorage(IBlob):
             container=self._config.name,
         )
         # Create if it does not exist
-        try:
+        with suppress(ResourceExistsError):
             await self._client.create_container()
             logger.debug('Created Blob Storage "%s"', self._config.name)
-        except ResourceExistsError:
-            pass
         return self
 
     async def __aexit__(self, *exc: Any) -> None:

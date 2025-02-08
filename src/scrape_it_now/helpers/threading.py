@@ -1,5 +1,6 @@
 import asyncio
 from collections.abc import Awaitable, Callable
+from contextlib import suppress
 from os import cpu_count
 from threading import Thread, current_thread
 
@@ -41,11 +42,9 @@ def run_workers(
     logger.debug("Started %i workers", len(threads))
 
     # Wait
-    try:
+    with suppress(KeyboardInterrupt):
         for thread in threads:
             thread.join()
-    except KeyboardInterrupt:
-        pass
 
 
 async def _worker_wrapper(func: Callable[..., Awaitable], **kwargs) -> None:

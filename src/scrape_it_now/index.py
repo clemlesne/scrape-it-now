@@ -1,5 +1,6 @@
 import asyncio
 import math
+from contextlib import suppress
 from http import HTTPStatus
 
 import aiojobs
@@ -109,7 +110,8 @@ async def _process_one(  # noqa: PLR0913
     logger.info("Chunked into %i parts", len(chunks))
 
     # Check if the document is already indexed
-    try:
+    # If a chunk is not found, it is not indexed, thus we can re-process the document
+    with suppress(DocumentNotFoundError):
         await asyncio.gather(
             *[
                 search.get_document(key=doc_id, selected_fields={"id"})
@@ -118,8 +120,6 @@ async def _process_one(  # noqa: PLR0913
         )
         logger.info("Already indexed, abort")
         return
-    except DocumentNotFoundError:  # If a chunk is not found, it is not indexed, thus we can re-process the document
-        pass
 
     # Generate the embeddings by block (mitigate API throughput limits)
     embeddings = []

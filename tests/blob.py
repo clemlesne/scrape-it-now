@@ -1,6 +1,7 @@
 import asyncio
 import random
 import string
+from contextlib import suppress
 from os import environ as env
 from uuid import uuid4
 
@@ -49,11 +50,9 @@ async def test_acid(provider: BlobProvider) -> None:
             test_content_bytes = blob_content.encode(client.encoding)
 
             # Check not exists
-            try:
+            with suppress(BlobNotFoundError):
                 await client.download_blob(blob_name)
                 raise AssertionError("Blob should not exist")
-            except BlobNotFoundError:
-                pass
 
             # Upload test content
             await client.upload_blob(
@@ -74,7 +73,7 @@ async def test_acid(provider: BlobProvider) -> None:
                 raise AssertionError("Blob should exist") from e
 
             # Check raise error on overwrite
-            try:
+            with suppress(BlobAlreadyExistsError):
                 await client.upload_blob(
                     blob=blob_name,
                     data=test_content_bytes,
@@ -82,8 +81,6 @@ async def test_acid(provider: BlobProvider) -> None:
                     overwrite=False,
                 )
                 raise AssertionError("Should raise error with overwrite disabled")
-            except BlobAlreadyExistsError:
-                pass
 
             # Check overwrite
             await client.upload_blob(

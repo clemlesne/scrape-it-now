@@ -2,7 +2,7 @@ import asyncio
 import random
 import string
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from datetime import UTC, datetime, timedelta
 from json import JSONDecodeError, loads
 from os import walk
@@ -114,11 +114,10 @@ class LocalDiskBlob(IBlob):
             yield lease.lease_id
 
         finally:
-            try:
-                # Remove the lease file
+            # Remove the lease file
+            # Catch race condition to preserve idempotency
+            with suppress(FileNotFoundError):
                 await remove(lease_file)
-            except FileNotFoundError:
-                pass
 
     async def upload_blob(
         self,
@@ -168,11 +167,9 @@ class LocalDiskBlob(IBlob):
 
             # Lease is expired
             if lease.until <= datetime.now(UTC):
-                try:
-                    # Remove the lease file
+                # Remove the lease file
+                with suppress(FileNotFoundError):
                     await remove(lease_file)
-                except FileNotFoundError:
-                    pass
 
             # Lease is not expired
             elif lease.until > datetime.now(UTC):

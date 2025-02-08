@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import suppress
 from os.path import join
 from pathlib import Path
 
@@ -45,15 +46,13 @@ async def test_lock_path_concurrent_simple(tmp_path: Path) -> None:
     Test that the lock cannot be acquired concurrently before the configured timeout.
     """
     async with file_lock(str(tmp_path)):
-        try:
+        with suppress(TimeoutError):
             async with asyncio.timeout(5):
                 async with file_lock(
                     str(tmp_path),
                     timeout=10,
                 ):
                     raise AssertionError("Should not be able to acquire lock")
-        except TimeoutError:
-            pass
 
 
 async def test_lock_path_concurrent_timeout(tmp_path: Path) -> None:

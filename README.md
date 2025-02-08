@@ -6,6 +6,7 @@ Web scraper made for AI and simplicity in mind. It runs as a CLI that can be par
 [![GitHub project license](https://img.shields.io/github/license/clemlesne/scrape-it-now)](https://github.com/clemlesne/scrape-it-now/blob/main/LICENSE)
 [![PyPI package version](https://img.shields.io/pypi/v/scrape-it-now)](https://pypi.org/project/scrape-it-now)
 [![PyPI supported Python versions](https://img.shields.io/pypi/pyversions/scrape-it-now)](https://pypi.org/project/scrape-it-now)
+[![CodSpeed report](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://codspeed.io/clemlesne/scrape-it-now)
 
 ## Features
 

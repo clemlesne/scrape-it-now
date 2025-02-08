@@ -25,6 +25,7 @@ from scrape_it_now.persistence.iblob import (
     ],
     ids=lambda x: x.value,
 )
+@pytest.mark.benchmark
 @pytest.mark.repeat(10)  # Catch multi-threading and concurrency issues
 async def test_acid(provider: BlobProvider) -> None:
     # Init values

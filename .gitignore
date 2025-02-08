@@ -291,3 +291,6 @@ test-reports/
 # Local .env
 !.env.example
 .env.*
+
+# CodSpeed
+.codspeed/

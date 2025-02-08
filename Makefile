@@ -34,12 +34,12 @@ install:
 
 	$(MAKE) install-deps
 
-	@echo "➡️ Installing Playwright dependencies..."
-	uv run playwright install chrome --with-deps
-
 install-deps:
 	@echo "➡️ Syncing dependencies..."
 	uv sync --extra dev
+
+	@echo "➡️ Installing Playwright dependencies..."
+	uv run playwright install chrome --with-deps
 
 upgrade:
 	@echo "➡️ Updating Git submodules..."

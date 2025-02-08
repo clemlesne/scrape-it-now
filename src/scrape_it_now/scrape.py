@@ -1199,7 +1199,7 @@ async def run(  # noqa: PLR0913
     logger.info("Start scraping job %s", job)
 
     # Make sure the dependencies are installed
-    # Note: To install system deps, use the "scrape install" command
+    # Note: This won't install required system packages, for that use "scrape install"
     await install(False)
 
     # Parse cache_refresh

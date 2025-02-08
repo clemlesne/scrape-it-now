@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, suppress
 from typing import Any
@@ -174,10 +175,25 @@ class AzureBlobStorage(IBlob):
     async def delete_container(
         self,
     ) -> None:
-        await self._client.delete_container()
-        logger.info('Deleted Blob Storage "%s"', self._config.name)
+        # Delete the container
+        # Catch race condition to preserve idempotency
+        with suppress(ResourceNotFoundError):
+            # Delete
+            await self._client.delete_container()
+            # Wait for it to be deleted, API is eventually consistent
+            while True:
+                try:
+                    properties = await self._client.get_container_properties()
+                    if properties.deleted:
+                        break
+                    await asyncio.sleep(2)
+                # Deleted
+                except ResourceNotFoundError:
+                    break
+            logger.info('Deleted Blob Storage "%s"', self._config.name)
 
     async def __aenter__(self) -> "AzureBlobStorage":
+        # Create the client
         self._service = BlobServiceClient(
             # Deployment
             account_url=f"https://{self._config.account_name}.blob.{self._config.endpoint_suffix}",
@@ -190,10 +206,21 @@ class AzureBlobStorage(IBlob):
             # Deployment
             container=self._config.name,
         )
+
         # Create if it does not exist
         with suppress(ResourceExistsError):
+            # Create
             await self._client.create_container()
+            # Wait for it to be created, API is eventually consistent
+            while True:
+                with suppress(ResourceNotFoundError):
+                    properties = await self._client.get_container_properties()
+                    if not properties.deleted:
+                        break
+                await asyncio.sleep(2)
             logger.debug('Created Blob Storage "%s"', self._config.name)
+
+        # Return instance
         return self
 
     async def __aexit__(self, *exc: Any) -> None:

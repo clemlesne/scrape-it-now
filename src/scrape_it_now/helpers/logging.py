@@ -18,6 +18,15 @@ from structlog.processors import (
 )
 from structlog.stdlib import PositionalArgumentsFormatter
 
+from scrape_it_now.helpers import IS_CI
+
+
+def enable_debug_logging() -> None:
+    configure(
+        wrapper_class=make_filtering_bound_logger(DEBUG),
+    )
+
+
 configure_once(
     cache_logger_on_first_use=True,
     context_class=dict,
@@ -44,8 +53,6 @@ configure_once(
 # Framework does not exactly expose Logger, but that's easier to work with
 logger: Logger = structlog_get_logger("scrape-it-now")
 
-
-def enable_debug_logging() -> None:
-    configure(
-        wrapper_class=make_filtering_bound_logger(DEBUG),
-    )
+# Enable debug logging on CI
+if IS_CI:
+    enable_debug_logging()

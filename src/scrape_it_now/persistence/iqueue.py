@@ -12,6 +12,7 @@ class MessageNotFoundError(Exception):
 
 @unique
 class Provider(str, Enum):
+    AWS_SQS = "aws_sqs"
     AZURE_QUEUE_STORAGE = "azure_queue_storage"
     LOCAL_DISK = "local_disk"
 

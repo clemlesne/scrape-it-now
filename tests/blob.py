@@ -17,13 +17,16 @@ from scrape_it_now.persistence.iblob import (
     Provider as BlobProvider,
 )
 
+PROVIDERS = [
+    BlobProvider.AWS_S3,
+    BlobProvider.AZURE_BLOB_STORAGE,
+    BlobProvider.LOCAL_DISK,
+]
+
 
 @pytest.mark.parametrize(
     "provider",
-    [
-        BlobProvider.AZURE_BLOB_STORAGE,
-        BlobProvider.LOCAL_DISK,
-    ],
+    PROVIDERS,
     ids=lambda x: x.value,
 )
 @pytest.mark.benchmark
@@ -40,6 +43,9 @@ async def test_acid(provider: BlobProvider) -> None:
 
     # Init client
     async with blob_client(
+        aws_access_key_id=env["AWS_ACCESS_KEY_ID"],
+        aws_s3_endpoint=env["AWS_S3_ENDPOINT"],
+        aws_secret_access_key=env["AWS_SECRET_ACCESS_KEY"],
         azure_storage_access_key=None,
         azure_storage_account_name=env["AZURE_STORAGE_ACCOUNT_NAME"],
         azure_storage_endpoint_suffix="core.windows.net",
@@ -98,10 +104,7 @@ async def test_acid(provider: BlobProvider) -> None:
 
 @pytest.mark.parametrize(
     "provider",
-    [
-        BlobProvider.AZURE_BLOB_STORAGE,
-        BlobProvider.LOCAL_DISK,
-    ],
+    PROVIDERS,
     ids=lambda x: x.value,
 )
 @pytest.mark.repeat(10)  # Catch multi-threading and concurrency issues
@@ -117,6 +120,9 @@ async def test_lease(provider: BlobProvider) -> None:
 
     # Init client
     async with blob_client(
+        aws_access_key_id=env["AWS_ACCESS_KEY_ID"],
+        aws_s3_endpoint=env["AWS_S3_ENDPOINT"],
+        aws_secret_access_key=env["AWS_SECRET_ACCESS_KEY"],
         azure_storage_access_key=None,
         azure_storage_account_name=env["AZURE_STORAGE_ACCOUNT_NAME"],
         azure_storage_endpoint_suffix="core.windows.net",
@@ -239,10 +245,7 @@ async def test_lease(provider: BlobProvider) -> None:
 
 @pytest.mark.parametrize(
     "provider",
-    [
-        BlobProvider.AZURE_BLOB_STORAGE,
-        BlobProvider.LOCAL_DISK,
-    ],
+    PROVIDERS,
     ids=lambda x: x.value,
 )
 @pytest.mark.repeat(5)  # Catch multi-threading and concurrency issues
@@ -262,6 +265,9 @@ async def test_upload_many(provider: BlobProvider) -> None:
 
     # Init client
     async with blob_client(
+        aws_access_key_id=env["AWS_ACCESS_KEY_ID"],
+        aws_s3_endpoint=env["AWS_S3_ENDPOINT"],
+        aws_secret_access_key=env["AWS_SECRET_ACCESS_KEY"],
         azure_storage_access_key=None,
         azure_storage_account_name=env["AZURE_STORAGE_ACCOUNT_NAME"],
         azure_storage_endpoint_suffix="core.windows.net",

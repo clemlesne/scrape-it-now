@@ -12,13 +12,16 @@ from scrape_it_now.persistence.iqueue import (
     Provider as QueueProvider,
 )
 
+PROVIDERS = [
+    QueueProvider.AWS_SQS,
+    QueueProvider.AZURE_QUEUE_STORAGE,
+    QueueProvider.LOCAL_DISK,
+]
+
 
 @pytest.mark.parametrize(
     "provider",
-    [
-        QueueProvider.AZURE_QUEUE_STORAGE,
-        QueueProvider.LOCAL_DISK,
-    ],
+    PROVIDERS,
     ids=lambda x: x.value,
 )
 @pytest.mark.benchmark
@@ -36,6 +39,10 @@ async def test_acid(provider: QueueProvider) -> None:
 
     # Init client
     async with queue_client(
+        aws_access_key_id=env["AWS_ACCESS_KEY_ID"],
+        aws_secret_access_key=env["AWS_SECRET_ACCESS_KEY"],
+        aws_sqs_endpoint=env["AWS_SQS_ENDPOINT"],
+        aws_sqs_region=env["AWS_SQS_REGION"],
         azure_storage_access_key=None,
         azure_storage_account_name=env["AZURE_STORAGE_ACCOUNT_NAME"],
         azure_storage_endpoint_suffix="core.windows.net",
@@ -114,10 +121,7 @@ async def test_acid(provider: QueueProvider) -> None:
 
 @pytest.mark.parametrize(
     "provider",
-    [
-        QueueProvider.AZURE_QUEUE_STORAGE,
-        QueueProvider.LOCAL_DISK,
-    ],
+    PROVIDERS,
     ids=lambda x: x.value,
 )
 @pytest.mark.repeat(10)  # Catch multi-threading and concurrency issues
@@ -135,6 +139,10 @@ async def test_send_many(provider: QueueProvider) -> None:
 
     # Init client
     async with queue_client(
+        aws_access_key_id=env["AWS_ACCESS_KEY_ID"],
+        aws_secret_access_key=env["AWS_SECRET_ACCESS_KEY"],
+        aws_sqs_endpoint=env["AWS_SQS_ENDPOINT"],
+        aws_sqs_region=env["AWS_SQS_REGION"],
         azure_storage_access_key=None,
         azure_storage_account_name=env["AZURE_STORAGE_ACCOUNT_NAME"],
         azure_storage_endpoint_suffix="core.windows.net",

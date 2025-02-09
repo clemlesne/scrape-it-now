@@ -8,16 +8,16 @@ from json import JSONDecodeError, loads
 from os import walk
 from os.path import dirname, join
 from typing import Any
-from uuid import uuid4
 
 import aiosqlite
 from aiofiles import open  # noqa: A004
 from aiofiles.os import makedirs, path, remove, rmdir
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from scrape_it_now.helpers import IS_CI
 from scrape_it_now.helpers.logging import logger
 from scrape_it_now.helpers.resources import file_lock, local_disk_cache_path
+from scrape_it_now.models.lease import LeaseModel
 from scrape_it_now.models.message import Message
 from scrape_it_now.persistence.iblob import (
     BlobAlreadyExistsError,
@@ -37,11 +37,6 @@ class BlobConfig(BaseModel):
 
     async def working_path(self) -> str:
         return await path.abspath(join(self.path, self.name))
-
-
-class LeaseModel(BaseModel):
-    lease_id: str = Field(default_factory=lambda: str(uuid4()))
-    until: datetime
 
 
 class LocalDiskBlob(IBlob):

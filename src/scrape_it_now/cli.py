@@ -78,6 +78,67 @@ def azure_storage_params(func):
     return wrapper
 
 
+def aws_common_params(func):
+    @click.option(
+        "--aws-access-key-id",
+        "-aaki",
+        envvar="AWS_ACCESS_KEY_ID",
+        help="AWS access key ID. Used for AWS S3 and AWS SQS providers.",
+        type=str,
+    )
+    @click.option(
+        "--aws-secret-access-key",
+        "-asak",
+        envvar="AWS_SECRET_ACCESS_KEY",
+        help="AWS secret access key. Used for AWS S3 and AWS SQS providers.",
+        hide_input=True,
+        type=str,
+    )
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
+def aws_s3_params(func):
+    @click.option(
+        "--aws-s3-endpoint",
+        "-ase",
+        envvar="AWS_S3_ENDPOINT",
+        help="AWS S3 endpoint. Mandatory for AWS S3 provider.",
+        type=str,
+    )
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
+def aws_sqs_params(func):
+    @click.option(
+        "--aws-sqs-endpoint",
+        "-ase",
+        envvar="AWS_SQS_ENDPOINT",
+        help="AWS SQS endpoint. Mandatory for AWS SQS provider.",
+        type=str,
+    )
+    @click.option(
+        "--aws-sqs-region",
+        "-asr",
+        default="eu-west-1",
+        envvar="AWS_SQS_REGION",
+        help="AWS SQS region. Mandatory for AWS SQS provider.",
+        type=str,
+    )
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
 @click.group
 def cli() -> None:
     """
@@ -268,10 +329,18 @@ async def scrape_install(with_deps: bool) -> None:
     envvar="URL",
 )
 @scrape.command("run")
-@common_params
+@aws_common_params
+@aws_s3_params
+@aws_sqs_params
 @azure_storage_params
+@common_params
 @run_in_async
 async def scrape_run(  # noqa: PLR0913
+    aws_access_key_id: str | None,
+    aws_s3_endpoint: str | None,
+    aws_secret_access_key: str | None,
+    aws_sqs_endpoint: str | None,
+    aws_sqs_region: str | None,
     azure_storage_access_key: str | None,
     azure_storage_account_name: str | None,
     azure_storage_endpoint_suffix: str | None,
@@ -324,6 +393,11 @@ async def scrape_run(  # noqa: PLR0913
         logger.info("Whitelist: %s", whitelist_parsed)
 
     await scrape_backend_run(
+        aws_access_key_id=aws_access_key_id,
+        aws_s3_endpoint=aws_s3_endpoint,
+        aws_secret_access_key=aws_secret_access_key,
+        aws_sqs_endpoint=aws_sqs_endpoint,
+        aws_sqs_region=aws_sqs_region,
         azure_storage_access_key=azure_storage_access_key,
         azure_storage_account_name=azure_storage_account_name,
         azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
@@ -366,10 +440,15 @@ async def scrape_run(  # noqa: PLR0913
     envvar="JOB_NAME",
 )
 @scrape.command("status")
-@common_params
+@aws_common_params
+@aws_s3_params
 @azure_storage_params
+@common_params
 @run_in_async
 async def scrape_status(  # noqa: PLR0913
+    aws_access_key_id: str | None,
+    aws_s3_endpoint: str | None,
+    aws_secret_access_key: str | None,
     azure_storage_access_key: str | None,
     azure_storage_account_name: str | None,
     azure_storage_endpoint_suffix: str | None,
@@ -381,6 +460,9 @@ async def scrape_status(  # noqa: PLR0913
     Get the state of a scraping job.
     """
     state = await scrape_backend_state(
+        aws_access_key_id=aws_access_key_id,
+        aws_s3_endpoint=aws_s3_endpoint,
+        aws_secret_access_key=aws_secret_access_key,
         azure_storage_access_key=azure_storage_access_key,
         azure_storage_account_name=azure_storage_account_name,
         azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
@@ -525,10 +607,18 @@ def index() -> None:
     envvar="JOB_NAME",
 )
 @index.command("run")
+@aws_common_params
+@aws_s3_params
+@aws_sqs_params
 @azure_storage_params
 @common_params
 @run_in_async
 async def index_run(  # noqa: PLR0913
+    aws_access_key_id: str | None,
+    aws_s3_endpoint: str | None,
+    aws_secret_access_key: str | None,
+    aws_sqs_endpoint: str | None,
+    aws_sqs_region: str | None,
     azure_openai_api_key: str | None,
     azure_openai_embedding_deployment_name: str,
     azure_openai_embedding_dimensions: int,
@@ -556,6 +646,11 @@ async def index_run(  # noqa: PLR0913
     Program is built to be idempotent. Multiple runs of the same job can be ran simultaneously and won't duplicate data.
     """
     await index_backend_run(
+        aws_access_key_id=aws_access_key_id,
+        aws_s3_endpoint=aws_s3_endpoint,
+        aws_secret_access_key=aws_secret_access_key,
+        aws_sqs_endpoint=aws_sqs_endpoint,
+        aws_sqs_region=aws_sqs_region,
         azure_openai_api_key=azure_openai_api_key,
         azure_openai_embedding_deployment=azure_openai_embedding_deployment_name,
         azure_openai_embedding_dimensions=azure_openai_embedding_dimensions,

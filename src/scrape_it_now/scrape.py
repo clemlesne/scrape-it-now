@@ -472,6 +472,11 @@ async def _update_job_state(
 
 
 async def _worker(  # noqa: PLR0913
+    aws_access_key_id: str | None,
+    aws_s3_endpoint: str | None,
+    aws_secret_access_key: str | None,
+    aws_sqs_endpoint: str | None,
+    aws_sqs_region: str | None,
     azure_storage_access_key: str | None,
     azure_storage_account_name: str | None,
     azure_storage_endpoint_suffix: str | None,
@@ -493,6 +498,9 @@ async def _worker(  # noqa: PLR0913
     # Init clients
     async with (
         blob_client(
+            aws_access_key_id=aws_access_key_id,
+            aws_s3_endpoint=aws_s3_endpoint,
+            aws_secret_access_key=aws_secret_access_key,
             azure_storage_access_key=azure_storage_access_key,
             azure_storage_account_name=azure_storage_account_name,
             azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
@@ -501,6 +509,10 @@ async def _worker(  # noqa: PLR0913
             provider=blob_provider,
         ) as blob,
         queue_client(
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+            aws_sqs_endpoint=aws_sqs_endpoint,
+            aws_sqs_region=aws_sqs_region,
             azure_storage_access_key=azure_storage_access_key,
             azure_storage_account_name=azure_storage_account_name,
             azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
@@ -508,6 +520,10 @@ async def _worker(  # noqa: PLR0913
             queue=scrape_queue_name(job),
         ) as in_queue,
         queue_client(
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+            aws_sqs_endpoint=aws_sqs_endpoint,
+            aws_sqs_region=aws_sqs_region,
             azure_storage_access_key=azure_storage_access_key,
             azure_storage_account_name=azure_storage_account_name,
             azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
@@ -1176,6 +1192,11 @@ def _format_path(path: str) -> str:
 
 
 async def run(  # noqa: PLR0913
+    aws_access_key_id: str | None,
+    aws_s3_endpoint: str | None,
+    aws_secret_access_key: str | None,
+    aws_sqs_endpoint: str | None,
+    aws_sqs_region: str | None,
     azure_storage_access_key: str | None,
     azure_storage_account_name: str | None,
     azure_storage_endpoint_suffix: str | None,
@@ -1211,6 +1232,9 @@ async def run(  # noqa: PLR0913
     # Init clients
     async with (
         blob_client(
+            aws_access_key_id=aws_access_key_id,
+            aws_s3_endpoint=aws_s3_endpoint,
+            aws_secret_access_key=aws_secret_access_key,
             azure_storage_access_key=azure_storage_access_key,
             azure_storage_account_name=azure_storage_account_name,
             azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
@@ -1219,6 +1243,10 @@ async def run(  # noqa: PLR0913
             provider=blob_provider,
         ) as blob,
         queue_client(
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+            aws_sqs_endpoint=aws_sqs_endpoint,
+            aws_sqs_region=aws_sqs_region,
             azure_storage_access_key=azure_storage_access_key,
             azure_storage_account_name=azure_storage_account_name,
             azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
@@ -1253,6 +1281,11 @@ async def run(  # noqa: PLR0913
         )
 
     run_workers(
+        aws_access_key_id=aws_access_key_id,
+        aws_s3_endpoint=aws_s3_endpoint,
+        aws_secret_access_key=aws_secret_access_key,
+        aws_sqs_endpoint=aws_sqs_endpoint,
+        aws_sqs_region=aws_sqs_region,
         azure_storage_access_key=azure_storage_access_key,
         azure_storage_account_name=azure_storage_account_name,
         azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,
@@ -1275,6 +1308,9 @@ async def run(  # noqa: PLR0913
 
 
 async def state(  # noqa: PLR0913
+    aws_access_key_id: str | None,
+    aws_s3_endpoint: str | None,
+    aws_secret_access_key: str | None,
     azure_storage_access_key: str | None,
     azure_storage_account_name: str | None,
     azure_storage_endpoint_suffix: str | None,
@@ -1284,6 +1320,9 @@ async def state(  # noqa: PLR0913
 ) -> StateJobModel | None:
     # Init clients
     async with blob_client(
+        aws_access_key_id=aws_access_key_id,
+        aws_s3_endpoint=aws_s3_endpoint,
+        aws_secret_access_key=aws_secret_access_key,
         azure_storage_access_key=azure_storage_access_key,
         azure_storage_account_name=azure_storage_account_name,
         azure_storage_endpoint_suffix=azure_storage_endpoint_suffix,

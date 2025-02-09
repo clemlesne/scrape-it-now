@@ -74,8 +74,9 @@ JOB_STATE_NAME = "job.json"
 _ads_pattern_cache: re.Pattern | None = None
 
 # Bowser
-BROWSER_NAME = "chromium"
-BROWSER_TIMEOUT_MS = 180000  # 3 mins
+BROWSER_TIMEOUT_MS = (
+    5 * 60 * 1000 if IS_CI else 3 * 60 * 1000
+)  # 5 mins in CI, 3 secs in production
 
 
 async def _queue(  # noqa: PLR0913
@@ -524,9 +525,8 @@ async def _worker(  # noqa: PLR0913
         logger.debug("Runing %i concurrent tasks per worker", scheduler.limit)
 
         # Get a browser instance
-        browser_type: BrowserType = getattr(p, BROWSER_NAME)
-        browser = await _get_broswer(browser_type)
-        logger.debug("Started browser %s", browser_type.name)
+        browser = await _get_broswer(p.chromium)
+        logger.debug("Started browser %s", browser.browser_type.name)
 
         # Process the queue
         while messages := in_queue.receive_messages(
@@ -1331,9 +1331,12 @@ async def _install_browser(with_deps: bool) -> None:
     # Ensure only one worker is installing the browser
     async with file_lock(driver_executable):
         # Build the command arguments
-        args = [driver_executable, driver_cli, "install", BROWSER_NAME]
+        args = [driver_executable, driver_cli, "install", "chromium"]
         if with_deps:
-            args.append("--with-deps")
+            args += [
+                "--with-deps",  # Install system deps with the system package manager
+                "--no-shell",  # Reduce install size for headlessmode (see: https://playwright.dev/python/docs/browsers#chromium-new-headless-mode)
+            ]
 
         # Run
         proc = await asyncio.create_subprocess_shell(
@@ -1360,16 +1363,16 @@ async def _get_broswer(
     browser_type: BrowserType,
 ) -> Browser:
     """
-    Launch a browser instance.
+    Launch a headless Chromium instance.
     """
     # Launch the browser
     browser = await browser_type.launch(
+        channel="chromium",  # Explicitly use the new headless mode (see: https://playwright.dev/python/docs/browsers#chromium-new-headless-mode)
         chromium_sandbox=True,  # Enable the sandbox for security, we don't know what we are scraping
         timeout=BROWSER_TIMEOUT_MS,
-        # See: https://github.com/microsoft/playwright/blob/99a36310570617222290c09b96a2026beb8b00f9/packages/playwright-core/src/server/chromium/chromium.ts
         args=[
             "--disable-gl-drawing-for-tests",  # Disable UI rendering, lower CPU usage
-        ],
+        ],  # See: https://github.com/microsoft/playwright/blob/99a36310570617222290c09b96a2026beb8b00f9/packages/playwright-core/src/server/chromium/chromium.ts
     )
     return browser
 

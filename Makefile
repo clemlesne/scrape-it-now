@@ -39,7 +39,7 @@ install-deps:
 	uv sync --extra dev
 
 	@echo "➡️ Installing Playwright dependencies..."
-	uv run playwright install chrome --with-deps
+	uv run playwright install chromium --with-deps --no-shell
 
 upgrade:
 	@echo "➡️ Updating Git submodules..."

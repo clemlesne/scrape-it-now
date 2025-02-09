@@ -76,6 +76,7 @@ test-unit-run:
 	@echo "➡️ Unit tests (Pytest)..."
 	uv run pytest \
 		--junit-xml=test-reports/$(version_full).xml \
+		--log-file=test-reports/$(version_full).log \
 		--maxprocesses=4 \
 		-n=logical \
 		tests/*.py

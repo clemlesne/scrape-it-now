@@ -103,7 +103,6 @@ scrape_it_now = ["resources/*"]
 asyncio_default_fixture_loop_scope = "function"
 asyncio_mode = "auto"
 junit_suite_name = "scrape-it-now"
-log_file = "test-reports/last-logs.txt"
 log_file_level = "INFO"
 pythonpath = ["src"]
 testpaths = ["tests"]

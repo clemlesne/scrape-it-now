@@ -254,7 +254,6 @@ class LocalDiskBlob(IBlob):
 class QueueConfig(BaseModel):
     name: str
     table: str = "queue"
-    timeout: int = 30
 
     async def db_path(self) -> str:
         return await path.abspath(
@@ -398,10 +397,7 @@ class LocalDiskQueue(IQueue):
         await makedirs(dirname(file_path), exist_ok=True)
 
         # Initialize the database
-        async with aiosqlite.connect(
-            database=file_path,
-            timeout=self._config.timeout,  # Wait for 30 secs before giving up
-        ) as connection:
+        async with self._use_connection() as connection:
             # Enable WAL mode to allow multiple readers and one writer
             await connection.execute(
                 """
@@ -437,7 +433,7 @@ class LocalDiskQueue(IQueue):
         # Connect and return the connection
         async with aiosqlite.connect(
             database=await self._config.db_path(),
-            timeout=self._config.timeout,  # Wait for 30 secs before giving up
+            timeout=30,  # 30 secs
         ) as connection:
             yield connection
 

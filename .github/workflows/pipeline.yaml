@@ -52,7 +52,8 @@ jobs:
         # Run all test suites
         step:
           - static
-          - unit
+          - unit-simple
+          - unit-profiling
         # Run on all supported Python versions
         python-version:
           - "3.11"
@@ -103,8 +104,16 @@ jobs:
       - name: Configure environment variables
         run: echo "${{ secrets.DOTENV_UNIT_TESTS }}" > .env
 
+      - name: Run test servers (unit)
+        if: ${{ contains(matrix.step, 'unit') }}
+        run: make run-test-servers
+
       - name: Run tests
         run: make test-${{ matrix.step }} version_full=${{ needs.init.outputs.VERSION_FULL }}
+
+      - name: Kill test servers (unit)
+        if: ${{ contains(matrix.step, 'unit') }}
+        run: make kill-test-servers
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4.3.6

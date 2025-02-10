@@ -74,9 +74,7 @@ JOB_STATE_NAME = "job.json"
 _ads_pattern_cache: re.Pattern | None = None
 
 # Bowser
-BROWSER_TIMEOUT_MS = (
-    5 * 60 * 1000 if IS_CI else 3 * 60 * 1000
-)  # 5 mins in CI, 3 secs in production
+BROWSER_TIMEOUT_MS = 3 * 60 * 1000  # 3 mins
 
 
 async def _queue(  # noqa: PLR0913

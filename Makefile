@@ -53,7 +53,9 @@ upgrade:
 
 test:
 	$(MAKE) test-static
-	$(MAKE) test-unit
+	$(MAKE) run-test-servers
+	$(MAKE) test-unit-simple
+	$(MAKE) kill-test-servers
 
 test-static:
 	@echo "➡️ Test dependencies issues (deptry)..."
@@ -65,21 +67,33 @@ test-static:
 	@echo "➡️ Test types (Pyright)..."
 	uv run pyright
 
-test-unit:
-	bash cicd/test-unit-ci.sh
-
-test-static-server:
+run-test-servers:
 	@echo "➡️ Starting local static server..."
-	python3 -m http.server -d ./tests/websites 8000
+	uv run -m http.server -d ./tests/websites 8000 & echo "$$!" > .static_server.pid
 
-test-unit-run:
-	@echo "➡️ Unit tests (Pytest)..."
+kill-test-servers:
+	@echo "➡️ Killing local static server..."
+	kill -s SIGKILL $(shell cat .static_server.pid)
+
+test-unit-simple:
+	@echo "➡️ Unit tests with no extra (Pytest)..."
 	uv run pytest \
-		--junit-xml=test-reports/$(version_full).xml \
-		--log-file=test-reports/$(version_full).log \
+		--junit-xml=test-reports/$(version_full)-simple.xml \
+		--log-file=test-reports/$(version_full)-simple.log \
 		--maxprocesses=4 \
 		-n=logical \
 		tests/*.py
+
+test-unit-profiling:
+	@echo "➡️ Unit tests with profiling (Pytest)..."
+	uv run scalene \
+		--json \
+		--outfile test-reports/$(version_full)-profiling.json \
+		--- -m pytest \
+			--junit-xml=test-reports/$(version_full)-profiling.xml \
+			--log-file=test-reports/$(version_full)-profiling.log \
+			-k "_profiling" \
+			tests/*.py
 
 dev:
 	uv pip install --editable .

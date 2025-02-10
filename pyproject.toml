@@ -76,6 +76,7 @@ dev = [
   "pytest-xdist[psutil]~=3.6", # Pytest plugin for parallel testing
   "pytest~=8.3",               # Testing framework
   "ruff~=0.6",                 # Linter
+  "scalene~=1.5",              # Profiler
 ]
 
 [project.urls]

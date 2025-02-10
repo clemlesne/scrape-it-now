@@ -22,7 +22,7 @@ from scrape_it_now.persistence.iqueue import (
     ids=lambda x: x.value,
 )
 @pytest.mark.repeat(10)  # Catch multi-threading and concurrency issues
-async def test_acid(provider: QueueProvider) -> None:
+async def test_acid_profiling(provider: QueueProvider) -> None:
     # Init values
     queue_name = _random_name()
     contents = [

@@ -60,7 +60,7 @@ test-static:
 	uv run deptry src
 
 	@echo "➡️ Test code smells (Ruff)..."
-	uv run ruff check --select I,PL,RUF,UP,ASYNC,A,DTZ,T20,ARG,PERF --ignore A005
+	uv run ruff check
 
 	@echo "➡️ Test types (Pyright)..."
 	uv run pyright
@@ -94,7 +94,7 @@ lint:
 	uv run ruff format
 
 	@echo "➡️ Lint with linter..."
-	uv run ruff check --select I,PL,RUF,UP,ASYNC,A,DTZ,T20,ARG,PERF --ignore A005 --fix
+	uv run ruff check --fix
 
 sbom:
 	@echo "🔍 Generating SBOM..."

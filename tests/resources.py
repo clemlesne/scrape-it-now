@@ -29,7 +29,7 @@ async def test_lock_file_removed(tmp_path: Path) -> None:
 
 async def test_lock_path_released(tmp_path: Path) -> None:
     """
-    Test tat the lock can be acquired again after the context manager exits.
+    Test that the lock can be acquired again after the context manager exits.
     """
     async with asyncio.timeout(5):
         async with file_lock(str(tmp_path)):

@@ -197,7 +197,7 @@ jobs:
           pattern: wheels
 
       - name: Setup Syft
-        uses: anchore/sbom-action/download-syft@v0.16.1
+        uses: anchore/sbom-action/download-syft@v0.20.2
 
       - name: Run scan
         run: make sbom version_full=${{ needs.init.outputs.VERSION_FULL }}

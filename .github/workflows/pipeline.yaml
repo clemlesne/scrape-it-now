@@ -16,6 +16,13 @@ on:
       - hotfix/*
       - main
 
+env:
+  # Tool versions
+  # See: https://devguide.python.org/versions
+  PYTHON_VERSION: 3.13
+  # See: https://github.com/astral-sh/uv/releases
+  UV_VERSION: 0.5.x
+
 jobs:
   init:
     name: Init
@@ -72,7 +79,7 @@ jobs:
         uses: astral-sh/setup-uv@v4.2.0
         with:
           enable-cache: true
-          version: "0.5.x"
+          version: ${{ env.UV_VERSION }}
 
       - name: Login to Azure
         uses: Azure/login@v2.2.0
@@ -136,8 +143,8 @@ jobs:
         uses: astral-sh/setup-uv@v4.2.0
         with:
           enable-cache: true
-          python-version: "3.13"
-          version: "0.5.x"
+          python-version: ${{ env.PYTHON_VERSION }}
+          version: ${{ env.UV_VERSION }}
 
       - name: Write version
         run: |

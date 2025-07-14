@@ -1,0 +1,53 @@
+name: Copilot setup steps
+
+# Allow manual testing through the repository's "Actions" tab
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+env:
+  # Tool versions
+  # See: https://devguide.python.org/versions
+  PYTHON_VERSION: 3.13
+  # See: https://github.com/astral-sh/uv/releases
+  UV_VERSION: 0.5.x
+
+jobs:
+  # Job must be called `copilot-setup-steps` or it will not be picked up by Copilot
+  copilot-setup-steps:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.1.7
+        with:
+          # We need all Git history for "version.sh"
+          fetch-depth: 0
+          # Ensure "version.sh" submodule are up-to-date
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v5.6.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4.2.0
+        with:
+          enable-cache: true
+          version: ${{ env.UV_VERSION }}
+
+      - name: Setup dependencies
+        run: make install-deps
+
+      # See: https://github.com/ungoogled-software/ungoogled-chromium/issues/2804#issuecomment-2081611387
+      - name: Configure AppArmor profile
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0

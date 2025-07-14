@@ -15,7 +15,7 @@ env:
   # See: https://devguide.python.org/versions
   PYTHON_VERSION: 3.13
   # See: https://github.com/astral-sh/uv/releases
-  UV_VERSION: 0.5.x
+  UV_VERSION: 0.7.x
 
 jobs:
   # Job must be called `copilot-setup-steps` or it will not be picked up by Copilot

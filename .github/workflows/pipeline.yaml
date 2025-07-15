@@ -172,7 +172,7 @@ jobs:
       - build-wheels
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v4.1.8
+        uses: actions/download-artifact@v4.3.0
         with:
           merge-multiple: true
           path: dist
@@ -197,7 +197,7 @@ jobs:
         uses: actions/checkout@v4.1.7
 
       - name: Download artifacts
-        uses: actions/download-artifact@v4.1.8
+        uses: actions/download-artifact@v4.3.0
         with:
           merge-multiple: true
           path: dist
@@ -237,7 +237,7 @@ jobs:
     if: (github.ref == 'refs/heads/main') || (github.ref == 'refs/heads/develop')
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v4.1.8
+        uses: actions/download-artifact@v4.3.0
         with:
           merge-multiple: true
           path: dist
@@ -263,7 +263,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v4.1.8
+        uses: actions/download-artifact@v4.3.0
         with:
           merge-multiple: true
           path: dist
@@ -286,7 +286,7 @@ jobs:
     steps:
       - name: Download artifacts
         id: download
-        uses: actions/download-artifact@v4.1.8
+        uses: actions/download-artifact@v4.3.0
         with:
           merge-multiple: true
           path: dist

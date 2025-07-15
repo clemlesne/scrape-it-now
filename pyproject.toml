@@ -88,7 +88,7 @@ Repository = "https://github.com/clemlesne/scrape-it-now"
 scrape-it-now = "scrape_it_now.cli:main"
 
 [build-system]
-requires = ["setuptools~=75.3"]
+requires = ["setuptools>=75.3,<81.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.dynamic]

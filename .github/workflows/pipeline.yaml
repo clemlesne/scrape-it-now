@@ -82,7 +82,7 @@ jobs:
           version: ${{ env.UV_VERSION }}
 
       - name: Login to Azure
-        uses: Azure/login@v2.2.0
+        uses: Azure/login@v2.3.0
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}

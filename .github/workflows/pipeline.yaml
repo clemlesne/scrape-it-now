@@ -244,7 +244,7 @@ jobs:
           pattern: wheels
 
       - name: Publish to TestPyPI
-        uses: pypa/gh-action-pypi-publish@v1.12.2
+        uses: pypa/gh-action-pypi-publish@v1.13.0
         with:
           repository-url: https://test.pypi.org/legacy/
 
@@ -270,7 +270,7 @@ jobs:
           pattern: wheels
 
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.12.2
+        uses: pypa/gh-action-pypi-publish@v1.13.0
 
   publish-release:
     name: Publish release

@@ -123,7 +123,7 @@ jobs:
         run: make kill-test-servers
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4.4.3
+        uses: actions/upload-artifact@v5.0.0
         if: always()
         with:
           compression-level: 9
@@ -156,7 +156,7 @@ jobs:
           make build
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4.4.3
+        uses: actions/upload-artifact@v5.0.0
         with:
           compression-level: 9
           name: wheels
@@ -215,7 +215,7 @@ jobs:
           subject-path: sbom-reports/*
 
       - name: Upload results to release
-        uses: actions/upload-artifact@v4.4.3
+        uses: actions/upload-artifact@v5.0.0
         with:
           compression-level: 9
           name: sbom
